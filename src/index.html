@@ -1,0 +1,84 @@
+<title>לוח המנינים</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;700&family=Heebo:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="style.css">
+<div id="app" dir="rtl" lang="he"><header class="top"><div class="inner"><div class="shul">לוח המנינים</div><h1 class="dayline">טוען את הלוח…</h1></div></header><main><div class="col"><section class="next"><h2>מנין הבא</h2><div class="empty">מחשב את המנין הקרוב…</div></section></div></main></div>
+<script id="config" type="application/json">{
+ "name": "לוח המנינים",
+ "location": {
+  "name": "וויליאמסבורג, ברוקלין",
+  "lat": 40.7081,
+  "lng": -73.9571,
+  "tz": "America/New_York",
+  "elev": 0
+ },
+ "israel": false,
+ "candles": 15,
+ "tzeisMinutes": 72,
+ "tzeisDeg": 8.5,
+ "weeklyEarliest": false,
+ "clock24": false,
+ "showRT": false,
+ "pin": "1234",
+ "tefillos": [
+  {
+   "id": "shacharis",
+   "name": "שחרית",
+   "milestone": "הודו",
+   "offset": 10,
+   "period": "am"
+  },
+  {
+   "id": "mincha",
+   "name": "מנחה",
+   "milestone": "שמונה עשרה",
+   "offset": 8,
+   "period": "pm"
+  },
+  {
+   "id": "maariv",
+   "name": "מעריב",
+   "milestone": "שמונה עשרה",
+   "offset": 5,
+   "period": "pm"
+  }
+ ],
+ "schedules": {
+  "weekday": {
+   "shacharis": "6:20 ברך משה\n6:50 דברי יואל\n7:15 ברך משה\n7:40 לב אהרן\n8:00 דברי יואל\n8:15 ברך משה\n8:30 שלמה יודא\n8:45 לב אהרן\n9:00 דברי יואל\n9:15 ברך משה\n9:30 שלמה יודא\n9:45 לב אהרן\n10:00 דברי יואל\n10:20 ברך משה\n10:40 שלמה יודא\n11:00 דברי יואל\n11:20 ברך משה\n11:40 שלמה יודא\n12:00 דברי יואל\nchatzos-30 ברך משה",
+   "mincha": "chatzos+30~5 ברך משה // example\nsunset-20~5 דברי יואל // example\nsunset-5 ברך משה // example",
+   "maariv": "tzeis+0 ברך משה // example\n9:00 דברי יואל // example\n10:00 ברך משה // example"
+  },
+  "friday": {
+   "mincha": "chatzos+30~5 ברך משה // example\ncandles דברי יואל // example\ncandles+10 ברך משה // example",
+   "maariv": "candles+20 ברך משה // example\nsunset+15 דברי יואל // example"
+  },
+  "shabbos": {
+   "shacharis": "8:00 ברך משה // example\n9:00 דברי יואל // example\n9:30 לב אהרן // example\n10:00 שלמה יודא // example",
+   "mincha": "sunset-60~5 ברך משה // example\nsunset-25~5 דברי יואל // example",
+   "maariv": "tzeis+0 ברך משה // example\ntzeis+15 דברי יואל // example"
+  }
+ },
+ "notices": [
+  {
+   "title": "פרנס החודש",
+   "body": ""
+  },
+  {
+   "title": "פרנס השבוע",
+   "body": ""
+  },
+  {
+   "title": "נר למאור",
+   "body": ""
+  }
+ ],
+ "overrides": [],
+ "smsNumber": "",
+ "remoteConfigUrl": "",
+ "savedAt": 1792512384154
+}</script>
+<script src="cal.js"></script>
+<script src="engine.js"></script>
+<script src="template.js"></script>
+<script src="app.js"></script>

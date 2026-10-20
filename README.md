@@ -1,0 +1,116 @@
+# לוח המנינים — Minyan board: website + app
+
+Shows the next minyan with a live countdown, every room's Shacharis / Mincha / Maariv
+minyanim (with the Hodu / Shemoneh Esrei time), the Hebrew date, the parsha of the week,
+holidays and today's zmanim. The board itself is in Hebrew; the gabbai edits everything from an in-page settings panel in English ("Edit" button at the bottom).
+
+Three ways to use it, all from the same code:
+
+| What | Where | Editing |
+|---|---|---|
+| Shareable page | https://claude.ai/artifact/5CiKzUDtdy3eTAeNzQrqwA | Owner clicks "Edit", saves for everyone |
+| Website + installable app (PWA) | `docs/` on any static host (GitHub Pages, Netlify…) | "Edit" → publishes `config.json` to GitHub |
+| App Store / Play Store app | `app/` (Capacitor, Android + iOS projects) | Reads the website's `config.json` |
+| Text message (SMS) | `sms/` (Twilio Functions, Cloudflare Worker or Node) | Reads the website's `config.json` |
+
+## Files
+
+- `src/cal.js` — Hebrew calendar, parsha algorithm, holidays, sunrise/sunset zmanim (NOAA). No dependencies.
+- `src/engine.js` — the schedule engine (config → minyanim for any date), shared by the page, the app and the SMS responder.
+- `src/app.js` — rendering, admin panel, saving, offline/app logic.
+- `src/sms.js` — turns an incoming text ("מנין", "mincha", "today"…) into the reply text.
+- `src/style.css`, `src/template.js`, `src/manifest.webmanifest`, `src/sw.js` — styling, page template, app manifest, service worker.
+- `config.default.json` — the schedule and settings built into the page.
+- `build.js` — `node build.js` regenerates `src/index.html`, `docs/` and `app/www`.
+  `node build.js --remote https://YOUR-SITE/config.json` bakes in the central schedule address (needed for the store app).
+- `assets/` — icon source (`make-icons.js` renders the PNGs, `native-icons.py` fills the Android/iOS projects).
+- `sms/twilio.js`, `sms/worker.js`, `sms/server.js` — the three deployable responders; `node build.js` bundles the first two into `sms/docs/`.
+- `test/cal.test.js`, `test/sms.test.js` — `node test/cal.test.js` / `node test/sms.test.js`. `test/smoke.js`, `test/pwa.js` — browser tests.
+
+## Schedule format
+
+One minyan per line: time first, then the room / minyan name, then an optional `// note`.
+
+```
+6:20 ברך משה
+שקיעה-15 דברי יואל
+הדלקה לב אהרן
+צאת+5 שלמה יודא // הערה
+שקיעה-20~5 ברך משה      (round down to 5 minutes)
+```
+
+Zman words: `שקיעה` `נץ` `הדלקה` `צאת` `פלג` `חצות` `עלות` `שמע` `ר״ת` (or sunset, sunrise,
+candles, tzeis, plag, chatzos, alos, shema). The last weekday Shacharis is written `חצות-30 ברך משה`,
+so it moves with chatzos every day (change `-30` if your board uses a different gap). Day types fall back to a more general one when
+empty (Rosh Chodesh → weekday, Yom Tov → Shabbos, Erev Yom Tov → Friday). For Mincha and
+Maariv a time like `6:45` means 6:45 PM (set per tefilla under General → Tefillos).
+
+## Putting the website online (GitHub Pages, free)
+
+1. Create a GitHub account and a new public repository, e.g. `minyan`.
+2. Push this whole project to it (or upload `docs/` on its own; `minyan-site.zip` holds those files).
+3. Repository Settings → Pages → Source: "Deploy from a branch", branch `main`, folder `/docs` (or `/ (root)` if you uploaded only the site files). The site appears at `https://USERNAME.github.io/minyan/` after a minute.
+4. On a phone, open that address: Android offers "Install app"; on iPhone use Share → "Add to Home Screen". The app works offline.
+
+Letting the gabbai update everyone from the page: in GitHub create a fine-grained personal
+access token (Settings → Developer settings → Fine-grained tokens) limited to that one
+repository with "Contents: Read and write". On the site: Edit → Publish tab → fill in
+`USERNAME/minyan`, branch `main`, path `docs/config.json` (or `config.json` for a root upload), paste the token, "Test connection". From then
+on every Save commits `config.json`; the site and the apps pick it up within a few minutes.
+The token stays in that browser only. Without a token, Save only changes that device, and
+the Backup tab gives you the JSON to upload as `config.json` by hand.
+
+Any other static host works too (Netlify Drop: drag the `docs` folder). Then update
+`config.json` by re-uploading it.
+
+## Store app (Android / iOS) with Capacitor
+
+`app/` is a Capacitor 8 project with the Android and iOS projects already generated and the
+app icons and splash screens in place (app id `org.minyanboard.app`, name "מנינים").
+
+1. Host the website first (above). Then build with the central schedule address:
+   `node build.js --remote https://USERNAME.github.io/minyan/config.json`
+2. `cd app && npm install && npx cap sync`
+3. Android: `npx cap open android` (needs Android Studio) → Build → Generate Signed Bundle → upload to Play Console.
+   iOS: `npx cap open ios` on a Mac with Xcode → set your Team → Product → Archive → upload to App Store Connect.
+
+The app bundles the site for instant offline start and refreshes the schedule from the
+website every 15 minutes and whenever it is opened.
+
+## Next minyan by text message (SMS)
+
+Anyone texts a word to the shul's number and gets the answer back:
+
+| They text | They get |
+|---|---|
+| מנין / next / anything else | the next minyan with room, time, Hodu time and "in N min", plus the one after it |
+| שחרית, מנחה, מעריב / shacharis, mincha, maariv | the remaining minyanim of that tefilla today (or tomorrow's) |
+| היום / today, מחר / tomorrow | the whole remaining day, grouped by tefilla |
+| זמנים / zmanim | today's zmanim |
+| עזרה / help | the list of words |
+
+Hebrew in → Hebrew reply; anything else → English labels (room names stay as configured).
+The responder reads the same `config.json` as the website, so one Save updates the page, the app and the texts.
+
+**Setup with Twilio (simplest, about $1.15/month for the number plus under a cent per text):**
+1. twilio.com → buy a local number with SMS. For US numbers Twilio will ask you to register the number for
+   business texting (A2P 10DLC); follow their form, it is a one-time step.
+2. Functions and Assets → Services → Create Service → Add Function (path `/minyan`), paste the whole contents of
+   `sms/docs/twilio-function.js`, set visibility to Protected, and under Environment Variables add
+   `CONFIG_URL` = `https://USERNAME.github.io/minyan/config.json`. Deploy All.
+3. Phone Numbers → your number → Messaging → "A message comes in": Function, pick the service and `/minyan`. Save.
+4. Text "מנין" to the number. Enter the number under General → "SMS number" so the website shows it with a
+   "שליחת הודעה" (send a message) button.
+
+The same function works for WhatsApp through Twilio's WhatsApp sender.
+
+**Alternatives:** `sms/docs/worker.js` is a Cloudflare Worker (free tier) with the same behaviour; set the `CONFIG_URL`
+variable and optionally `TWILIO_AUTH_TOKEN` so it only answers Twilio; point the Twilio webhook at the worker URL.
+`sms/server.js` runs on any Node host (`CONFIG_URL=... node sms/server.js`). Both answer `GET ?q=mincha` with plain
+text, which is handy for testing in a browser.
+
+## Notes
+
+- Location defaults to Williamsburg, Brooklyn (set exact coordinates under General); candle lighting 15 minutes before sunset and nightfall 72 minutes after sunset as saved on the live page, all adjustable.
+- Verified: calendar, SMS and browser tests, offline mode, the SMS webhook replying over HTTP, and saving inside the claude.ai viewer. Not verified: GitHub publishing against a real repository, the native builds, and a real Twilio number.
+- The PIN (default 1234) only guards the edit panel on the self-hosted site and in the app; it is not security.

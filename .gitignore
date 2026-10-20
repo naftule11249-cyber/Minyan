@@ -1,0 +1,10 @@
+node_modules/
+app/www/
+app/android/.gradle/
+app/android/build/
+app/android/app/build/
+app/ios/App/Pods/
+app/ios/App/App/public/
+*.zip
+test/shot-*.png
+.DS_Store

@@ -1,0 +1,19 @@
+{
+  "name": "minyan-app",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Native wrapper (Capacitor) for the minyan board web app",
+  "scripts": {
+    "build": "node ../build.js && npx cap sync",
+    "android": "npx cap open android",
+    "ios": "npx cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/ios": "^8.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.0.0"
+  }
+}
