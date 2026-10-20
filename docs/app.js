@@ -223,6 +223,7 @@
       if (id === 'data') dataArea.value = JSON.stringify(collect(), null, 2);
     }
 
+    var oRows = [];
     /* general */
     var g = el('div', { class: 'col' });
     var fName = inp('f-name', d.name), fLocName = inp('f-locname', d.location.name), fLat = inp('f-lat', d.location.lat, { inputmode: 'decimal' }),
@@ -231,7 +232,9 @@
       fTzeisMin = inp('f-tzeismin', d.tzeisMinutes || '', { inputmode: 'numeric', placeholder: 'blank = by degrees' }), fTzeisDeg = inp('f-tzeisdeg', d.tzeisDeg || 8.5, { inputmode: 'decimal' }),
       fPin = inp('f-pin', d.pin == null ? '1234' : d.pin);
     var fSms = inp('f-sms', d.smsNumber || '', { dir: 'ltr', placeholder: '+1 718 555 0100' });
+    var fRooms = inp('f-rooms', d.rooms || '', { placeholder: 'ברך משה, דברי יואל, לב אהרן' });
     g.appendChild(el('div', { class: 'fields' }, [field('Shul name (shown on the board)', fName), field('Location name (shown in the footer)', fLocName), field('SMS number (once the text service is set up)', fSms)]));
+    g.appendChild(el('div', { class: 'fields' }, [field('Rooms / minyan names, comma-separated (suggested when you enter minyanim)', fRooms)]));
     g.appendChild(el('div', { class: 'fields' }, [field('Latitude', fLat), field('Longitude', fLng), field('Time zone', fTz), field('Elevation (meters)', fElev)]));
     g.appendChild(el('datalist', { id: 'tz-list' }, ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Toronto', 'Europe/London', 'Europe/Antwerp', 'Europe/Zurich', 'Asia/Jerusalem', 'Australia/Melbourne'].map(function (z) { return el('option', { value: z }); })));
     g.appendChild(el('div', { class: 'fields' }, [field('Candle lighting: minutes before sunset', fCandles), field('Nightfall (tzeis): minutes after sunset', fTzeisMin), field('Nightfall: degrees below the horizon (used when minutes is blank)', fTzeisDeg)]));
@@ -249,47 +252,159 @@
     pages.general = g;
     function liveTefilla(i) { var r = tRows[i], t = d.tefillos[i]; return { id: t.id, name: r.name.value.trim() || t.name, milestone: r.ms.value.trim(), offset: +r.off.value || 0, period: r.period.value }; }
 
-    /* schedule */
+    /* schedule: one row per minyan */
+    var lines = {};
+    Cal.DAY_TYPES.forEach(function (t) { lines[t[0]] = {}; d.tefillos.forEach(function (tf) { lines[t[0]][tf.id] = { value: (d.schedules[t[0]] && d.schedules[t[0]][tf.id]) || '' }; }); });
+    var ZMAN_OPTS = [['fixed', 'Fixed time'], ['sunrise', 'Sunrise (netz)'], ['alos', 'Dawn (alos)'], ['shema', 'Sof zman Shema'], ['chatzos', 'Chatzos'], ['minchag', 'Mincha gedola'],
+      ['plag', 'Plag hamincha'], ['candles', 'Candle lighting'], ['sunset', 'Sunset (shkiah)'], ['tzeis', 'Nightfall (tzeis)'], ['tzeis72', 'Rabbeinu Tam (72 min)']];
+    var ZWORD = { sunrise: 'sunrise', alos: 'alos', shema: 'shema', chatzos: 'chatzos', minchag: 'minchag', plag: 'plag', candles: 'candles', sunset: 'sunset', tzeis: 'tzeis', tzeis72: 'rt' };
+    function hhmm(min) { min = Math.round(min); return pad2(Math.floor(min / 60) % 24) + ':' + pad2(min % 60); }
+    function lineToRow(line, tf) {
+      var p = parseLine(line, tf);
+      if (!p) return null;
+      if (!p.spec) return { raw: line.trim() };
+      var r = { room: p.room, note: p.note, off: 0, round: false };
+      if (p.spec.kind === 'fixed') { r.kind = 'fixed'; r.time = hhmm(p.spec.min); }
+      else { r.kind = p.spec.zman; r.off = p.spec.offset || 0; r.round = !!p.spec.round; }
+      return r;
+    }
+    function rowToLine(r) {
+      if (r.raw != null) return r.raw;
+      var tok = r.kind === 'fixed' ? (r.time || '07:00') : (ZWORD[r.kind] + (r.off ? (r.off < 0 ? '-' : '+') + Math.abs(r.off) : '') + (r.round ? '~5' : ''));
+      return tok + (r.room ? ' ' + r.room : '') + (r.note ? ' // ' + r.note : '');
+    }
+    var roomsList = el('datalist', { id: 'rooms-list' });
+    function refreshRooms() {
+      var set = {}, probe = { period: 'am' };
+      fRooms.value.split(',').forEach(function (x) { if (x.trim()) set[x.trim()] = 1; });
+      Object.keys(lines).forEach(function (k) { Object.keys(lines[k]).forEach(function (id) { lines[k][id].value.split('\n').forEach(function (l) { var p = parseLine(l, probe); if (p && p.room) set[p.room] = 1; }); }); });
+      oRows.forEach(function (r) { Object.keys(r.lines).forEach(function (id) { r.lines[id].value.split('\n').forEach(function (l) { var p = parseLine(l, probe); if (p && p.room) set[p.room] = 1; }); }); });
+      roomsList.innerHTML = '';
+      Object.keys(set).sort().forEach(function (name) { roomsList.appendChild(el('option', { value: name })); });
+    }
+    /* store = {value: lines text}; tfIndex = index into d.tefillos; typeKeyFn() = day type used for the "today" preview */
+    function minyanEditor(store, tfIndex, typeKeyFn, copyFrom) {
+      var wrap = el('div', { class: 'editor' }), list = el('div', { class: 'rows' }), rows = [], ta = null, seriesBox = null;
+      function tf() { return liveTefilla(tfIndex); }
+      function sync() { store.value = rows.map(rowToLine).join('\n'); if (ta) ta.value = store.value; refreshRooms(); markTabs(); }
+      function load() { rows = []; store.value.split('\n').forEach(function (l) { var r = lineToRow(l, tf()); if (r) rows.push(r); }); }
+      function previewOf(r) {
+        var p = parseLine(rowToLine(r), tf());
+        if (!p || !p.spec) return null;
+        return resolveMin(p.spec, todayRd, typeKeyFn());
+      }
+      function renderRow(r) {
+        var row = el('div', { class: 'mrow' });
+        var del = el('button', { type: 'button', class: 'btn small danger', text: '✕', title: 'Remove this minyan', 'aria-label': 'Remove', onclick: function () { rows.splice(rows.indexOf(r), 1); row.remove(); sync(); } });
+        if (r.raw != null) {
+          var rawIn = el('input', { type: 'text', dir: 'auto', value: r.raw, class: 'grow' });
+          rawIn.addEventListener('input', function () { r.raw = rawIn.value; sync(); });
+          row.appendChild(el('div', { class: 'mrow-l' }, [el('span', { class: 'bad', text: 'Cannot read this line:' }), rawIn, del]));
+          return row;
+        }
+        var when = el('select', { 'aria-label': 'Time type' });
+        ZMAN_OPTS.forEach(function (o) { when.appendChild(el('option', { value: o[0], text: o[1] })); });
+        when.value = r.kind;
+        var time = el('input', { type: 'time', value: r.time || '', 'aria-label': 'Time' });
+        var sign = el('select', { 'aria-label': 'Before or after' }, [el('option', { value: '-', text: 'min before' }), el('option', { value: '+', text: 'min after' })]);
+        sign.value = r.off < 0 ? '-' : '+';
+        var mins = el('input', { type: 'number', min: '0', step: '1', inputmode: 'numeric', class: 'mins', value: String(Math.abs(r.off || 0)), 'aria-label': 'Minutes' });
+        var roundC = el('input', { type: 'checkbox' }); roundC.checked = !!r.round;
+        var roundL = el('label', { class: 'small' }, [roundC, ' round to 5']);
+        var pv = el('span', { class: 'pv num' });
+        var room = el('input', { type: 'text', list: 'rooms-list', dir: 'auto', placeholder: 'Room / minyan name', value: r.room || '', class: 'room', autocomplete: 'off' });
+        var note = el('input', { type: 'text', dir: 'auto', placeholder: 'Note (optional)', value: r.note || '', class: 'grow' });
+        function refresh() {
+          var fixed = when.value === 'fixed';
+          time.hidden = !fixed; sign.hidden = fixed; mins.hidden = fixed; roundL.hidden = fixed;
+          var m = previewOf(r);
+          pv.textContent = m == null || isNaN(m) ? '' : 'today ' + fmtTime(m);
+        }
+        when.addEventListener('change', function () { r.kind = when.value; if (r.kind === 'fixed' && !r.time) { r.time = '07:00'; time.value = r.time; } sync(); refresh(); });
+        time.addEventListener('input', function () { r.time = time.value; sync(); refresh(); });
+        function offChange() { r.off = (+mins.value || 0) * (sign.value === '-' ? -1 : 1); sync(); refresh(); }
+        sign.addEventListener('change', offChange); mins.addEventListener('input', offChange);
+        roundC.addEventListener('change', function () { r.round = roundC.checked; sync(); refresh(); });
+        room.addEventListener('input', function () { r.room = room.value; sync(); });
+        note.addEventListener('input', function () { r.note = note.value; sync(); });
+        row.appendChild(el('div', { class: 'mrow-l' }, [when, time, sign, mins, roundL, pv]));
+        row.appendChild(el('div', { class: 'mrow-l' }, [room, note, del]));
+        refresh();
+        return row;
+      }
+      function renderAll() { list.innerHTML = ''; rows.forEach(function (r) { list.appendChild(renderRow(r)); }); }
+      function addRow(r) { rows.push(r); list.appendChild(renderRow(r)); sync(); }
+      var addBtn = el('button', { type: 'button', class: 'btn small primary', text: '+ Add minyan', onclick: function () {
+        var last = rows.length ? rows[rows.length - 1] : null, r = { kind: 'fixed', time: '07:00', off: 0, round: false, room: last ? last.room : '', note: '' };
+        if (last && last.raw == null) { r.kind = last.kind; r.off = last.off; r.round = last.round; if (last.kind === 'fixed') { var m = previewOf(last); r.time = hhmm((isNaN(m) ? 7 * 60 : m) + 15); } }
+        addRow(r);
+        var inputs = list.lastChild.querySelectorAll('input, select'); if (inputs.length) inputs[0].focus();
+      } });
+      var seriesBtn = el('button', { type: 'button', class: 'btn small', text: 'Add a series…', onclick: function () { seriesBox.hidden = !seriesBox.hidden; } });
+      var sFirst = el('input', { type: 'time', value: '06:20' }), sLast = el('input', { type: 'time', value: '12:00' }), sEvery = el('input', { type: 'number', min: '1', value: '20', class: 'mins', inputmode: 'numeric' }), sRooms = el('input', { type: 'text', dir: 'auto', placeholder: 'rooms in turn, e.g. ברך משה, דברי יואל', class: 'grow' });
+      seriesBox = el('div', { class: 'series' }, [
+        el('div', { class: 'mrow-l' }, ['From', sFirst, 'to', sLast, 'every', sEvery, 'min']),
+        el('div', { class: 'mrow-l' }, [sRooms, el('button', { type: 'button', class: 'btn small primary', text: 'Add these', onclick: function () {
+          var a = sFirst.value.split(':'), b = sLast.value.split(':'), step = +sEvery.value || 0;
+          if (a.length < 2 || b.length < 2 || step < 1) { toast('Enter a first time, a last time and the minutes between minyanim'); return; }
+          var start = +a[0] * 60 + +a[1], end = +b[0] * 60 + +b[1], names = sRooms.value.split(',').map(function (x) { return x.trim(); }).filter(Boolean), n = 0;
+          for (var m = start; m <= end && n < 200; m += step, n++) addRow({ kind: 'fixed', time: hhmm(m), off: 0, round: false, room: names.length ? names[n % names.length] : '', note: '' });
+          seriesBox.hidden = true;
+        } })])]);
+      seriesBox.hidden = true;
+      var copySel = el('select', { 'aria-label': 'Copy from another day' });
+      function fillCopy() {
+        copySel.innerHTML = ''; copySel.appendChild(el('option', { value: '', text: 'Copy from…' }));
+        (copyFrom || []).forEach(function (src) { if (src.store().value.trim()) copySel.appendChild(el('option', { value: src.key, text: src.label })); });
+      }
+      copySel.addEventListener('change', function () {
+        var src = (copyFrom || []).filter(function (x) { return x.key === copySel.value; })[0];
+        if (src) { store.value = src.store().value; load(); renderAll(); sync(); }
+        copySel.value = '';
+      });
+      copySel.addEventListener('focus', fillCopy); fillCopy();
+      var sortBtn = el('button', { type: 'button', class: 'btn small', text: 'Sort by time', onclick: function () {
+        rows.sort(function (x, y) { var a = previewOf(x), b = previewOf(y); return (isNaN(a) ? 1e9 : a) - (isNaN(b) ? 1e9 : b); });
+        renderAll(); sync();
+      } });
+      var textBtn = el('button', { type: 'button', class: 'btn small', text: 'Edit as text', onclick: function () {
+        if (ta.hidden) { ta.value = store.value; ta.hidden = false; list.hidden = true; textBtn.textContent = 'Back to the list'; }
+        else { load(); renderAll(); ta.hidden = true; list.hidden = false; textBtn.textContent = 'Edit as text'; }
+      } });
+      ta = el('textarea', { spellcheck: 'false', dir: 'auto' }); ta.hidden = true;
+      ta.addEventListener('input', function () { store.value = ta.value; refreshRooms(); markTabs(); });
+      load(); renderAll();
+      wrap.appendChild(list); wrap.appendChild(ta);
+      wrap.appendChild(el('div', { class: 'editor-bar' }, [addBtn, seriesBtn, copySel, sortBtn, textBtn]));
+      wrap.appendChild(seriesBox);
+      return wrap;
+    }
     var sp = el('div', { class: 'col' });
-    sp.appendChild(el('details', { class: 'help' }, [el('summary', { text: 'How to write the schedule' }), el('div', { class: 'hint' }, [
-      el('p', { text: 'One minyan per line: the time first, then the room or minyan name, then an optional // note (notes show on the tile).' }),
-      el('p', null, ['Fixed time: ', el('code', { text: '6:20 ברך משה' }), ' · by zman: ', el('code', { text: 'sunset-15 דברי יואל' }), ' , ', el('code', { text: 'candles לב אהרן' }), ' , ', el('code', { text: 'tzeis+5 שלמה יודא' }), ' , ', el('code', { text: 'plag-10' }), ' , ', el('code', { text: 'sunrise-45' }), ' , ', el('code', { text: 'chatzos-30' }), ' , ', el('code', { text: 'alos+60' }), ' (Hebrew words work too: שקיעה, הדלקה, צאת, פלג, נץ, חצות, עלות).']),
-      el('p', null, ['Round down to 5 minutes: ', el('code', { text: 'sunset-20~5 ברך משה' }), ' · lines starting with # are ignored.']),
-      el('p', { text: 'An empty schedule uses the more general one (Rosh Chodesh empty → Weekdays; Yom Tov empty → Shabbos). The preview under each box uses today\'s zmanim.' })])]));
+    sp.appendChild(roomsList);
+    sp.appendChild(el('details', { class: 'help' }, [el('summary', { text: 'How this works' }), el('div', { class: 'hint' }, [
+      el('p', { text: 'Pick a day type, then add one row per minyan: a fixed time, or a zman (sunset, chatzos, candle lighting…) with minutes before or after. Type the room name; names you already used are suggested. "today" shows what that row gives today.' }),
+      el('p', { text: '"Add a series" fills a run of minyanim at once, rotating through the rooms you list. "Copy from…" starts a day type from another one. A day type with no rows uses the more general one (Rosh Chodesh empty → Weekdays; Yom Tov empty → Shabbos).' }),
+      el('p', null, ['"Edit as text" shows the same rows as lines like ', el('code', { text: '6:20 ברך משה' }), ' or ', el('code', { text: 'sunset-15 דברי יואל // note' }), ', handy for pasting a whole list.'])])]));
     var typeTabs = el('div', { class: 'tabs' }), typePages = {};
     sp.appendChild(typeTabs);
     Cal.DAY_TYPES.forEach(function (t) {
       var key = t[0], b = el('button', { type: 'button', id: 'dt-' + key, text: t[3], 'aria-selected': 'false', onclick: function () { showType(key); } });
       typeTabs.appendChild(b);
-      var page = el('div', { class: 'col' });
+      var page = el('div', { class: 'col', id: 'dtp-' + key });
       page.hidden = true;
-      page.appendChild(el('div', { class: 'hint', text: FALLBACK[key] ? t[3] + ' schedule. Leave a box empty to use the ' + TYPE_EN[FALLBACK[key]] + ' schedule.' : t[3] + ' is the base schedule.' }));
+      page.appendChild(el('div', { class: 'hint', text: FALLBACK[key] ? t[3] + ' schedule. A tefilla with no rows here uses the ' + TYPE_EN[FALLBACK[key]] + ' schedule.' : t[3] + ' is the base schedule.' }));
       var row = el('div', { class: 'fields three' });
       d.tefillos.forEach(function (tf, i) {
-        var ta = el('textarea', { id: 'sch-' + key + '-' + tf.id, spellcheck: 'false', dir: 'auto' });
-        ta.value = (d.schedules[key] && d.schedules[key][tf.id]) || '';
-        var pv = el('div', { class: 'preview' });
-        ta.addEventListener('input', function () { preview(ta, pv, i, key); markTabs(); });
-        preview(ta, pv, i, key);
-        row.appendChild(el('div', { class: 'field' }, [el('label', { for: ta.id, text: tf.name }), ta, pv]));
+        var sources = Cal.DAY_TYPES.filter(function (o) { return o[0] !== key; }).map(function (o) { return { key: o[0], label: o[3], store: function () { return lines[o[0]][tf.id]; } }; });
+        row.appendChild(el('div', { class: 'field' }, [el('label', { text: tf.name }), minyanEditor(lines[key][tf.id], i, function () { return key; }, sources)]));
       });
       page.appendChild(row);
       typePages[key] = { page: page, button: b };
       sp.appendChild(page);
     });
-    function preview(ta, pv, i, key) {
-      var tf = liveTefilla(i);
-      pv.innerHTML = '';
-      ta.value.split('\n').forEach(function (line, n) {
-        var p = parseLine(line, tf);
-        if (!p) return;
-        if (!p.spec) { pv.appendChild(el('span', { class: 'bad', text: 'Line ' + (n + 1) + ': cannot read ' }, [el('bdi', { text: p.tok })])); return; }
-        pv.appendChild(el('span', { class: 'num', dir: 'auto', text: fmtTime(resolveMin(p.spec, todayRd, key)) + (p.room ? ' ' + p.room : '') }));
-      });
-    }
     function markTabs() {
       Cal.DAY_TYPES.forEach(function (t) {
-        var has = d.tefillos.some(function (tf) { var ta = $('#sch-' + t[0] + '-' + tf.id); return ta && ta.value.trim(); });
+        var has = d.tefillos.some(function (tf) { return lines[t[0]][tf.id].value.trim(); });
         typePages[t[0]].button.classList.toggle('has', has);
       });
     }
@@ -311,15 +426,19 @@
     pages.notices = np;
 
     /* overrides */
-    var op = el('div', { class: 'col' }), oList = el('div', { class: 'col' }), oRows = [];
+    var op = el('div', { class: 'col' }), oList = el('div', { class: 'col' });
     function addOverride(o) {
       var id = ++uid, r = { date: inp('o-date-' + id, o.date, { type: 'date' }), label: inp('o-label-' + id, o.label), lines: {} };
       var row = el('div', { class: 'fields three' });
-      d.tefillos.forEach(function (tf) {
-        var ta = el('textarea', { id: 'o-' + id + '-' + tf.id, spellcheck: 'false', dir: 'auto' });
-        ta.value = (o.lines && o.lines[tf.id]) || ''; ta.style.minHeight = '90px';
-        r.lines[tf.id] = ta;
-        row.appendChild(field(tf.name + ' (blank = as usual)', ta));
+      function typeOfDate() {
+        var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(r.date.value);
+        if (!m) return 'weekday';
+        return Cal.dayType(Cal.dayInfo(Cal.rdFromGreg(+m[1], +m[2], +m[3]), !!d.israel));
+      }
+      d.tefillos.forEach(function (tf, i) {
+        r.lines[tf.id] = { value: (o.lines && o.lines[tf.id]) || '' };
+        var sources = Cal.DAY_TYPES.map(function (t) { return { key: t[0], label: t[3], store: function () { return lines[t[0]][tf.id]; } }; });
+        row.appendChild(el('div', { class: 'field' }, [el('label', { text: tf.name + ' (no rows = as usual)' }), minyanEditor(r.lines[tf.id], i, typeOfDate, sources)]));
       });
       r.wrap = el('div', { class: 'ovr' }, [el('div', { class: 'fields' }, [field('Date', r.date), field('Label shown on the board (e.g. yahrzeit, wedding)', r.label)]), row,
         el('button', { type: 'button', class: 'btn small danger', text: 'Remove', onclick: function () { oRows.splice(oRows.indexOf(r), 1); r.wrap.remove(); } })]);
@@ -385,10 +504,11 @@
       out.israel = $('#f-israel').checked; out.weeklyEarliest = $('#f-weekly').checked; out.clock24 = $('#f-24').checked; out.showRT = $('#f-rt').checked;
       if (mode !== 'artifact') out.pin = fPin.value;
       out.tefillos = d.tefillos.map(function (t, i) { return liveTefilla(i); });
+      out.rooms = fRooms.value.trim();
       out.schedules = {};
       Cal.DAY_TYPES.forEach(function (t) {
         var o = {};
-        d.tefillos.forEach(function (tf) { var ta = $('#sch-' + t[0] + '-' + tf.id); if (ta && ta.value.trim()) o[tf.id] = ta.value.replace(/\r/g, ''); });
+        d.tefillos.forEach(function (tf) { var v = lines[t[0]][tf.id].value; if (v.trim()) o[tf.id] = v.replace(/\r/g, ''); });
         if (Object.keys(o).length) out.schedules[t[0]] = o;
       });
       out.notices = nRows.map(function (r) { return { title: r.title.value.trim(), body: r.body.value.trim() }; }).filter(function (n) { return n.title || n.body; });
