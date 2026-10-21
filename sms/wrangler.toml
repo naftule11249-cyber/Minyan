@@ -1,0 +1,23 @@
+# Cloudflare Worker for the minyan text service. One-time setup:
+#   cd sms && npx wrangler login
+#   npx wrangler kv namespace create SUBS          -> paste the id below
+#   node vapid-keys.js                              -> VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY
+#   npx wrangler secret put TWILIO_ACCOUNT_SID ; TWILIO_AUTH_TOKEN ; TWILIO_FROM ; VAPID_PUBLIC_KEY ; VAPID_PRIVATE_KEY   (WA_FROM, WA_CONTENT_SID optional)
+#   (cd .. && node build.js) && npx wrangler deploy
+# Then point the Twilio number's "A message comes in" webhook at https://minyan-sms.<you>.workers.dev/
+# and enter that address under Edit → General → "Notification service address".
+name = "minyan-sms"
+main = "dist/worker.js"
+compatibility_date = "2025-01-01"
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+[[kv_namespaces]]
+binding = "SUBS"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+
+[vars]
+CONFIG_URL = "https://USERNAME.github.io/minyan/config.json"
+ALLOWED_ORIGIN = "https://USERNAME.github.io"
+VAPID_SUBJECT = "mailto:shul@example.com"

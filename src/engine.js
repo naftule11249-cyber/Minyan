@@ -88,6 +88,24 @@ var MinyanEngine = (function () {
       return out;
     }
     function tefillos() { return (cfg.tefillos && cfg.tefillos.length) ? cfg.tefillos : TEFILLA_DEFAULTS; }
+    /* sponsor notices that are on today: non-empty body, and inside their from/to dates when set */
+    function activeNotices(rd) {
+      var iso = isoDate(rd);
+      return (cfg.notices || []).filter(function (n) {
+        if (!(n.body || '').trim()) return false;
+        if (n.from && iso < n.from) return false;
+        if (n.to && iso > n.to) return false;
+        return true;
+      });
+    }
+    /* the temporary banner, or null once it has expired (until = "YYYY-MM-DDTHH:MM" in the shul's time zone) */
+    function activeBanner(nowMs) {
+      var b = cfg.banner;
+      if (!b || !(b.text || '').trim()) return null;
+      var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(b.until || '');
+      if (m && nowMs >= Cal.epochFromWall(Cal.rdFromGreg(+m[1], +m[2], +m[3]), +m[4] * 60 + +m[5], loc().tz)) return null;
+      return b;
+    }
     function dayTexts(rd, info) {
       var type = Cal.dayType(info), iso = isoDate(rd);
       var ovr = (cfg.overrides || []).filter(function (o) { return o.date === iso; })[0] || null;
@@ -157,7 +175,7 @@ var MinyanEngine = (function () {
       if (s.override) return 'לוח מיוחד' + (s.override.label ? ': ' + s.override.label : '');
       return 'לוח ' + (TYPE_NAME[s.type] || s.type);
     }
-    return { cfg: cfg, loc: loc, zmanimFor: zmanimFor, resolveMin: resolveMin, expand: expand, tefillos: tefillos, dayTexts: dayTexts, scheduleFor: scheduleFor,
+    return { cfg: cfg, loc: loc, zmanimFor: zmanimFor, resolveMin: resolveMin, expand: expand, tefillos: tefillos, activeNotices: activeNotices, activeBanner: activeBanner, dayTexts: dayTexts, scheduleFor: scheduleFor,
       after: after, upcoming: upcoming, fmtTime: fmtTime, fmtCountdown: fmtCountdown, dayLine: dayLine, typeLabel: typeLabel, parseLine: parseLine };
   }
   create.parseLine = parseLine; create.parseSpec = parseSpec; create.sameEntry = sameEntry; create.gregStr = gregStr; create.isoDate = isoDate;

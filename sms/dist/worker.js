@@ -437,6 +437,24 @@ var MinyanEngine = (function () {
       return out;
     }
     function tefillos() { return (cfg.tefillos && cfg.tefillos.length) ? cfg.tefillos : TEFILLA_DEFAULTS; }
+    /* sponsor notices that are on today: non-empty body, and inside their from/to dates when set */
+    function activeNotices(rd) {
+      var iso = isoDate(rd);
+      return (cfg.notices || []).filter(function (n) {
+        if (!(n.body || '').trim()) return false;
+        if (n.from && iso < n.from) return false;
+        if (n.to && iso > n.to) return false;
+        return true;
+      });
+    }
+    /* the temporary banner, or null once it has expired (until = "YYYY-MM-DDTHH:MM" in the shul's time zone) */
+    function activeBanner(nowMs) {
+      var b = cfg.banner;
+      if (!b || !(b.text || '').trim()) return null;
+      var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(b.until || '');
+      if (m && nowMs >= Cal.epochFromWall(Cal.rdFromGreg(+m[1], +m[2], +m[3]), +m[4] * 60 + +m[5], loc().tz)) return null;
+      return b;
+    }
     function dayTexts(rd, info) {
       var type = Cal.dayType(info), iso = isoDate(rd);
       var ovr = (cfg.overrides || []).filter(function (o) { return o.date === iso; })[0] || null;
@@ -506,7 +524,7 @@ var MinyanEngine = (function () {
       if (s.override) return 'לוח מיוחד' + (s.override.label ? ': ' + s.override.label : '');
       return 'לוח ' + (TYPE_NAME[s.type] || s.type);
     }
-    return { cfg: cfg, loc: loc, zmanimFor: zmanimFor, resolveMin: resolveMin, expand: expand, tefillos: tefillos, dayTexts: dayTexts, scheduleFor: scheduleFor,
+    return { cfg: cfg, loc: loc, zmanimFor: zmanimFor, resolveMin: resolveMin, expand: expand, tefillos: tefillos, activeNotices: activeNotices, activeBanner: activeBanner, dayTexts: dayTexts, scheduleFor: scheduleFor,
       after: after, upcoming: upcoming, fmtTime: fmtTime, fmtCountdown: fmtCountdown, dayLine: dayLine, typeLabel: typeLabel, parseLine: parseLine };
   }
   create.parseLine = parseLine; create.parseSpec = parseSpec; create.sameEntry = sameEntry; create.gregStr = gregStr; create.isoDate = isoDate;
@@ -623,43 +641,254 @@ var MinyanSms = (function () {
         if (second) out += '\n' + L.then + ': ' + (second.daysAhead !== first.daysAhead ? dayPrefix(second) + ', ' : '') + entry(second.entry, second.entry.tefilla.id !== first.entry.tefilla.id) + '.';
       }
     }
+    var banner = (k === 'next' || k === 'today' || tf) ? engine.activeBanner(nowMs) : null;
+    if (banner) out = (lang === 'he' ? 'שימו לב: ' : 'Note: ') + banner.text.trim() + '\n' + out;
     return { text: out, lang: lang, keyword: k };
   }
   return { buildReply: buildReply, keyword: keyword, hasHebrew: hasHebrew };
 })();
 
 
+/* notify.js — reminder subscriptions by text message and app notification. Pure logic, no platform code.
+   Needs cal.js, engine.js and sms.js.
+   Commands (SMS/WhatsApp):  REMIND MINCHA [5:45] [15]  ·  DAILY [6:30]  ·  REMIND LIST  ·  REMIND OFF
+   A subscription: { lang, reminders: [{tefilla, time: minutes|null, lead}], daily: minutes|null, channel: 'sms'|'whatsapp'|'push', to, push } */
+var MinyanNotify = (function () {
+  'use strict';
+  var T = {
+    he: { set: 'תזכורת נקבעה: ', before: ' דק׳ לפני ', first: 'המנין הראשון של ', at: ' של ', daily: 'הלוח היומי יישלח כל בוקר ב-', none: 'אין תזכורות פעילות.', list: 'התזכורות שלך:', off: 'כל התזכורות בוטלו.',
+      unknown: 'לא זיהיתי את התפילה. שלחו למשל: תזכורת מנחה 5:45 15 (15 דקות לפני מנחה של 5:45), או: יומי 6:30', remind: 'תזכורת', inMin: 'בעוד', min: 'דק׳', notAvail: 'תזכורות אינן זמינות במספר הזה.' },
+    en: { set: 'Reminder set: ', before: ' min before ', first: 'the first ', at: ' at ', daily: 'Daily schedule every morning at ', none: 'No active reminders.', list: 'Your reminders:', off: 'All reminders cancelled.',
+      unknown: 'Tefilla not recognized. Examples: REMIND MINCHA 5:45 15 (15 min before the 5:45 Mincha), REMIND SHACHARIS (first Shacharis), DAILY 6:30', remind: 'Reminder', inMin: 'in', min: 'min', notAvail: 'Reminders are not available on this number.' }
+  };
+  var EN_TEFILLA = { shacharis: 'Shacharis', mincha: 'Mincha', maariv: 'Maariv' };
+  function hasHebrew(s) { return /[֐-׿]/.test(s); }
+  function norm(text) { return (text || '').trim().toLowerCase().replace(/[.!?'"״׳,]/g, '').replace(/\s+/g, ' '); }
+  function isCommand(text) { var t = norm(text); return /^(remind|reminder|reminders|תזכורת|תזכורות|daily|יומי|ביטול)(\s|$)/.test(t); }
+  function tefillaFrom(word, cfg) {
+    var k = MinyanSms.keyword(word), t = null;
+    (cfg.tefillos || []).forEach(function (x) { if (x.id === k || x.name === word) t = x; });
+    return t;
+  }
+  function parseClock(tok, pm) {
+    var m = /^(\d{1,2})(?::(\d{2}))?$/.exec(tok || ''); if (!m) return null;
+    var h = +m[1], mi = +(m[2] || 0); if (h > 23 || mi > 59) return null;
+    if (pm && h >= 1 && h < 12) h += 12;
+    return h * 60 + mi;
+  }
+  function fmt(cfg, min) { return MinyanEngine(cfg).fmtTime(min); }
+  /* Parse a command. Returns {action: 'add'|'daily'|'list'|'off'|'help', ...} or null when it is not a command. */
+  function parseCommand(text, cfg) {
+    var t = norm(text); if (!isCommand(t)) return null;
+    var lang = hasHebrew(text) ? 'he' : 'en', w = t.split(' ');
+    if (/^(daily|יומי)$/.test(w[0])) { var at = w[1] ? parseClock(w[1], false) : 6 * 60; return at == null ? { action: 'help', lang: lang } : { action: 'daily', at: at, lang: lang }; }
+    if (w[0] === 'ביטול' || /^(off|stop|cancel|none|ביטול|בטל)$/.test(w[1] || '')) return { action: 'off', lang: lang };
+    if (/^(list|רשימה|status)$/.test(w[1] || '')) return { action: 'list', lang: lang };
+    if (!w[1]) return { action: 'help', lang: lang };
+    var tf = tefillaFrom(w[1], cfg); if (!tf) return { action: 'help', lang: lang };
+    var time = null, lead = 10, i;
+    for (i = 2; i < w.length; i++) {
+      if (/^\d{1,2}:\d{2}$/.test(w[i])) time = parseClock(w[i], tf.period === 'pm');
+      else if (/^\d{1,3}$/.test(w[i])) { if (time == null && +w[i] <= 12 && i === 2 && w[i + 1] && /^\d{1,3}$/.test(w[i + 1])) time = parseClock(w[i], tf.period === 'pm'); else lead = Math.min(180, Math.max(1, +w[i])); }
+    }
+    return { action: 'add', tefilla: tf.id, time: time, lead: lead, lang: lang };
+  }
+  function describe(cfg, r, lang) {
+    var L = T[lang], name = lang === 'en' && EN_TEFILLA[r.tefilla] ? EN_TEFILLA[r.tefilla] : (cfg.tefillos.filter(function (x) { return x.id === r.tefilla; })[0] || {}).name || r.tefilla;
+    return r.lead + L.before + (r.time == null ? L.first + name : name + L.at + fmt(cfg, r.time));
+  }
+  /* Apply a parsed command to a subscription object (mutated). Returns the reply text. */
+  function apply(cmd, sub, cfg) {
+    var L = T[cmd.lang];
+    sub.lang = cmd.lang; sub.reminders = sub.reminders || [];
+    if (cmd.action === 'help') return L.unknown;
+    if (cmd.action === 'off') { sub.reminders = []; sub.daily = null; return L.off; }
+    if (cmd.action === 'list') {
+      var lines = sub.reminders.map(function (r) { return '• ' + describe(cfg, r, cmd.lang); });
+      if (sub.daily != null) lines.push('• ' + L.daily + fmt(cfg, sub.daily));
+      return lines.length ? L.list + '\n' + lines.join('\n') : L.none;
+    }
+    if (cmd.action === 'daily') { sub.daily = cmd.at; return L.daily + fmt(cfg, cmd.at) + '.'; }
+    sub.reminders = sub.reminders.filter(function (r) { return !(r.tefilla === cmd.tefilla && r.time === cmd.time); });
+    sub.reminders.push({ tefilla: cmd.tefilla, time: cmd.time, lead: cmd.lead });
+    return L.set + describe(cfg, sub.reminders[sub.reminders.length - 1], cmd.lang) + '.';
+  }
+  /* Which messages are due in [nowMs, nowMs + windowMin). Each: {key, text, title, minyan} — the caller sends and remembers `key`. */
+  function due(cfg, sub, nowMs, windowMin) {
+    var engine = MinyanEngine(cfg), tz = engine.loc().tz, now = Cal.nowInTz(nowMs, tz), rd = now.rd, sched = engine.scheduleFor(rd), out = [];
+    var win = (windowMin || 5) * 60000, lang = sub.lang || 'he', L = T[lang], iso = MinyanEngine.isoDate(rd);
+    (sub.reminders || []).forEach(function (r) {
+      var list = sched.byTefilla[r.tefilla] || [];
+      if (!list.length) return;
+      var target = list[0];
+      if (r.time != null) {
+        var best = null, bestD = 1e9;
+        list.forEach(function (e) { var d = Math.abs(e.start - r.time); if (d < bestD) { bestD = d; best = e; } });
+        if (!best || bestD > 45) return;
+        target = best;
+      }
+      var fireAt = target.ms - r.lead * 60000;
+      if (fireAt < nowMs || fireAt >= nowMs + win) return;
+      var mins = Math.max(1, Math.round((target.ms - nowMs) / 60000));
+      var name = lang === 'en' && EN_TEFILLA[r.tefilla] ? EN_TEFILLA[r.tefilla] : target.tefilla.name;
+      var text = name + (target.room ? ' – ' + target.room : '') + ' ' + engine.fmtTime(target.start) + (target.tefilla.milestone ? ' (' + target.tefilla.milestone + ' ' + engine.fmtTime(target.milestone) + ')' : '') + ', ' + L.inMin + ' ' + mins + ' ' + L.min;
+      out.push({ key: 'r:' + iso + ':' + r.tefilla + ':' + target.start, title: L.remind + ': ' + name, text: (lang === 'he' ? 'תזכורת: ' : 'Reminder: ') + text, minyan: target });
+    });
+    if (sub.daily != null) {
+      var dailyMs = Cal.epochFromWall(rd, sub.daily, tz);
+      if (dailyMs >= nowMs && dailyMs < nowMs + win) out.push({ key: 'd:' + iso, title: lang === 'he' ? 'הלוח להיום' : "Today's minyanim", text: MinyanSms.buildReply(cfg, lang === 'he' ? 'היום' : 'today', nowMs).text });
+    }
+    return out;
+  }
+  return { isCommand: isCommand, parseCommand: parseCommand, apply: apply, due: due, T: T };
+})();
 
-/* ---- Cloudflare Worker. Variables: CONFIG_URL (required) = https://YOUR-SITE/config.json,
-   TWILIO_AUTH_TOKEN (optional) rejects requests that were not signed by Twilio.
-   POST from Twilio -> TwiML reply. GET ?q=text -> plain-text reply, handy for testing. ---- */
+
+/* webpush.js — Web Push (RFC 8291 aes128gcm + VAPID) with WebCrypto only; runs in a Cloudflare Worker or Node 22. */
+var WebPush = (function () {
+  'use strict';
+  var enc = new TextEncoder();
+  function b64u(buf) { var s = '', a = new Uint8Array(buf), i; for (i = 0; i < a.length; i++) s += String.fromCharCode(a[i]); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+  function fromB64u(str) { str = String(str).replace(/-/g, '+').replace(/_/g, '/'); while (str.length % 4) str += '='; var bin = atob(str), out = new Uint8Array(bin.length), i; for (i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i); return out; }
+  function concat() { var len = 0, i, out, off = 0; for (i = 0; i < arguments.length; i++) len += arguments[i].length; out = new Uint8Array(len); for (i = 0; i < arguments.length; i++) { out.set(arguments[i], off); off += arguments[i].length; } return out; }
+  function hkdf(salt, ikm, info, len) {
+    return crypto.subtle.importKey('raw', ikm, 'HKDF', false, ['deriveBits']).then(function (key) { return crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt: salt, info: info }, key, len * 8); }).then(function (bits) { return new Uint8Array(bits); });
+  }
+  /* VAPID keys: public = base64url of the 65-byte uncompressed P-256 point, private = base64url of the 32-byte scalar */
+  function importVapidPrivate(pub, priv) {
+    var p = fromB64u(pub);
+    return crypto.subtle.importKey('jwk', { kty: 'EC', crv: 'P-256', x: b64u(p.slice(1, 33)), y: b64u(p.slice(33, 65)), d: priv, ext: true }, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+  }
+  function vapidAuth(endpoint, subject, pub, priv) {
+    var aud = new URL(endpoint).origin;
+    var header = b64u(enc.encode(JSON.stringify({ typ: 'JWT', alg: 'ES256' }))), claims = b64u(enc.encode(JSON.stringify({ aud: aud, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: subject })));
+    var data = enc.encode(header + '.' + claims);
+    return importVapidPrivate(pub, priv).then(function (key) { return crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, data); })
+      .then(function (sig) { return 'vapid t=' + header + '.' + claims + '.' + b64u(sig) + ', k=' + pub; });
+  }
+  /* Encrypt `payload` for a PushSubscription's keys (p256dh, auth). Resolves to the request body bytes. */
+  function encrypt(payload, p256dh, auth) {
+    var uaPub = fromB64u(p256dh), authSecret = fromB64u(auth), salt = crypto.getRandomValues(new Uint8Array(16)), asPub;
+    return crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']).then(function (kp) {
+      return crypto.subtle.exportKey('raw', kp.publicKey).then(function (raw) { asPub = new Uint8Array(raw); return crypto.subtle.importKey('raw', uaPub, { name: 'ECDH', namedCurve: 'P-256' }, false, []); })
+        .then(function (uaKey) { return crypto.subtle.deriveBits({ name: 'ECDH', public: uaKey }, kp.privateKey, 256); });
+    }).then(function (shared) {
+      return hkdf(authSecret, new Uint8Array(shared), concat(enc.encode('WebPush: info\0'), uaPub, asPub), 32);
+    }).then(function (ikm) {
+      return Promise.all([hkdf(salt, ikm, enc.encode('Content-Encoding: aes128gcm\0'), 16), hkdf(salt, ikm, enc.encode('Content-Encoding: nonce\0'), 12)]);
+    }).then(function (keys) {
+      var plain = concat(enc.encode(payload), new Uint8Array([2]));
+      return crypto.subtle.importKey('raw', keys[0], 'AES-GCM', false, ['encrypt']).then(function (k) { return crypto.subtle.encrypt({ name: 'AES-GCM', iv: keys[1] }, k, plain); });
+    }).then(function (cipher) {
+      return concat(salt, new Uint8Array([0, 0, 16, 0]), new Uint8Array([asPub.length]), asPub, new Uint8Array(cipher));
+    });
+  }
+  /* Send to one subscription {endpoint, keys:{p256dh, auth}}. Resolves to the fetch Response (404/410 = subscription gone). */
+  function send(sub, payload, env) {
+    return Promise.all([encrypt(payload, sub.keys.p256dh, sub.keys.auth), vapidAuth(sub.endpoint, env.VAPID_SUBJECT || 'mailto:admin@example.com', env.VAPID_PUBLIC_KEY, env.VAPID_PRIVATE_KEY)]).then(function (r) {
+      return fetch(sub.endpoint, { method: 'POST', headers: { 'Content-Encoding': 'aes128gcm', 'Content-Type': 'application/octet-stream', 'TTL': '3600', 'Urgency': 'high', 'Authorization': r[1] }, body: r[0] });
+    });
+  }
+  return { send: send, encrypt: encrypt, vapidAuth: vapidAuth, b64u: b64u, fromB64u: fromB64u };
+})();
+
+
+
+/* ---- Cloudflare Worker: text/WhatsApp responder, reminder texts, daily schedule texts and app notifications.
+   Bindings: KV namespace SUBS. Variables: CONFIG_URL (required), ALLOWED_ORIGIN (the website address), VAPID_SUBJECT (mailto:…).
+   Secrets (wrangler secret put): TWILIO_AUTH_TOKEN (also verifies Twilio's signature), TWILIO_ACCOUNT_SID, TWILIO_FROM (+1718…),
+   WA_FROM (whatsapp:+1718…, optional), WA_CONTENT_SID (optional WhatsApp template), VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY.
+   Cron trigger every 5 minutes (wrangler.toml) sends what is due. ---- */
 function escapeXml(s) { return s.replace(/[<>&'"]/g, function (c) { return { '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]; }); }
 async function twilioSignatureOk(request, params, token) {
   var data = request.url;
   Object.keys(params).sort().forEach(function (k) { data += k + params[k]; });
   var key = await crypto.subtle.importKey('raw', new TextEncoder().encode(token), { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']);
   var mac = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(data)));
-  var b64 = btoa(String.fromCharCode.apply(null, mac));
-  return b64 === (request.headers.get('X-Twilio-Signature') || '');
+  return btoa(String.fromCharCode.apply(null, mac)) === (request.headers.get('X-Twilio-Signature') || '');
+}
+async function loadConfig(env) { return (await fetch(env.CONFIG_URL, { cf: { cacheTtl: 60, cacheEverything: true } })).json(); }
+function twiml(text) { return new Response('<?xml version="1.0" encoding="UTF-8"?><Response>' + (text ? '<Message>' + escapeXml(text) + '</Message>' : '') + '</Response>', { headers: { 'content-type': 'text/xml; charset=utf-8' } }); }
+function cors(env, extra) { return Object.assign({ 'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN || '*', 'Access-Control-Allow-Methods': 'GET,POST,OPTIONS', 'Access-Control-Allow-Headers': 'content-type' }, extra || {}); }
+function json(env, obj, status) { return new Response(JSON.stringify(obj), { status: status || 200, headers: cors(env, { 'content-type': 'application/json' }) }); }
+async function sendTwilio(env, to, body) {
+  var isWa = /^whatsapp:/.test(to), from = isWa ? env.WA_FROM : env.TWILIO_FROM;
+  if (!from || !env.TWILIO_ACCOUNT_SID || !env.TWILIO_AUTH_TOKEN) return false;
+  var form = new URLSearchParams({ To: to, From: from });
+  if (isWa && env.WA_CONTENT_SID) { form.set('ContentSid', env.WA_CONTENT_SID); form.set('ContentVariables', JSON.stringify({ 1: body })); } else form.set('Body', body);
+  var r = await fetch('https://api.twilio.com/2010-04-01/Accounts/' + env.TWILIO_ACCOUNT_SID + '/Messages.json', {
+    method: 'POST', headers: { Authorization: 'Basic ' + btoa(env.TWILIO_ACCOUNT_SID + ':' + env.TWILIO_AUTH_TOKEN), 'content-type': 'application/x-www-form-urlencoded' }, body: form });
+  return r.ok;
+}
+async function allSubscriptions(env) {
+  var out = [], cursor;
+  do {
+    var page = await env.SUBS.list({ cursor: cursor });
+    for (var i = 0; i < page.keys.length; i++) if (/^(sub|push):/.test(page.keys[i].name)) out.push(page.keys[i].name);
+    cursor = page.list_complete ? null : page.cursor;
+  } while (cursor);
+  return out;
 }
 export default {
   async fetch(request, env) {
-    var isPost = request.method === 'POST', body = '', params = {};
+    var url = new URL(request.url), path = url.pathname.replace(/\/+$/, '');
+    if (request.method === 'OPTIONS') return new Response(null, { headers: cors(env) });
+    if (path === '/push/key') return new Response(env.VAPID_PUBLIC_KEY || '', { headers: cors(env, { 'content-type': 'text/plain' }) });
+    if (path === '/push/subscribe' && request.method === 'POST') {
+      var body = await request.json().catch(function () { return null; });
+      if (!body || !body.subscription || !body.subscription.endpoint || !body.subscription.keys) return json(env, { error: 'bad request' }, 400);
+      var id = body.id && /^[a-z0-9]{8,32}$/.test(body.id) ? body.id : crypto.randomUUID().replace(/-/g, '').slice(0, 20);
+      var sub = { channel: 'push', push: { endpoint: body.subscription.endpoint, keys: body.subscription.keys }, reminders: (body.reminders || []).slice(0, 10).map(function (r) { return { tefilla: String(r.tefilla), time: r.time == null ? null : +r.time, lead: Math.min(180, Math.max(1, +r.lead || 10)) }; }),
+        daily: body.daily == null ? null : +body.daily, lang: body.lang === 'en' ? 'en' : 'he', updated: Date.now() };
+      await env.SUBS.put('push:' + id, JSON.stringify(sub));
+      return json(env, { id: id });
+    }
+    if (path === '/push/unsubscribe' && request.method === 'POST') {
+      var b2 = await request.json().catch(function () { return {}; });
+      if (b2.id && /^[a-z0-9]{8,32}$/.test(b2.id)) await env.SUBS.delete('push:' + b2.id);
+      return json(env, { ok: true });
+    }
+    /* Twilio webhook (SMS or WhatsApp): POST form. GET ?q=text[&from=+1…] answers in plain text for testing. */
+    var isPost = request.method === 'POST', text = '', params = {}, from = '';
     if (isPost) {
       var form = await request.formData();
       form.forEach(function (v, k) { params[k] = v; });
-      body = params.Body || '';
+      text = params.Body || ''; from = params.From || '';
       if (env.TWILIO_AUTH_TOKEN && !(await twilioSignatureOk(request, params, env.TWILIO_AUTH_TOKEN))) return new Response('forbidden', { status: 403 });
-    } else {
-      var u = new URL(request.url);
-      body = u.searchParams.get('q') || u.searchParams.get('Body') || '';
-    }
-    var text;
+    } else { text = url.searchParams.get('q') || url.searchParams.get('Body') || ''; from = url.searchParams.get('from') || ''; }
+    var reply;
     try {
-      var cfg = await (await fetch(env.CONFIG_URL, { cf: { cacheTtl: 60, cacheEverything: true } })).json();
-      text = MinyanSms.buildReply(cfg, body, Date.now()).text;
-    } catch (e) { text = 'Sorry, the schedule is unavailable right now. / הלוח אינו זמין כרגע'; }
-    if (isPost) return new Response('<?xml version="1.0" encoding="UTF-8"?><Response>' + (text ? '<Message>' + escapeXml(text) + '</Message>' : '') + '</Response>', { headers: { 'content-type': 'text/xml; charset=utf-8' } });
-    return new Response(text, { headers: { 'content-type': 'text/plain; charset=utf-8' } });
+      var cfg = await loadConfig(env), cmd = MinyanNotify.parseCommand(text, cfg);
+      if (cmd) {
+        if (!from) reply = MinyanNotify.T[cmd.lang].notAvail;
+        else {
+          var key = 'sub:' + from, s = (await env.SUBS.get(key, 'json')) || {};
+          s.channel = /^whatsapp:/.test(from) ? 'whatsapp' : 'sms'; s.to = from;
+          reply = MinyanNotify.apply(cmd, s, cfg);
+          if (!s.reminders.length && s.daily == null) await env.SUBS.delete(key); else await env.SUBS.put(key, JSON.stringify(s));
+        }
+      } else reply = MinyanSms.buildReply(cfg, text, Date.now()).text;
+    } catch (e) { reply = 'Sorry, the schedule is unavailable right now. / הלוח אינו זמין כרגע'; }
+    if (isPost) return twiml(reply);
+    return new Response(reply, { headers: cors(env, { 'content-type': 'text/plain; charset=utf-8' }) });
+  },
+  async scheduled(event, env) {
+    var cfg = await loadConfig(env), now = Date.now(), names = await allSubscriptions(env), i, j;
+    for (i = 0; i < names.length; i++) {
+      var sub = await env.SUBS.get(names[i], 'json');
+      if (!sub) continue;
+      var due = MinyanNotify.due(cfg, sub, now, 5);
+      for (j = 0; j < due.length; j++) {
+        var sentKey = 'sent:' + names[i] + ':' + due[j].key;
+        if (await env.SUBS.get(sentKey)) continue;
+        await env.SUBS.put(sentKey, '1', { expirationTtl: 86400 });
+        try {
+          if (sub.channel === 'push') {
+            var r = await WebPush.send(sub.push, JSON.stringify({ title: due[j].title, body: due[j].text, tag: due[j].key }), env);
+            if (r.status === 404 || r.status === 410) await env.SUBS.delete(names[i]);
+          } else await sendTwilio(env, sub.to, due[j].text);
+        } catch (e) {}
+      }
+    }
   }
 };

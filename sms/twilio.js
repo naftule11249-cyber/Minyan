@@ -6,7 +6,8 @@ exports.handler = async function (context, event, callback) {
   try {
     var res = await fetch(context.CONFIG_URL, { cache: 'no-store' });
     var cfg = await res.json();
-    var reply = MinyanSms.buildReply(cfg, event.Body || '', Date.now()).text;
+    var cmd = MinyanNotify.parseCommand(event.Body || '', cfg);
+    var reply = cmd ? MinyanNotify.T[cmd.lang].notAvail : MinyanSms.buildReply(cfg, event.Body || '', Date.now()).text;
     if (reply) twiml.message(reply);
   } catch (e) {
     twiml.message('Sorry, the schedule is unavailable right now. / הלוח אינו זמין כרגע');

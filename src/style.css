@@ -44,6 +44,13 @@ button { cursor: pointer; }
 .top .chips { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
 .chip { display: inline-block; padding: 2px 10px; border-radius: 999px; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.25); font-size: .85rem; }
 
+/* Temporary banner */
+.banner { background: #b8963f; color: #1d1708; }
+.banner-inner { max-width: 1120px; margin: 0 auto; padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); font-weight: 700; font-size: 1.1rem; text-align: center; }
+.push-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.push-lbl { min-width: 5em; }
+.push-row select, .push-row input { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 5px 7px; }
+
 /* Sponsor boxes under the header */
 .sponsors { max-width: 1120px; margin: 0 auto; padding-block: 18px 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 .sponsors-inner { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 14px; }

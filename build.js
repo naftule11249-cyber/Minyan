@@ -36,10 +36,10 @@ for (const f of ['icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple
 }
 // SMS responder bundles: one file to paste into Twilio Functions, one to deploy as a Cloudflare Worker
 const strip = t => t.replace(/^if \(typeof module !== 'undefined'\) module\.exports = .*;$/mg, '');
-const core = ['cal.js', 'engine.js', 'sms.js'].map(f => strip(fs.readFileSync(path.join(__dirname, 'src', f), 'utf8'))).join('\n');
+const core = ['src/cal.js', 'src/engine.js', 'src/sms.js', 'src/notify.js'].map(f => strip(fs.readFileSync(path.join(__dirname, f), 'utf8'))).join('\n');
 fs.mkdirSync(path.join(__dirname, 'sms/dist'), { recursive: true });
 fs.writeFileSync(path.join(__dirname, 'sms/dist/twilio-function.js'), core + '\n' + fs.readFileSync(path.join(__dirname, 'sms/twilio.js'), 'utf8'));
-fs.writeFileSync(path.join(__dirname, 'sms/dist/worker.js'), core + '\n' + fs.readFileSync(path.join(__dirname, 'sms/worker.js'), 'utf8'));
+fs.writeFileSync(path.join(__dirname, 'sms/dist/worker.js'), core + '\n' + strip(fs.readFileSync(path.join(__dirname, 'sms/webpush.js'), 'utf8')) + '\n' + fs.readFileSync(path.join(__dirname, 'sms/worker.js'), 'utf8'));
 // Capacitor app: copy the site into app/www when the app project exists
 const www = path.join(__dirname, 'app', 'www');
 if (fs.existsSync(path.join(__dirname, 'app'))) {

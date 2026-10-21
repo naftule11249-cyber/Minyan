@@ -106,6 +106,8 @@ var MinyanSms = (function () {
         if (second) out += '\n' + L.then + ': ' + (second.daysAhead !== first.daysAhead ? dayPrefix(second) + ', ' : '') + entry(second.entry, second.entry.tefilla.id !== first.entry.tefilla.id) + '.';
       }
     }
+    var banner = (k === 'next' || k === 'today' || tf) ? engine.activeBanner(nowMs) : null;
+    if (banner) out = (lang === 'he' ? 'שימו לב: ' : 'Note: ') + banner.text.trim() + '\n' + out;
     return { text: out, lang: lang, keyword: k };
   }
   return { buildReply: buildReply, keyword: keyword, hasHebrew: hasHebrew };

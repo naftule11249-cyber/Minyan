@@ -49,7 +49,9 @@
       el('div', { class: 'dates' }, [el('span', { text: hebLine }), el('span', { class: 'num', text: gregStr(rd) })]),
       chips.length ? el('div', { class: 'chips' }, chips) : null])]));
 
-    var strip = sponsorsStrip();
+    var banner = engine.activeBanner(now);
+    if (banner) root.appendChild(el('div', { class: 'banner', role: 'status' }, [el('div', { class: 'banner-inner', text: banner.text.trim() })]));
+    var strip = sponsorsStrip(rd);
     if (strip) root.appendChild(strip);
     var up = upcoming(now, rd);
     var main = el('main'), colA = el('div', { class: 'col' }), colB = el('div', { class: 'col' });
@@ -74,6 +76,8 @@
     colB.appendChild(zmanimPanel(info, z));
     var sms = smsPanel();
     if (sms) colB.appendChild(sms);
+    var push = pushPanel();
+    if (push) colB.appendChild(push);
     main.appendChild(colA); main.appendChild(colB);
     root.appendChild(main);
     root.appendChild(footer());
@@ -118,10 +122,9 @@
     return el('section', { class: 'side' }, [el('h3', { text: 'זמני היום' }), ul]);
   }
   /* Sponsor boxes (פרנס החודש and friends) in a framed strip under the header */
-  function sponsorsStrip() {
+  function sponsorsStrip(rd) {
     var items = [];
-    (cfg.notices || []).forEach(function (n) {
-      if (!(n.body || '').trim()) return;
+    engine.activeNotices(rd).forEach(function (n) {
       items.push(el('section', { class: 'sponsor' }, [
         el('div', { class: 'frame' }),
         el('h2', { class: 't', text: n.title || '' }),
@@ -141,6 +144,63 @@
       el('p', { class: 'hint', text: 'אפשר גם: שחרית, מנחה, מעריב, היום, מחר, זמנים' }),
       el('a', { class: 'btn', href: 'sms:' + digits + '?&body=' + encodeURIComponent('מנין'), text: 'שליחת הודעה' }),
       cfg.siteUrl ? el('p', { class: 'hint' }, [el('a', { href: cfg.siteUrl.replace(/\/?$/, '/') + 'sms.html', text: 'פרטי השירות' })]) : null]);
+  }
+  /* ---------- app notifications (web push through the notification service) ---------- */
+  function pushSupported() { return !inArtifact && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && /^https:$/.test(location.protocol) && !!(cfg.notifyUrl || '').trim(); }
+  function pushState() { try { return JSON.parse(localStorage.getItem('minyan-push') || 'null'); } catch (e) { return null; } }
+  function urlB64ToBytes(b) { b = b.replace(/-/g, '+').replace(/_/g, '/'); while (b.length % 4) b += '='; var bin = atob(b), out = new Uint8Array(bin.length), i; for (i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i); return out; }
+  function notifyBase() { return cfg.notifyUrl.trim().replace(/\/+$/, ''); }
+  function pushPanel() {
+    if (!pushSupported()) return null;
+    var st = pushState(), box = el('section', { class: 'side' }, [el('h3', { text: 'תזכורות בנייד' })]);
+    if (isIOS() && !isStandalone()) { box.appendChild(el('p', { class: 'hint', text: 'באייפון התזכורות עובדות אחרי התקנה: שיתוף ← הוספה למסך הבית, ואז לפתוח מהאייקון.' })); return box; }
+    var form = el('div', { class: 'col' }), today = scheduleFor(Cal.nowInTz(Date.now(), loc().tz).rd), prefs = (st && st.prefs) || { reminders: [], daily: null };
+    var rows = tefillos().map(function (t) {
+      var sel = el('select', { id: 'push-' + t.id }, [el('option', { value: '', text: 'בלי תזכורת' }), el('option', { value: 'first', text: 'המנין הראשון' })]);
+      (today.byTefilla[t.id] || []).forEach(function (e) { sel.appendChild(el('option', { value: String(e.start), text: fmtTime(e.start) + (e.room ? ' ' + e.room : '') })); });
+      var cur = prefs.reminders.filter(function (r) { return r.tefilla === t.id; })[0];
+      if (cur) sel.value = cur.time == null ? 'first' : String(cur.time);
+      form.appendChild(el('div', { class: 'push-row' }, [el('span', { class: 'push-lbl', text: t.name }), sel]));
+      return { t: t, sel: sel };
+    });
+    var lead = el('input', { type: 'number', min: '1', max: '120', value: String((prefs.reminders[0] && prefs.reminders[0].lead) || 10), class: 'mins', id: 'push-lead', inputmode: 'numeric' });
+    form.appendChild(el('div', { class: 'push-row' }, [el('label', { for: 'push-lead', class: 'push-lbl', text: 'דקות לפני' }), lead]));
+    var daily = el('input', { type: 'checkbox', id: 'push-daily' }); daily.checked = prefs.daily != null;
+    var dailyAt = el('input', { type: 'time', id: 'push-daily-at', value: prefs.daily != null ? pad2(Math.floor(prefs.daily / 60)) + ':' + pad2(prefs.daily % 60) : '06:00' });
+    form.appendChild(el('div', { class: 'push-row' }, [el('label', { for: 'push-daily', class: 'push-lbl' }, [daily, ' הלוח היומי בבוקר ב-']), dailyAt]));
+    var msg = el('div', { class: 'hint' });
+    var saveB = el('button', { class: 'btn primary small', text: st ? 'עדכון התזכורות' : 'הפעלת תזכורות', onclick: function () {
+      var reminders = []; rows.forEach(function (r) { if (r.sel.value) reminders.push({ tefilla: r.t.id, time: r.sel.value === 'first' ? null : +r.sel.value, lead: Math.max(1, +lead.value || 10) }); });
+      var d = daily.checked ? (function () { var m = /^(\d{2}):(\d{2})$/.exec(dailyAt.value); return m ? +m[1] * 60 + +m[2] : 6 * 60; })() : null;
+      if (!reminders.length && d == null) { msg.textContent = 'בחרו לפחות תזכורת אחת.'; return; }
+      saveB.disabled = true; msg.textContent = 'מפעיל…';
+      subscribePush({ reminders: reminders, daily: d }).then(function () { msg.textContent = 'התזכורות פעילות במכשיר הזה.'; render(); }, function (e) { saveB.disabled = false; msg.textContent = 'לא הצלחתי להפעיל: ' + (e && e.message || e); });
+    } });
+    form.appendChild(el('div', { class: 'tabs' }, [saveB, st ? el('button', { class: 'btn small', text: 'ביטול התזכורות', onclick: function () { unsubscribePush().then(function () { render(); }); } }) : null]));
+    form.appendChild(msg);
+    box.appendChild(el('p', { class: 'hint', text: 'הודעה בנייד לפני המנין שבחרתם, גם כשהאפליקציה סגורה.' }));
+    box.appendChild(form);
+    return box;
+  }
+  function subscribePush(prefs) {
+    var base = notifyBase(), st = pushState();
+    return Notification.requestPermission().then(function (perm) {
+      if (perm !== 'granted') throw new Error('לא ניתנה הרשאה להודעות');
+      return navigator.serviceWorker.ready;
+    }).then(function (reg) {
+      return fetch(base + '/push/key').then(function (r) { return r.text(); }).then(function (key) {
+        return reg.pushManager.getSubscription().then(function (sub) { return sub || reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToBytes(key.trim()) }); });
+      });
+    }).then(function (sub) {
+      return fetch(base + '/push/subscribe', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: st && st.id, subscription: sub.toJSON(), reminders: prefs.reminders, daily: prefs.daily, lang: 'he' }) })
+        .then(function (r) { if (!r.ok) throw new Error('השירות לא ענה (' + r.status + ')'); return r.json(); });
+    }).then(function (j) { try { localStorage.setItem('minyan-push', JSON.stringify({ id: j.id, prefs: prefs })); } catch (e) {} });
+  }
+  function unsubscribePush() {
+    var st = pushState(), base = notifyBase();
+    try { localStorage.removeItem('minyan-push'); } catch (e) {}
+    return Promise.resolve(st && st.id ? fetch(base + '/push/unsubscribe', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: st.id }) }).catch(function () {}) : null)
+      .then(function () { return navigator.serviceWorker.ready; }).then(function (reg) { return reg.pushManager.getSubscription(); }).then(function (sub) { if (sub) return sub.unsubscribe(); }).catch(function () {});
   }
   function footer() {
     var L = cfg.location || {};
@@ -255,6 +315,7 @@
     var fSms = inp('f-sms', d.smsNumber || '', { dir: 'ltr', placeholder: '+1 718 555 0100' });
     var fRooms = inp('f-rooms', d.rooms || '', { placeholder: 'ברך משה, דברי יואל, לב אהרן' });
     var fSite = inp('f-site', d.siteUrl || '', { dir: 'ltr', placeholder: 'https://yourname.github.io/minyan/' }), fLogo = inp('f-logo', d.logo || '', { dir: 'ltr', placeholder: 'logo.png' });
+    var fNotify = inp('f-notify', d.notifyUrl || '', { dir: 'ltr', placeholder: 'https://minyan-sms.yourname.workers.dev' });
     g.appendChild(el('div', { class: 'fields' }, [field('Shul name (shown on the board)', fName), field('Location name (shown in the footer)', fLocName), field('SMS number (once the text service is set up)', fSms)]));
     var roomSelects = [];
     function roomList() { return fRooms.value.split(',').map(function (x) { return x.trim(); }).filter(Boolean); }
@@ -299,6 +360,7 @@
       return [sel, newIn, okBtn];
     }
     g.appendChild(el('div', { class: 'fields' }, [field('Website address (used for share previews and the app)', fSite), field('Logo file shown in the header (file name next to index.html)', fLogo)]));
+    g.appendChild(el('div', { class: 'fields' }, [field('Notification service address (the Cloudflare worker; enables reminders in the app)', fNotify)]));
     g.appendChild(el('div', { class: 'fields' }, [field('Latitude', fLat), field('Longitude', fLng), field('Time zone', fTz), field('Elevation (meters)', fElev)]));
     g.appendChild(el('datalist', { id: 'tz-list' }, ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Toronto', 'Europe/London', 'Europe/Antwerp', 'Europe/Zurich', 'Asia/Jerusalem', 'Australia/Melbourne'].map(function (z) { return el('option', { value: z }); })));
     g.appendChild(el('div', { class: 'fields' }, [field('Candle lighting: minutes before sunset', fCandles), field('Nightfall (tzeis): minutes after sunset', fTzeisMin), field('Nightfall: degrees below the horizon (used when minutes is blank)', fTzeisDeg)]));
@@ -562,13 +624,21 @@
     /* notices */
     var np = el('div', { class: 'col' }), nList = el('div', { class: 'col' }), nRows = [];
     function addNotice(n) {
-      var id = ++uid, r = { title: inp('n-title-' + id, n.title), body: el('textarea', { id: 'n-body-' + id, dir: 'auto' }) };
+      var id = ++uid, r = { title: inp('n-title-' + id, n.title), body: el('textarea', { id: 'n-body-' + id, dir: 'auto' }), from: inp('n-from-' + id, n.from || '', { type: 'date' }), to: inp('n-to-' + id, n.to || '', { type: 'date' }) };
       r.body.value = n.body || ''; r.body.style.minHeight = '70px';
-      r.wrap = el('div', { class: 'ovr' }, [el('div', { class: 'fields' }, [field('Title', r.title), field('Text', r.body)]), el('button', { type: 'button', class: 'btn small danger', text: 'Remove', onclick: function () { nRows.splice(nRows.indexOf(r), 1); r.wrap.remove(); } })]);
+      r.wrap = el('div', { class: 'ovr' }, [el('div', { class: 'fields' }, [field('Title', r.title), field('Text', r.body)]),
+        el('div', { class: 'fields' }, [field('Show from (blank = now)', r.from), field('Show until (blank = no end)', r.to)]),
+        el('button', { type: 'button', class: 'btn small danger', text: 'Remove', onclick: function () { nRows.splice(nRows.indexOf(r), 1); r.wrap.remove(); } })]);
       nRows.push(r); nList.appendChild(r.wrap);
     }
     (d.notices.length ? d.notices : [{ title: 'פרנס החודש', body: '' }, { title: 'פרנס השבוע', body: '' }, { title: 'נר למאור', body: '' }]).forEach(addNotice);
-    np.appendChild(el('div', { class: 'hint', text: 'Sponsor panels (פרנס החודש, פרנס השבוע, נר למאור) and announcements, shown in framed boxes at the top of the board. A notice with empty text is not shown.' }));
+    var bText = el('textarea', { id: 'banner-text', dir: 'auto', placeholder: 'e.g. אין מעריב בלב אהרן הערב' }), bUntil = inp('banner-until', (d.banner && d.banner.until) || '', { type: 'datetime-local' });
+    bText.value = (d.banner && d.banner.text) || ''; bText.style.minHeight = '60px';
+    np.appendChild(el('h3', { text: 'Temporary banner' }));
+    np.appendChild(el('div', { class: 'hint', text: 'One line shown across the top of the board (and at the start of text replies) until the time you set, then it disappears by itself.' }));
+    np.appendChild(el('div', { class: 'fields' }, [field('Banner text', bText), field('Show until (shul time)', bUntil, el('button', { type: 'button', class: 'btn small', text: 'Clear banner', onclick: function () { bText.value = ''; bUntil.value = ''; } }))]));
+    np.appendChild(el('h3', { text: 'Sponsors and announcements' }));
+    np.appendChild(el('div', { class: 'hint', text: 'Sponsor panels (פרנס החודש, פרנס השבוע, נר למאור) and announcements, shown in framed boxes at the top of the board. Give each one dates and it appears and disappears by itself; several entries with the same title form a queue. A notice with empty text is not shown.' }));
     np.appendChild(nList);
     np.appendChild(el('div', null, [el('button', { type: 'button', class: 'btn', text: '+ Notice', onclick: function () { addNotice({ title: '', body: '' }); } })]));
     pages.notices = np;
@@ -621,10 +691,20 @@
     } }), ghMsg]));
     pp.appendChild(el('div', { class: 'fields' }, [field('Central schedule URL (for the store app; blank = config.json on this site)', fRemote)]));
     pages.publish = pp;
+    function history() { try { return JSON.parse(localStorage.getItem('minyan-history') || '[]'); } catch (e) { return []; } }
 
     /* data */
     var dp = el('div', { class: 'col' }), dataArea = el('textarea', { id: 'data-json', spellcheck: 'false', dir: 'ltr' });
     dataArea.style.minHeight = '260px'; dataArea.style.fontFamily = 'monospace';
+    var hist = history(), hBox = el('div', { class: 'col' });
+    dp.appendChild(el('h3', { text: 'Previous versions' }));
+    if (!hist.length) hBox.appendChild(el('div', { class: 'hint', text: 'Each Save made on this device keeps the version before it here, so a wrong save can be undone.' }));
+    hist.forEach(function (h) {
+      var when = new Date(h.at);
+      hBox.appendChild(el('div', { class: 'mrow-l' }, [el('span', { text: 'Saved ' + when.toLocaleString() }), el('button', { type: 'button', class: 'btn small', text: 'Restore', onclick: function () { setCfg(h.cfg); closeOverlay(); buildAdmin(); toast('Restored into the editor. Click Save to keep it.', 6000); } })]));
+    });
+    dp.appendChild(hBox);
+    dp.appendChild(el('h3', { text: 'Settings as text' }));
     dp.appendChild(el('div', { class: 'hint', text: 'All settings as text: copy it as a backup, or paste and load it into another copy of the page.' }));
     dp.appendChild(dataArea);
     dp.appendChild(el('div', { class: 'bar' }, [
@@ -654,6 +734,7 @@
       out.tefillos = d.tefillos.map(function (t, i) { return liveTefilla(i); });
       out.rooms = fRooms.value.trim();
       out.siteUrl = fSite.value.trim();
+      out.notifyUrl = fNotify.value.trim();
       out.logo = fLogo.value.trim();
       out.schedules = {};
       Cal.DAY_TYPES.forEach(function (t) {
@@ -661,7 +742,8 @@
         d.tefillos.forEach(function (tf) { var v = lines[t[0]][tf.id].value; if (v.trim()) o[tf.id] = v.replace(/\r/g, ''); });
         if (Object.keys(o).length) out.schedules[t[0]] = o;
       });
-      out.notices = nRows.map(function (r) { return { title: r.title.value.trim(), body: r.body.value.trim() }; }).filter(function (n) { return n.title || n.body; });
+      out.notices = nRows.map(function (r) { return { title: r.title.value.trim(), body: r.body.value.trim(), from: r.from.value, to: r.to.value }; }).filter(function (n) { return n.title || n.body; });
+      out.banner = { text: bText.value.trim(), until: bUntil.value };
       out.overrides = oRows.map(function (r) {
         var lines = {};
         d.tefillos.forEach(function (tf) { if (r.lines[tf.id].value.trim()) lines[tf.id] = r.lines[tf.id].value; });
@@ -687,6 +769,7 @@
         c.pinHash = null;
         ready = (window.crypto && crypto.subtle) ? sha256Hex(fPin.value.trim()).then(function (h) { c.pinHash = h; }) : Promise.resolve().then(function () { c.pin = fPin.value.trim(); delete c.pinHash; });
       }
+      try { var hist2 = history(); hist2.unshift({ at: Date.now(), cfg: cfg }); localStorage.setItem('minyan-history', JSON.stringify(hist2.slice(0, 10))); } catch (e) {}
       ready.then(function () { return persist(c); }).then(function (r) {
         setCfg(c);
         if (r.reloads) { toast('Saved. Reloading the page…', 8000); return; }

@@ -107,10 +107,37 @@ The responder reads the same `config.json` as the website, so one Save updates t
 
 The same function works for WhatsApp through Twilio's WhatsApp sender.
 
-**Alternatives:** `sms/docs/worker.js` is a Cloudflare Worker (free tier) with the same behaviour; set the `CONFIG_URL`
-variable and optionally `TWILIO_AUTH_TOKEN` so it only answers Twilio; point the Twilio webhook at the worker URL.
-`sms/server.js` runs on any Node host (`CONFIG_URL=... node sms/server.js`). Both answer `GET ?q=mincha` with plain
-text, which is handy for testing in a browser.
+**Reminders, daily texts, WhatsApp and app notifications** need the Cloudflare Worker version (`sms/dist/worker.js`,
+free tier), which also answers the texts. People text `REMIND MINCHA 5:45 15` (15 minutes before the 5:45 Mincha),
+`REMIND SHACHARIS` (the first Shacharis), `DAILY 6:30` (the day's schedule every morning), `REMIND LIST`, `REMIND OFF`
+(Hebrew: `תזכורת מנחה 5:45 15`, `יומי 6:30`, `תזכורות`, `ביטול`). The worker checks every 5 minutes what is due and sends it
+through Twilio. Setup (once, on a computer with Node):
+
+```
+cd sms
+npx wrangler login
+npx wrangler kv namespace create SUBS      # paste the id into wrangler.toml
+node vapid-keys.js                          # keys for app notifications
+npx wrangler secret put TWILIO_ACCOUNT_SID  # then TWILIO_AUTH_TOKEN, TWILIO_FROM, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY
+cd .. && node build.js && cd sms && npx wrangler deploy
+```
+Edit `wrangler.toml` first (CONFIG_URL, ALLOWED_ORIGIN, VAPID_SUBJECT). Point the Twilio number's webhook at the worker
+address instead of the Twilio Function, and enter the same address under Edit → General → "Notification service address":
+the website and the installed app then show a "תזכורות בנייד" box where people pick the minyanim they want to be reminded
+of (works on Android, and on iPhone once the site is added to the home screen).
+
+WhatsApp: enable the WhatsApp sender on the Twilio number, set `WA_FROM` (`whatsapp:+1718…`); the same keywords work.
+Messages the shul starts (reminders, the daily schedule) need an approved WhatsApp template: put its Content SID in
+`WA_CONTENT_SID` with the text as variable {{1}}. Twilio cannot post to WhatsApp groups.
+
+`sms/server.js` runs the plain responder on any Node host (`CONFIG_URL=... node sms/server.js`). The worker and the server
+both answer `GET ?q=mincha` with plain text, handy for testing in a browser.
+
+## Board extras
+
+- **Temporary banner** (Edit → Notices): one line across the top of the board, and at the start of text replies, until the time you set.
+- **Sponsor dates**: each notice can have "show from" and "show until" dates; several entries with the same title form a queue.
+- **Undo** (Edit → Backup → Previous versions): every Save made on a device keeps the version before it; Restore loads it into the editor.
 
 ## Notes
 
