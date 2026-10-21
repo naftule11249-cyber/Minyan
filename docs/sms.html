@@ -1,0 +1,27 @@
+<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>המנין הבא בהודעת טקסט</title>
+<style>body{font-family:system-ui,sans-serif;max-width:680px;margin:36px auto;padding:0 16px;line-height:1.55;color:#2a1a1d;background:#f5efe3}h1{font-size:1.5rem}h2{font-size:1.15rem;margin-top:28px}.num{font-size:1.4rem;font-weight:700;direction:ltr;display:inline-block}.en{direction:ltr;text-align:left;border-top:1px solid #d8cab2;margin-top:32px;padding-top:20px}code{background:#fbf7ef;padding:0 4px;border-radius:4px}.box{background:#fbf7ef;border:2px double #b8963f;border-radius:8px;padding:14px 18px}</style></head>
+<body>
+<h1>המנין הבא בהודעת טקסט</h1>
+<p>שלחו הודעת טקסט (SMS) עם המילה <b>מנין</b> למספר <span class="num" id="num">[המספר יופיע כאן]</span> ותקבלו מיד תשובה עם המנין הבא בבית המדרש: התפילה, החדר, השעה וזמן הודו.</p>
+<div class="box">
+<p><b>מילים נוספות:</b> <code>שחרית</code>, <code>מנחה</code>, <code>מעריב</code> – המנינים שנותרו היום · <code>היום</code> / <code>מחר</code> – כל הלוח · <code>זמנים</code> – זמני היום · <code>עזרה</code> – רשימת המילים.</p>
+<p>באנגלית: <code>next</code>, <code>shacharis</code>, <code>mincha</code>, <code>maariv</code>, <code>today</code>, <code>tomorrow</code>, <code>zmanim</code>, <code>help</code>.</p>
+</div>
+<h2>איך זה עובד</h2>
+<p>השירות עונה רק להודעות שאתם שולחים: הודעה אחת נכנסת, תשובה אחת יוצאת. אין הודעות יזומות, אין פרסומות ואין רישום. כדי להפסיק, שלחו <code>STOP</code>; לעזרה שלחו <code>HELP</code>. חברת הסלולר עשויה לחייב על הודעות לפי התוכנית שלכם.</p>
+<p>הלוח מתעדכן על ידי בית המדרש, והתשובות מחושבות לפי הלוח העדכני וזמני היום במיקום בית המדרש.</p>
+<p><a href="privacy.html">מדיניות פרטיות</a> · <a href="./">ללוח המנינים</a></p>
+
+<div class="en">
+<h2 id="program">Minyan times by text message – program details</h2>
+<p><b>How to opt in:</b> text the keyword <b>MINYAN</b> (or מנין) to <span class="num" id="num2">[number]</span>. Each message you send receives one automated reply with the next minyan time at <span id="shul">the shul</span>. Other keywords: SHACHARIS, MINCHA, MAARIV, TODAY, TOMORROW, ZMANIM, HELP.</p>
+<p><b>Message frequency:</b> replies only, one per message you send; no recurring or promotional messages. <b>Message and data rates may apply.</b> Reply <b>STOP</b> to opt out at any time; reply <b>HELP</b> for help. Carriers are not liable for delayed or undelivered messages.</p>
+<p>Your phone number is used only to send the reply you requested. Mobile information is never shared with third parties or affiliates for marketing or promotional purposes. See our <a href="privacy.html">privacy policy</a>.</p>
+</div>
+<script>
+fetch('config.json', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (c) {
+  if (c.smsNumber) { document.getElementById('num').textContent = c.smsNumber; document.getElementById('num2').textContent = c.smsNumber; }
+  if (c.name) document.getElementById('shul').textContent = c.name;
+}).catch(function () {});
+</script>
+</body></html>

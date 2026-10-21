@@ -139,7 +139,8 @@
       el('p', { class: 'sms-text', text: 'שלחו את המילה „מנין” למספר' }),
       el('div', { class: 'sms-num num', dir: 'ltr', text: num }),
       el('p', { class: 'hint', text: 'אפשר גם: שחרית, מנחה, מעריב, היום, מחר, זמנים' }),
-      el('a', { class: 'btn', href: 'sms:' + digits + '?&body=' + encodeURIComponent('מנין'), text: 'שליחת הודעה' })]);
+      el('a', { class: 'btn', href: 'sms:' + digits + '?&body=' + encodeURIComponent('מנין'), text: 'שליחת הודעה' }),
+      cfg.siteUrl ? el('p', { class: 'hint' }, [el('a', { href: cfg.siteUrl.replace(/\/?$/, '/') + 'sms.html', text: 'פרטי השירות' })]) : null]);
   }
   function footer() {
     var L = cfg.location || {};

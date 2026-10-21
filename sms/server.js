@@ -18,6 +18,6 @@ http.createServer(async (req, res) => {
   let reply;
   try { reply = MinyanSms.buildReply(await loadCfg(), String(text), Date.now()).text; }
   catch (e) { reply = 'Sorry, the schedule is unavailable right now. / הלוח אינו זמין כרגע'; }
-  if (isPost) { res.writeHead(200, { 'content-type': 'text/xml; charset=utf-8' }); res.end('<?xml version="1.0" encoding="UTF-8"?><Response><Message>' + escapeXml(reply) + '</Message></Response>'); }
+  if (isPost) { res.writeHead(200, { 'content-type': 'text/xml; charset=utf-8' }); res.end('<?xml version="1.0" encoding="UTF-8"?><Response>' + (reply ? '<Message>' + escapeXml(reply) + '</Message>' : '') + '</Response>'); }
   else { res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' }); res.end(reply); }
 }).listen(process.env.PORT || 8788, () => console.log('SMS responder on port ' + (process.env.PORT || 8788)));

@@ -28,7 +28,7 @@ export default {
       var cfg = await (await fetch(env.CONFIG_URL, { cf: { cacheTtl: 60, cacheEverything: true } })).json();
       text = MinyanSms.buildReply(cfg, body, Date.now()).text;
     } catch (e) { text = 'Sorry, the schedule is unavailable right now. / הלוח אינו זמין כרגע'; }
-    if (isPost) return new Response('<?xml version="1.0" encoding="UTF-8"?><Response><Message>' + escapeXml(text) + '</Message></Response>', { headers: { 'content-type': 'text/xml; charset=utf-8' } });
+    if (isPost) return new Response('<?xml version="1.0" encoding="UTF-8"?><Response>' + (text ? '<Message>' + escapeXml(text) + '</Message>' : '') + '</Response>', { headers: { 'content-type': 'text/xml; charset=utf-8' } });
     return new Response(text, { headers: { 'content-type': 'text/plain; charset=utf-8' } });
   }
 };

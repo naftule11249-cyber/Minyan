@@ -521,10 +521,10 @@ var MinyanSms = (function () {
   var T = {
     he: { next: 'המנין הבא', then: 'אחריו', in_: 'בעוד', min: 'דק׳', hr: 'שע׳', today: 'היום', tomorrow: 'מחר', none: 'לא רשומים מנינים בימים הקרובים.',
       left: 'נותרו', noneToday: 'אין עוד מנינים היום', zmanim: 'זמני היום', more: 'ועוד',
-      help: 'שלחו אחת מהמילים: מנין, שחרית, מנחה, מעריב, היום, מחר, זמנים' },
+      help: 'שלחו אחת מהמילים: מנין, שחרית, מנחה, מעריב, היום, מחר, זמנים. להפסקה שלחו STOP.' },
     en: { next: 'Next minyan', then: 'Then', in_: 'in', min: 'min', hr: 'hr', today: 'Today', tomorrow: 'Tomorrow', none: 'No minyanim are listed for the coming days.',
       left: 'left', noneToday: 'No more minyanim today', zmanim: "Today's zmanim", more: 'more',
-      help: 'Text one of: next, shacharis, mincha, maariv, today, tomorrow, zmanim' }
+      help: 'Text one of: next, shacharis, mincha, maariv, today, tomorrow, zmanim. Reply STOP to opt out, HELP for help. Msg and data rates may apply.' }
   };
   var EN_TEFILLA = { shacharis: 'Shacharis', mincha: 'Mincha', maariv: 'Maariv' };
   var EN_MILESTONE = { 'הודו': 'Hodu', 'שמונה עשרה': 'Shemoneh Esrei', 'ברכו': 'Borchu', 'ישתבח': 'Yishtabach', 'נשמת': 'Nishmas' };
@@ -535,6 +535,7 @@ var MinyanSms = (function () {
   function keyword(text) {
     var t = (text || '').trim().toLowerCase().replace(/[.!?'"״׳,]/g, '');
     if (!t) return 'next';
+    if (/^(stop|stopall|unsubscribe|cancel|end|quit|start|unstop|yes)$/.test(t)) return 'carrier';
     if (/^(help|עזרה|\?|info|menu)$/.test(t)) return 'help';
     if (/^(zmanim|zman|times|זמנים|זמני היום)$/.test(t)) return 'zmanim';
     if (/^(today|היום|all|הכל|list|schedule|לוח)$/.test(t)) return 'today';
@@ -579,6 +580,7 @@ var MinyanSms = (function () {
       return EN_DAYS[info.dow] + (parsha ? ' (' + parsha + ')' : '');
     }
     var out = '', list, first, second, i;
+    if (k === 'carrier') return { text: '', lang: lang, keyword: k };
     if (k === 'help') out = L.help;
     else if (k === 'zmanim') {
       var z = engine.zmanimFor(rd), info = Cal.dayInfo(rd, !!cfg.israel), keys = ['sunrise', 'shema', 'chatzos', 'plag', 'candles', 'sunset', 'tzeis'], parts = [];
@@ -634,7 +636,8 @@ exports.handler = async function (context, event, callback) {
   try {
     var res = await fetch(context.CONFIG_URL, { cache: 'no-store' });
     var cfg = await res.json();
-    twiml.message(MinyanSms.buildReply(cfg, event.Body || '', Date.now()).text);
+    var reply = MinyanSms.buildReply(cfg, event.Body || '', Date.now()).text;
+    if (reply) twiml.message(reply);
   } catch (e) {
     twiml.message('Sorry, the schedule is unavailable right now. / הלוח אינו זמין כרגע');
   }
