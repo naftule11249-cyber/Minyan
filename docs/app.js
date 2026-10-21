@@ -205,8 +205,16 @@
         el('h2', { class: 't', text: n.title || '' }),
         el('div', { class: 'b', text: n.body.trim() })]));
     });
+    if (ui.sponsorTimer) { clearInterval(ui.sponsorTimer); ui.sponsorTimer = null; }
     if (!items.length) return null;
-    return el('div', { class: 'sponsors' }, [el('div', { class: 'sponsors-inner' }, items)]);
+    var rotate = $('#app').classList.contains('display') && items.length > 1;
+    if (!rotate) return el('div', { class: 'sponsors' }, [el('div', { class: 'sponsors-inner' }, items)]);
+    /* lobby / door screens: one sponsor at a time, cycling with a fade; the index survives the minute-by-minute re-render */
+    var idx = (ui.sponsorIndex || 0) % items.length, secs = Math.max(2, +cfg.sponsorSeconds || 8);
+    function show(i) { items.forEach(function (it, k) { it.classList.toggle('on', k === i); it.setAttribute('aria-hidden', k === i ? 'false' : 'true'); }); }
+    show(idx);
+    ui.sponsorTimer = setInterval(function () { idx = (idx + 1) % items.length; ui.sponsorIndex = idx; show(idx); }, secs * 1000);
+    return el('div', { class: 'sponsors' }, [el('div', { class: 'sponsors-inner rotating' }, items)]);
   }
   function smsPanel() {
     var num = (cfg.smsNumber || '').trim();
@@ -391,6 +399,7 @@
     var fRooms = inp('f-rooms', d.rooms || '', { placeholder: 'ברך משה, דברי יואל, לב אהרן' });
     var fSite = inp('f-site', d.siteUrl || '', { dir: 'ltr', placeholder: 'https://yourname.github.io/minyan/' }), fLogo = inp('f-logo', d.logo || '', { dir: 'ltr', placeholder: 'logo.png' });
     var fNotify = inp('f-notify', d.notifyUrl || '', { dir: 'ltr', placeholder: 'https://minyan-sms.yourname.workers.dev' });
+    var fSponsorSecs = inp('f-sponsor-secs', d.sponsorSeconds || 8, { type: 'number', min: '2', max: '120', inputmode: 'numeric' });
     g.appendChild(el('div', { class: 'fields' }, [field('Shul name (shown on the board)', fName), field('Location name (shown in the footer)', fLocName), field('SMS number (once the text service is set up)', fSms)]));
     var roomSelects = [];
     function roomList() { return fRooms.value.split(',').map(function (x) { return x.trim(); }).filter(Boolean); }
@@ -435,7 +444,7 @@
       return [sel, newIn, okBtn];
     }
     g.appendChild(el('div', { class: 'fields' }, [field('Website address (used for share previews and the app)', fSite), field('Logo file shown in the header (file name next to index.html)', fLogo)]));
-    g.appendChild(el('div', { class: 'fields' }, [field('Notification service address (the Cloudflare worker; enables reminders in the app)', fNotify)]));
+    g.appendChild(el('div', { class: 'fields' }, [field('Notification service address (the Cloudflare worker; enables reminders in the app)', fNotify), field('Lobby screen: seconds per sponsor box (they take turns when there is more than one)', fSponsorSecs)]));
     g.appendChild(el('div', { class: 'fields' }, [field('Latitude', fLat), field('Longitude', fLng), field('Time zone', fTz), field('Elevation (meters)', fElev)]));
     g.appendChild(el('datalist', { id: 'tz-list' }, ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Toronto', 'Europe/London', 'Europe/Antwerp', 'Europe/Zurich', 'Asia/Jerusalem', 'Australia/Melbourne'].map(function (z) { return el('option', { value: z }); })));
     g.appendChild(el('div', { class: 'fields' }, [field('Candle lighting: minutes before sunset', fCandles), field('Nightfall (tzeis): minutes after sunset', fTzeisMin), field('Nightfall: degrees below the horizon (used when minutes is blank)', fTzeisDeg)]));
@@ -826,6 +835,7 @@
       out.rooms = fRooms.value.trim();
       out.siteUrl = fSite.value.trim();
       out.notifyUrl = fNotify.value.trim();
+      out.sponsorSeconds = Math.max(2, +fSponsorSecs.value || 8);
       out.logo = fLogo.value.trim();
       out.schedules = {};
       Cal.DAY_TYPES.forEach(function (t) {

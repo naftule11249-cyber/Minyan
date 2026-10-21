@@ -219,3 +219,9 @@ details.help summary { cursor: pointer; font-weight: 500; }
   .week-block + .week-block { break-before: page; page-break-before: always; }
   .wday.today { background: none; }
 }
+
+/* Lobby screen: sponsors take turns in one spot, fading between them */
+.sponsors-inner.rotating { display: grid; grid-template-columns: 1fr; }
+.sponsors-inner.rotating > .sponsor { grid-area: 1 / 1; opacity: 0; transition: opacity .9s ease; pointer-events: none; }
+.sponsors-inner.rotating > .sponsor.on { opacity: 1; pointer-events: auto; }
+@media (prefers-reduced-motion: reduce) { .sponsors-inner.rotating > .sponsor { transition: none; } }
