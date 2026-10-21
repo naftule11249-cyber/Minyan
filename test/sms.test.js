@@ -14,7 +14,7 @@ check('shacharis after last -> tomorrow', R('shacharis', at(13, 0)), /^Shacharis
 check('he today', R('היום', at(11, 30)), /^היום – יום שלישי פרשת לך לך, ט׳ חשון תשפ״ז\nשחרית: 11:40 שלמה יודא, 12:00 דברי יואל, 12:\d\d ברך משה\nמנחה: .*\nמעריב: /);
 check('late night -> none today', R('today', at(23, 30)), /^No more minyanim today\. Next minyan: Tomorrow, Shacharis – ברך משה 6:20/);
 check('tomorrow', R('tomorrow', at(11, 0)), /^Tomorrow – Wednesday \(לך לך\)\nShacharis: 6:20 ברך משה/);
-check('zmanim he', R('זמנים', at(11, 0)), /^זמני היום \(יום שלישי פרשת לך לך, ט׳ חשון תשפ״ז\): נץ החמה 7:13, סוף זמן ק״ש 9:56, חצות 12:40, פלג המנחה 5:00, שקיעה 6:08, צאת הכוכבים 7:20$/);
+check('zmanim he', R('זמנים', at(11, 0)), /^זמני היום \(יום שלישי פרשת לך לך, ט׳ חשון תשפ״ז\): נץ החמה 7:12, סוף זמן ק״ש 9:56, חצות 12:40, פלג המנחה 5:00, שקיעה 6:08, צאת הכוכבים 7:20$/);
 check('friday candles', R('zmanim', at(11, 0, 23)), /Candles 5:4\d, Sunset/);
 check('help', R('עזרה', at(11, 0)), /^שלחו אחת מהמילים/);
 check('next on friday night -> shabbos', R('next', at(20, 0, 23)), /^Next minyan: Tomorrow, Shacharis – ברך משה 8:00/);

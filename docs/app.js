@@ -86,7 +86,7 @@
       el('span', { class: 'sub', text: typeLabel(s) })]));
     tefillos().forEach(function (t) {
       var list = s.byTefilla[t.id] || [], sec = el('section', { class: 'tefilla' });
-      sec.appendChild(el('h3', null, ['מניני ' + t.name, list.length ? el('span', { class: 'n num', text: list.length + ' מנינים' }) : null]));
+      sec.appendChild(el('h3', null, ['מניני ' + t.name]));
       if (!list.length) { sec.appendChild(el('div', { class: 'none', text: 'אין מנינים רשומים' })); }
       else {
         var grid = el('div', { class: 'grid' });
@@ -255,7 +255,48 @@
     var fRooms = inp('f-rooms', d.rooms || '', { placeholder: 'ברך משה, דברי יואל, לב אהרן' });
     var fSite = inp('f-site', d.siteUrl || '', { dir: 'ltr', placeholder: 'https://yourname.github.io/minyan/' }), fLogo = inp('f-logo', d.logo || '', { dir: 'ltr', placeholder: 'logo.png' });
     g.appendChild(el('div', { class: 'fields' }, [field('Shul name (shown on the board)', fName), field('Location name (shown in the footer)', fLocName), field('SMS number (once the text service is set up)', fSms)]));
-    g.appendChild(el('div', { class: 'fields' }, [field('Rooms / minyan names, comma-separated (suggested when you enter minyanim)', fRooms)]));
+    var roomSelects = [];
+    function roomList() { return fRooms.value.split(',').map(function (x) { return x.trim(); }).filter(Boolean); }
+    function roomsChanged() { refreshRooms(); paintRoomsEditor(); roomSelects.forEach(function (f) { try { f(); } catch (e) {} }); }
+    function addRoomToList(name) { var l = roomList(); if (l.indexOf(name) < 0) { l.push(name); fRooms.value = l.join(', '); } roomsChanged(); }
+    var roomsChips = el('div', { class: 'chips-row' }), roomAdd = el('input', { id: 'f-room-add', type: 'text', dir: 'auto', placeholder: 'Room / minyan name', class: 'room', autocomplete: 'off' });
+    function paintRoomsEditor() {
+      roomsChips.innerHTML = '';
+      roomList().forEach(function (name, idx) {
+        roomsChips.appendChild(el('span', { class: 'rchip' }, [el('span', { text: name }), el('button', { type: 'button', class: 'x', text: '✕', 'aria-label': 'Remove ' + name, onclick: function () { var l = roomList(); l.splice(idx, 1); fRooms.value = l.join(', '); roomsChanged(); } })]));
+      });
+      if (!roomList().length) roomsChips.appendChild(el('span', { class: 'hint', text: 'No rooms yet. Add the rooms or minyan names here; the schedule rows pick from this list.' }));
+    }
+    function addRoomFromInput() { var v = roomAdd.value.trim(); if (!v) return; roomAdd.value = ''; addRoomToList(v); }
+    roomAdd.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); addRoomFromInput(); } });
+    fRooms.hidden = true;
+    g.appendChild(el('div', { class: 'field' }, [el('label', { for: 'f-room-add', text: 'Rooms / minyan names (the schedule rows pick from this list, so names are always spelled the same)' }), roomsChips,
+      el('div', { class: 'mrow-l' }, [roomAdd, el('button', { type: 'button', class: 'btn small', text: '+ Add room', onclick: addRoomFromInput })]), fRooms]));
+    /* a dropdown of the defined rooms; "New room…" adds one to the list */
+    function roomPicker(current, onPick, label) {
+      var sel = el('select', { 'aria-label': label || 'Room' }), newIn = el('input', { type: 'text', dir: 'auto', placeholder: 'New room name', class: 'room', 'aria-label': 'New room name' }), okBtn = el('button', { type: 'button', class: 'btn small', text: 'Add' });
+      newIn.hidden = true; okBtn.hidden = true;
+      function cur() { return (typeof current === 'function' ? current() : current) || ''; }
+      function fill() {
+        var c = cur(), names = knownRooms.slice();
+        if (c && names.indexOf(c) < 0) names.push(c);
+        sel.innerHTML = '';
+        sel.appendChild(el('option', { value: '', text: label === 'Add a room' ? '+ add a room…' : '— no room —' }));
+        names.forEach(function (n) { sel.appendChild(el('option', { value: n, text: n })); });
+        sel.appendChild(el('option', { value: '__new', text: 'New room…' }));
+        sel.value = c;
+      }
+      function hideNew() { newIn.hidden = true; okBtn.hidden = true; }
+      sel.addEventListener('change', function () {
+        if (sel.value === '__new') { newIn.hidden = false; okBtn.hidden = false; newIn.focus(); return; }
+        hideNew(); onPick(sel.value); fill();
+      });
+      function commitNew() { var v = newIn.value.trim(); hideNew(); newIn.value = ''; if (!v) { fill(); return; } addRoomToList(v); fill(); sel.value = v; onPick(v); fill(); }
+      okBtn.addEventListener('click', commitNew);
+      newIn.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); commitNew(); } });
+      fill(); roomSelects.push(fill);
+      return [sel, newIn, okBtn];
+    }
     g.appendChild(el('div', { class: 'fields' }, [field('Website address (used for share previews and the app)', fSite), field('Logo file shown in the header (file name next to index.html)', fLogo)]));
     g.appendChild(el('div', { class: 'fields' }, [field('Latitude', fLat), field('Longitude', fLng), field('Time zone', fTz), field('Elevation (meters)', fElev)]));
     g.appendChild(el('datalist', { id: 'tz-list' }, ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Toronto', 'Europe/London', 'Europe/Antwerp', 'Europe/Zurich', 'Asia/Jerusalem', 'Australia/Melbourne'].map(function (z) { return el('option', { value: z }); })));
@@ -286,18 +327,25 @@
       var p = parseLine(line, tf);
       if (!p) return null;
       if (!p.spec) return { raw: line.trim() };
-      if (p.series) return { series: true, every: p.spec.every, start: specToRow(p.spec.start), endMode: p.spec.end ? 'to' : 'count',
-        end: p.spec.end ? specToRow(p.spec.end) : { kind: 'fixed', time: '12:00', off: 0, round: false }, count: p.spec.count || 10, rooms: p.rooms.join(', '), note: p.note };
+      if (p.series) {
+        var st = specToRow(p.spec.start), en;
+        if (p.spec.end) en = specToRow(p.spec.end);
+        else { /* legacy "count N": same span, expressed as an end that moves with the start */
+          var span = p.spec.every * Math.max(0, (p.spec.count || 1) - 1);
+          en = st.kind === 'fixed' ? { kind: 'fixed', time: hhmm(p.spec.start.min + span), off: 0, round: false } : { kind: st.kind, time: '', off: st.off + span, round: false };
+        }
+        return { series: true, every: p.spec.every, start: st, endMode: 'to', end: en, rooms: p.rooms.join(', '), note: p.note };
+      }
       var r = specToRow(p.spec); r.room = p.room; r.note = p.note;
       return r;
     }
     function tokOf(w) { return w.kind === 'fixed' ? (w.time || '07:00') : (ZWORD[w.kind] + (w.off ? (w.off < 0 ? '-' : '+') + Math.abs(w.off) : '') + (w.round ? '~5' : '')); }
     function rowToLine(r) {
       if (r.raw != null) return r.raw;
-      if (r.series) return 'every ' + (r.every || 10) + ' from ' + tokOf(r.start) + (r.endMode === 'count' ? ' count ' + (r.count || 1) : ' to ' + tokOf(r.end)) + (r.rooms ? ' rooms ' + r.rooms : '') + (r.note ? ' // ' + r.note : '');
+      if (r.series) return 'every ' + (r.every || 10) + ' from ' + tokOf(r.start) + ' to ' + tokOf(r.end) + (r.rooms ? ' rooms ' + r.rooms : '') + (r.note ? ' // ' + r.note : '');
       return tokOf(r) + (r.room ? ' ' + r.room : '') + (r.note ? ' // ' + r.note : '');
     }
-    var roomsList = el('datalist', { id: 'rooms-list' });
+    var roomsList = el('datalist', { id: 'rooms-list' }), knownRooms = [];
     function refreshRooms() {
       var set = {}, probe = { period: 'am' };
       fRooms.value.split(',').forEach(function (x) { if (x.trim()) set[x.trim()] = 1; });
@@ -305,7 +353,19 @@
       Object.keys(lines).forEach(function (k) { Object.keys(lines[k]).forEach(function (id) { lines[k][id].value.split('\n').forEach(take); }); });
       oRows.forEach(function (r) { Object.keys(r.lines).forEach(function (id) { r.lines[id].value.split('\n').forEach(take); }); });
       roomsList.innerHTML = '';
-      Object.keys(set).sort().forEach(function (name) { roomsList.appendChild(el('option', { value: name })); });
+      knownRooms = Object.keys(set).sort();
+      knownRooms.forEach(function (name) { roomsList.appendChild(el('option', { value: name })); });
+    }
+    /* "דברי יואל ברך משה" typed without commas -> ["דברי יואל", "ברך משה"] when it is exactly a run of known room names */
+    function splitKnown(str) {
+      var names = knownRooms.filter(function (n) { return n !== str; }).sort(function (a, b) { return b.length - a.length; }), out = [], rest = str.trim(), hit, i;
+      while (rest) {
+        hit = null;
+        for (i = 0; i < names.length; i++) if (rest.indexOf(names[i]) === 0) { hit = names[i]; break; }
+        if (!hit) return [str];
+        out.push(hit); rest = rest.slice(hit.length).trim();
+      }
+      return out.length ? out : [str];
     }
     /* store = {value: lines text}; tfIndex = index into d.tefillos; typeKeyFn() = day type used for the "today" preview */
     function minyanEditor(store, tfIndex, typeKeyFn, copyFrom) {
@@ -320,7 +380,7 @@
         if (!t.length) return r.series ? 'no minyanim today (check the times)' : '';
         if (!r.series) return 'today ' + fmtTime(t[0]);
         var head = t.slice(0, 3).map(fmtTime).join(', ');
-        return 'today ' + head + (t.length > 4 ? ' … ' : t.length === 4 ? ', ' : '') + (t.length > 3 ? fmtTime(t[t.length - 1]) : '') + ' (' + t.length + ' minyanim)';
+        return 'today ' + head + (t.length > 4 ? ' … ' : t.length === 4 ? ', ' : '') + (t.length > 3 ? fmtTime(t[t.length - 1]) : '');
       }
       /* the "when" widget: fixed time picker, or zman + minutes before/after + rounding. Mutates w and calls onChange. */
       function timeWidget(w, onChange, label, roundLabel) {
@@ -358,27 +418,34 @@
         if (r.series) {
           var every = el('input', { type: 'number', min: '1', step: '1', inputmode: 'numeric', class: 'mins', value: String(r.every || 10), 'aria-label': 'Every how many minutes' });
           every.addEventListener('input', function () { r.every = Math.max(1, +every.value || 1); changed(); });
-          var endMode = el('select', { 'aria-label': 'Until or for' }, [el('option', { value: 'to', text: 'until' }), el('option', { value: 'count', text: 'for' })]);
-          endMode.value = r.endMode || 'to';
-          var count = el('input', { type: 'number', min: '1', step: '1', inputmode: 'numeric', class: 'mins', value: String(r.count || 10), 'aria-label': 'How many minyanim' });
-          count.addEventListener('input', function () { r.count = Math.max(1, +count.value || 1); changed(); });
-          var countL = el('span', { class: 'k', text: 'minyanim' });
           var endW = timeWidget(r.end, changed, 'Until time', '');
-          var endWrap = el('span', { class: 'inl' }, endW);
-          function showEnd() { var c = endMode.value === 'count'; endWrap.hidden = c; count.hidden = !c; countL.hidden = !c; }
-          endMode.addEventListener('change', function () { r.endMode = endMode.value; showEnd(); changed(); });
-          showEnd();
-          var rooms = el('input', { type: 'text', dir: 'auto', placeholder: 'Rooms in turn, comma-separated: ברך משה, דברי יואל', value: r.rooms || '', class: 'grow', list: 'rooms-list', autocomplete: 'off' });
-          rooms.addEventListener('input', function () { r.rooms = rooms.value; changed(); });
+          var seq = (r.rooms || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+          if (seq.length === 1) { seq = splitKnown(seq[0]); if (seq.length > 1) r.rooms = seq.join(', '); }
+          var chips = el('div', { class: 'chips-row' });
+          function paint() {
+            chips.innerHTML = '';
+            seq.forEach(function (name, idx) {
+              function move(dir) { var j = idx + dir; if (j < 0 || j >= seq.length) return; seq.splice(idx, 1); seq.splice(j, 0, name); commitRooms(); }
+              chips.appendChild(el('span', { class: 'rchip' }, [
+                el('span', { class: 'n', text: (idx + 1) + '.' }), el('span', { text: name }),
+                seq.length > 1 ? el('button', { type: 'button', class: 'x', text: '◀', title: 'Earlier', 'aria-label': 'Move ' + name + ' earlier', onclick: function () { move(-1); } }) : null,
+                seq.length > 1 ? el('button', { type: 'button', class: 'x', text: '▶', title: 'Later', 'aria-label': 'Move ' + name + ' later', onclick: function () { move(1); } }) : null,
+                el('button', { type: 'button', class: 'x', text: '✕', 'aria-label': 'Remove ' + name, onclick: function () { seq.splice(idx, 1); commitRooms(); } })]));
+            });
+            if (!seq.length) chips.appendChild(el('span', { class: 'k', text: 'no rooms yet: pick them below in the order they take turns' }));
+          }
+          function commitRooms() { r.rooms = seq.join(', '); paint(); changed(); }
+          var picker = roomPicker('', function (v) { if (v) { seq.push(v); commitRooms(); } }, 'Add a room');
+          paint();
           row.appendChild(el('div', { class: 'mrow-l' }, [el('span', { class: 'tag', text: 'Repeating' }), el('span', { class: 'k', text: 'every' }), every, el('span', { class: 'k', text: 'min, from' })].concat(timeWidget(r.start, changed, 'From', 'round every minyan to 5'))));
-          row.appendChild(el('div', { class: 'mrow-l' }, [endMode, endWrap, count, countL]));
-          row.appendChild(el('div', { class: 'mrow-l' }, [rooms]));
+          row.appendChild(el('div', { class: 'mrow-l' }, [el('span', { class: 'k', text: 'until' })].concat(endW)));
+          row.appendChild(el('div', { class: 'mrow-l' }, [el('span', { class: 'k', text: 'rooms, in this order (1st minyan, 2nd, …, then again from 1):' }), chips]));
+          row.appendChild(el('div', { class: 'mrow-l' }, picker));
           row.appendChild(el('div', { class: 'mrow-l' }, [note, pv, del]));
         } else {
-          var room = el('input', { type: 'text', list: 'rooms-list', dir: 'auto', placeholder: 'Room / minyan name', value: r.room || '', class: 'room', autocomplete: 'off' });
-          room.addEventListener('input', function () { r.room = room.value; sync(); });
+          var room = roomPicker(function () { return r.room; }, function (v) { r.room = v; sync(); }, 'Room');
           row.appendChild(el('div', { class: 'mrow-l' }, timeWidget(r, changed).concat([pv])));
-          row.appendChild(el('div', { class: 'mrow-l' }, [room, note, del]));
+          row.appendChild(el('div', { class: 'mrow-l' }, room.concat([note, del])));
         }
         pv.textContent = previewText(r);
         return row;
@@ -394,7 +461,7 @@
       var repeatBtn = el('button', { type: 'button', class: 'btn small', text: '+ Add repeating', title: 'A run of minyanim every few minutes, in rooms taken in turn', onclick: function () {
         var last = rows.length ? rows[rows.length - 1] : null, m = last ? previewOf(last) : NaN;
         addRow({ series: true, every: 15, start: { kind: 'fixed', time: hhmm(isNaN(m) ? 7 * 60 : m + 15), off: 0, round: false }, endMode: 'to',
-          end: { kind: 'fixed', time: hhmm(isNaN(m) ? 9 * 60 : m + 135), off: 0, round: false }, count: 10, rooms: fRooms.value.trim(), note: '' });
+          end: { kind: 'fixed', time: hhmm(isNaN(m) ? 9 * 60 : m + 135), off: 0, round: false }, rooms: fRooms.value.trim(), note: '' });
         var inputs = list.lastChild.querySelectorAll('input, select'); if (inputs.length) inputs[0].focus();
       } });
       var copySel = el('select', { 'aria-label': 'Copy from another day' });
@@ -428,7 +495,7 @@
     sp.appendChild(roomsList);
     sp.appendChild(el('details', { class: 'help' }, [el('summary', { text: 'How this works' }), el('div', { class: 'hint' }, [
       el('p', { text: 'Pick a day type, then add one row per minyan: a fixed time, or a zman (sunset, chatzos, candle lighting…) with minutes before or after. Type the room name; names you already used are suggested. "today" shows what that row gives today.' }),
-      el('p', { text: '"+ Add repeating" makes one row that stands for a whole run: every N minutes, from a time or a zman, until a time or zman (or for a number of minyanim), in the rooms you list, taken in turn. It is recalculated every day, so a run that starts at sunrise moves with sunrise. Mix repeating rows and single rows freely; the board shows them all sorted by time.' }),
+      el('p', { text: '"+ Add repeating" makes one row that stands for a whole run: every N minutes, from a time or a zman, until a time or zman, in the rooms you pick, taken in turn in the order shown. It is recalculated every day, so a run that starts at sunrise moves with sunrise. Mix repeating rows and single rows freely; the board shows them all sorted by time.' }),
       el('p', { text: '"Copy from…" starts a day type from another one. A day type with no rows uses the more general one (Rosh Chodesh empty → Weekdays; Yom Tov empty → Shabbos).' }),
       el('p', null, ['"Edit as text" shows the same rows as lines like ', el('code', { text: '6:20 ברך משה' }), ', ', el('code', { text: 'sunset-15 דברי יואל // note' }), ' or ', el('code', { text: 'every 10 from sunrise-30 to chatzos-30 rooms ברך משה, דברי יואל' }), ', handy for pasting a whole list.'])])]));
     var typeTabs = el('div', { class: 'tabs' }), typePages = {};
@@ -439,10 +506,6 @@
       var k = FALLBACK[key];
       while (k) { if (lines[k][tfId].value.trim()) return k; k = FALLBACK[k]; }
       return null;
-    }
-    function countOf(key, tfId, i) {
-      var n = 0; lines[key][tfId].value.split('\n').forEach(function (l) { n += expandLine(parseLine(l, liveTefilla(i)), todayRd, key).length; });
-      return n;
     }
     Cal.DAY_TYPES.forEach(function (t) {
       var key = t[0], b = el('button', { type: 'button', id: 'dt-' + key, text: t[3], 'aria-selected': 'false', onclick: function () { showType(key); } });
@@ -462,9 +525,9 @@
           editor.hidden = same.checked;
           var kept = '';
           function update() {
-            if (!same.checked) { info.textContent = 'Own list for ' + t[3] + ' (' + countOf(key, tf.id, i) + ' minyanim today).'; return; }
+            if (!same.checked) { info.textContent = 'Own list for ' + t[3] + '.'; return; }
             var src = sourceOf(key, tf.id);
-            info.textContent = src ? 'Follows the ' + TYPE_EN[src] + ' list (' + countOf(src, tf.id, i) + ' minyanim today).' : 'No list here and none to follow: no ' + tf.name + ' minyanim on this day.';
+            info.textContent = src ? 'Follows the ' + TYPE_EN[src] + ' list.' : 'No list here and none to follow: no ' + tf.name + ' minyanim on this day.';
           }
           same.addEventListener('change', function () {
             if (same.checked) { kept = store.value; store.value = ''; editor.hidden = true; }
@@ -490,6 +553,9 @@
       infoUpdaters.forEach(function (f) { try { f(); } catch (e) {} });
     }
     function showType(key) { Cal.DAY_TYPES.forEach(function (t) { typePages[t[0]].page.hidden = t[0] !== key; typePages[t[0]].button.setAttribute('aria-selected', String(t[0] === key)); }); }
+    refreshRooms();
+    if (!fRooms.value.trim()) fRooms.value = knownRooms.join(', ');
+    paintRoomsEditor(); roomsChanged();
     pages.schedule = sp;
 
     /* notices */

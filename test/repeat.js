@@ -16,11 +16,12 @@ const { chromium } = require('playwright');
   await row.locator('input[aria-label="Every how many minutes"]').fill('10');
   await row.locator('select[aria-label="From"]').selectOption('fixed'); await row.locator('input[type=time]').first().fill('20:00');
   await row.locator('select[aria-label="Until time"]').selectOption('fixed'); await row.locator('input[type=time]').nth(1).fill('20:30');
-  await row.locator('input[list="rooms-list"]').fill('ברך משה, דברי יואל');
+  await row.locator('select[aria-label="Add a room"]').selectOption('ברך משה'); await row.locator('select[aria-label="Add a room"]').selectOption('דברי יואל');
+  console.log('chips:', await row.locator('.rchip').allTextContents());
   await page.waitForTimeout(150);
   console.log('preview (until 20:30):', await row.locator('.pv').textContent());
-  await row.locator('select[aria-label="Until or for"]').selectOption('count'); await row.locator('input[aria-label="How many minyanim"]').fill('3');
-  console.log('preview (count 3):', await row.locator('.pv').textContent());
+  await row.locator('input[type=time]').nth(1).fill('20:20');
+  console.log('preview (until 20:20):', await row.locator('.pv').textContent());
   // zman start
   await row.locator('select[aria-label="From"]').selectOption('tzeis'); await row.locator('input[aria-label="Minutes"]').first().fill('5'); await row.locator('select[aria-label="Before or after"]').first().selectOption('+');
   console.log('preview (from tzeis+5):', await row.locator('.pv').textContent());

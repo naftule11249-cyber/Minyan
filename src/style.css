@@ -157,6 +157,11 @@ footer { max-width: 1120px; margin: 0 auto; padding-block: 0 30px; padding-left:
 .mrow .tag { background: var(--gold); color: #fff; font-size: .72rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; letter-spacing: .03em; }
 .mrow .k { font-size: .85rem; color: var(--muted); }
 .mrow .inl { display: contents; }
+.chips-row { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.rchip { display: inline-flex; align-items: center; gap: 4px; background: var(--panel); border: 1px solid var(--gold); border-radius: 999px; padding: 2px 6px 2px 10px; font-size: .9rem; }
+.rchip .x { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 2px; font-size: .8rem; }
+.rchip .x:hover { color: var(--count); }
+.rchip .n { color: var(--muted); font-size: .8rem; }
 .editor-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .editor-bar select { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 3px 8px; font-size: .85rem; }
 .series { border: 1px dashed var(--line); border-radius: 8px; padding: 8px; display: grid; gap: 6px; font-size: .9rem; }

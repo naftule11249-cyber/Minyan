@@ -24,7 +24,7 @@ const { chromium } = require('playwright');
   console.log('mincha rows after add:', await mi.locator('.mrow').count(), '| new row preview:', await mi.locator('.mrow').last().locator('.pv').textContent());
   await mi.locator('.mrow').last().locator('select').first().selectOption('fixed');
   await mi.locator('.mrow').last().locator('input[type=time]').fill('17:45');
-  await mi.locator('.mrow').last().locator('input.room').fill('לב אהרן');
+  await mi.locator('.mrow').last().locator('select[aria-label="Room"]').selectOption('לב אהרן');
   // repeating row on sunday shacharis
   await page.click('#dt-sunday');
   const sun = page.locator('#dtp-sunday').locator('.fields.three > .field').nth(0);
@@ -35,7 +35,7 @@ const { chromium } = require('playwright');
   await srow.locator('input[aria-label="Every how many minutes"]').fill('30');
   await srow.locator('select[aria-label="From"]').selectOption('fixed'); await srow.locator('input[type=time]').nth(0).fill('07:00');
   await srow.locator('select[aria-label="Until time"]').selectOption('fixed'); await srow.locator('input[type=time]').nth(1).fill('09:00');
-  await srow.locator('input[list="rooms-list"]').fill('ברך משה, דברי יואל');
+  await srow.locator('select[aria-label="Add a room"]').selectOption('ברך משה'); await srow.locator('select[aria-label="Add a room"]').selectOption('דברי יואל');
   console.log('sunday repeating preview:', await srow.locator('.pv').textContent(), '| tab marked:', await page.getAttribute('#dt-sunday', 'class'));
   // text view of sunday shacharis
   await sun.locator('button:has-text("Edit as text")').click();
