@@ -1,0 +1,38 @@
+const { chromium } = require('playwright');
+(async () => {
+  const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' }).catch(() => chromium.launch());
+  const errors = [];
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: 'he', timezoneId: 'America/New_York', serviceWorkers: 'block' });
+  const page = await ctx.newPage();
+  page.on('console', m => { if (m.type() === 'error' && !/favicon/.test(m.text())) errors.push(m.text()); });
+  page.on('pageerror', e => errors.push('pageerror: ' + e.message));
+  await page.goto('http://localhost:8790/index.html', { waitUntil: 'networkidle' });
+  await page.evaluate(() => { try { localStorage.clear(); } catch (e) {} }); await page.reload({ waitUntil: 'networkidle' });
+  await page.click('footer button:has-text("Edit")'); await page.fill('#pin-input', '1234'); await page.press('#pin-input', 'Enter');
+  await page.waitForSelector('#tab-schedule'); await page.click('#tab-schedule');
+  const maariv = page.locator('#dtp-weekday .fields.three > .field').nth(2);
+  await maariv.locator('button:has-text("+ Add repeating")').click();
+  const row = maariv.locator('.mrow.series').first();
+  await row.locator('input[aria-label="Every how many minutes"]').fill('10');
+  await row.locator('select[aria-label="From"]').selectOption('fixed'); await row.locator('input[type=time]').first().fill('20:00');
+  await row.locator('select[aria-label="Until time"]').selectOption('fixed'); await row.locator('input[type=time]').nth(1).fill('20:30');
+  await row.locator('input[list="rooms-list"]').fill('ברך משה, דברי יואל');
+  await page.waitForTimeout(150);
+  console.log('preview (until 20:30):', await row.locator('.pv').textContent());
+  await row.locator('select[aria-label="Until or for"]').selectOption('count'); await row.locator('input[aria-label="How many minyanim"]').fill('3');
+  console.log('preview (count 3):', await row.locator('.pv').textContent());
+  // zman start
+  await row.locator('select[aria-label="From"]').selectOption('tzeis'); await row.locator('input[aria-label="Minutes"]').first().fill('5'); await row.locator('select[aria-label="Before or after"]').first().selectOption('+');
+  console.log('preview (from tzeis+5):', await row.locator('.pv').textContent());
+  await maariv.locator('button:has-text("Edit as text")').click();
+  console.log('text:', (await maariv.locator('textarea').inputValue()).split('\n').pop());
+  await maariv.locator('button:has-text("Back to the list")').click();
+  console.log('rows after round trip:', await maariv.locator('.mrow').count(), '| series rows:', await maariv.locator('.mrow.series').count());
+  await page.screenshot({ path: 'test/shot-repeat.png' });
+  await page.click('.panel .bar button.primary'); await page.waitForTimeout(400);
+  const cfg = await page.evaluate(() => JSON.parse(localStorage.getItem('minyan-config')));
+  console.log('saved maariv:', cfg.schedules.weekday.maariv.split('\n').pop());
+  console.log('board maariv tiles:', (await page.locator('section.tefilla').nth(2).textContent()).replace(/\s+/g, ' ').trim().slice(0, 160));
+  await ctx.close(); await browser.close();
+  console.log(errors.length ? 'ERRORS:\n' + errors.join('\n') : 'no console errors');
+})();

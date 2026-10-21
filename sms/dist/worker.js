@@ -386,6 +386,13 @@ var MinyanEngine = (function () {
     if (!s || s.charAt(0) === '#') return null;
     var note = '', i = s.indexOf('//');
     if (i >= 0) { note = s.slice(i + 2).trim(); s = s.slice(0, i).trim(); }
+    var m = /^every\s+(\d+)\s+from\s+(\S+)\s+(?:to\s+(\S+)|count\s+(\d+))(?:\s+rooms\s+(.*))?$/i.exec(s);
+    if (m) {
+      var start = parseSpec(m[2], tefilla), end = m[3] ? parseSpec(m[3], tefilla) : null;
+      var rooms = (m[5] || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+      var ok = !!start && +m[1] > 0 && (m[3] ? !!end : +m[4] > 0);
+      return { raw: line, tok: s, series: true, spec: ok ? { kind: 'series', every: +m[1], start: start, end: end, count: m[4] ? +m[4] : 0 } : null, room: '', rooms: rooms, note: note };
+    }
     var parts = s.split(/\s*\|\s*|\s+/), tok = parts.shift();
     return { raw: line, tok: tok, spec: parseSpec(tok, tefilla), room: parts.join(' '), note: note };
   }
@@ -412,6 +419,21 @@ var MinyanEngine = (function () {
       var v = base + spec.offset;
       return spec.round ? Math.floor(v / spec.round) * spec.round : Math.floor(v);
     }
+    /* A parsed line -> the minyanim it produces on day rd: [{start, room, note}] (a repeating line gives many). */
+    function expand(p, rd, type) {
+      if (!p || !p.spec) return [];
+      if (p.spec.kind !== 'series') { var st = resolveMin(p.spec, rd, type); return isNaN(st) ? [] : [{ start: st, room: p.room, note: p.note }]; }
+      var out = [], start = resolveMin(p.spec.start, rd, type);
+      if (isNaN(start)) return out;
+      var end = p.spec.end ? resolveMin(p.spec.end, rd, type) : NaN;
+      if (p.spec.end && isNaN(end)) return out;
+      var n = 0, m = start, limit = p.spec.count || 500;
+      while (n < limit && n < 500 && (!p.spec.end || m <= end)) {
+        out.push({ start: m, room: p.rooms.length ? p.rooms[n % p.rooms.length] : '', note: p.note });
+        m += p.spec.every; n++;
+      }
+      return out;
+    }
     function tefillos() { return (cfg.tefillos && cfg.tefillos.length) ? cfg.tefillos : TEFILLA_DEFAULTS; }
     function dayTexts(rd, info) {
       var type = Cal.dayType(info), iso = isoDate(rd);
@@ -432,13 +454,11 @@ var MinyanEngine = (function () {
       var info = Cal.dayInfo(rd, !!cfg.israel), dt = dayTexts(rd, info), tz = loc().tz, byT = {}, all = [];
       tefillos().forEach(function (t) {
         var list = [];
+        var offset = (t.offset == null || t.offset === '') ? 0 : +t.offset;
         dt.texts[t.id].text.split('\n').forEach(function (line) {
-          var p = parseLine(line, t);
-          if (!p || !p.spec) return;
-          var start = resolveMin(p.spec, rd, dt.type);
-          if (isNaN(start)) return;
-          list.push({ tefilla: t, room: p.room, note: p.note, start: start, ms: Cal.epochFromWall(rd, start, tz),
-            milestone: start + (t.offset == null || t.offset === '' ? 0 : +t.offset), rd: rd });
+          expand(parseLine(line, t), rd, dt.type).forEach(function (x) {
+            list.push({ tefilla: t, room: x.room, note: x.note, start: x.start, ms: Cal.epochFromWall(rd, x.start, tz), milestone: x.start + offset, rd: rd });
+          });
         });
         list.sort(function (a, b) { return a.start - b.start; });
         byT[t.id] = list; all = all.concat(list);
@@ -484,7 +504,7 @@ var MinyanEngine = (function () {
       if (s.override) return 'לוח מיוחד' + (s.override.label ? ': ' + s.override.label : '');
       return 'לוח ' + (TYPE_NAME[s.type] || s.type);
     }
-    return { cfg: cfg, loc: loc, zmanimFor: zmanimFor, resolveMin: resolveMin, tefillos: tefillos, dayTexts: dayTexts, scheduleFor: scheduleFor,
+    return { cfg: cfg, loc: loc, zmanimFor: zmanimFor, resolveMin: resolveMin, expand: expand, tefillos: tefillos, dayTexts: dayTexts, scheduleFor: scheduleFor,
       after: after, upcoming: upcoming, fmtTime: fmtTime, fmtCountdown: fmtCountdown, dayLine: dayLine, typeLabel: typeLabel, parseLine: parseLine };
   }
   create.parseLine = parseLine; create.parseSpec = parseSpec; create.sameEntry = sameEntry; create.gregStr = gregStr; create.isoDate = isoDate;

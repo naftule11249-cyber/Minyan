@@ -25,15 +25,16 @@ const { chromium } = require('playwright');
   await mi.locator('.mrow').last().locator('select').first().selectOption('fixed');
   await mi.locator('.mrow').last().locator('input[type=time]').fill('17:45');
   await mi.locator('.mrow').last().locator('input.room').fill('לב אהרן');
-  // series on sunday shacharis
+  // repeating row on sunday shacharis
   await page.click('#dt-sunday');
   const sun = page.locator('#dtp-sunday').locator('.fields.three > .field').nth(0);
-  await sun.locator('button:has-text("Add a series")').click();
-  const series = sun.locator('.series');
-  await series.locator('input[type=time]').nth(0).fill('07:00'); await series.locator('input[type=time]').nth(1).fill('09:00'); await series.locator('input.mins').fill('30');
-  await series.locator('input.grow').fill('ברך משה, דברי יואל');
-  await series.locator('button:has-text("Add these")').click();
-  console.log('sunday series rows:', await sun.locator('.mrow').count(), '| tab marked:', await page.getAttribute('#dt-sunday', 'class'));
+  await sun.locator('button:has-text("+ Add repeating")').click();
+  const srow = sun.locator('.mrow.series').first();
+  await srow.locator('input[aria-label="Every how many minutes"]').fill('30');
+  await srow.locator('select[aria-label="From"]').selectOption('fixed'); await srow.locator('input[type=time]').nth(0).fill('07:00');
+  await srow.locator('select[aria-label="Until time"]').selectOption('fixed'); await srow.locator('input[type=time]').nth(1).fill('09:00');
+  await srow.locator('input[list="rooms-list"]').fill('ברך משה, דברי יואל');
+  console.log('sunday repeating preview:', await srow.locator('.pv').textContent(), '| tab marked:', await page.getAttribute('#dt-sunday', 'class'));
   // text view of sunday shacharis
   await sun.locator('button:has-text("Edit as text")').click();
   console.log('sunday text:', (await sun.locator('textarea').inputValue()).replace(/\n/g, ' | '));
@@ -48,6 +49,7 @@ const { chromium } = require('playwright');
   const cfg = await page.evaluate(() => JSON.parse(localStorage.getItem('minyan-config')));
   console.log('saved weekday mincha:', cfg.schedules.weekday.mincha.replace(/\n/g, ' | '));
   console.log('saved sunday shacharis:', cfg.schedules.sunday.shacharis.replace(/\n/g, ' | '));
+  console.log('sunday expands to:', (() => { const e = null; return 'n/a'; })());
   console.log('saved sunday mincha == weekday mincha:', cfg.schedules.sunday.mincha === cfg.schedules.weekday.mincha);
   console.log('board mincha tiles:', (await page.locator('section.tefilla').nth(1).textContent()).replace(/\s+/g, ' ').trim());
   await ctx.close(); await browser.close();

@@ -25,6 +25,7 @@
   function loc() { return engine.loc(); }
   function zmanimFor(rd) { return engine.zmanimFor(rd); }
   function resolveMin(spec, rd, type) { return engine.resolveMin(spec, rd, type); }
+  function expandLine(p, rd, type) { return engine.expand(p, rd, type); }
   function tefillos() { return engine.tefillos(); }
   function scheduleFor(rd) { return engine.scheduleFor(rd); }
   function upcoming(nowMs, nowRd) { return engine.upcoming(nowMs, nowRd); }
@@ -265,77 +266,106 @@
       ['plag', 'Plag hamincha'], ['candles', 'Candle lighting'], ['sunset', 'Sunset (shkiah)'], ['tzeis', 'Nightfall (tzeis)'], ['tzeis72', 'Rabbeinu Tam (72 min)']];
     var ZWORD = { sunrise: 'sunrise', alos: 'alos', shema: 'shema', chatzos: 'chatzos', minchag: 'minchag', plag: 'plag', candles: 'candles', sunset: 'sunset', tzeis: 'tzeis', tzeis72: 'rt' };
     function hhmm(min) { min = Math.round(min); return pad2(Math.floor(min / 60) % 24) + ':' + pad2(min % 60); }
+    function specToRow(spec) { return spec.kind === 'fixed' ? { kind: 'fixed', time: hhmm(spec.min), off: 0, round: false } : { kind: spec.zman, time: '', off: spec.offset || 0, round: !!spec.round }; }
     function lineToRow(line, tf) {
       var p = parseLine(line, tf);
       if (!p) return null;
       if (!p.spec) return { raw: line.trim() };
-      var r = { room: p.room, note: p.note, off: 0, round: false };
-      if (p.spec.kind === 'fixed') { r.kind = 'fixed'; r.time = hhmm(p.spec.min); }
-      else { r.kind = p.spec.zman; r.off = p.spec.offset || 0; r.round = !!p.spec.round; }
+      if (p.series) return { series: true, every: p.spec.every, start: specToRow(p.spec.start), endMode: p.spec.end ? 'to' : 'count',
+        end: p.spec.end ? specToRow(p.spec.end) : { kind: 'fixed', time: '12:00', off: 0, round: false }, count: p.spec.count || 10, rooms: p.rooms.join(', '), note: p.note };
+      var r = specToRow(p.spec); r.room = p.room; r.note = p.note;
       return r;
     }
+    function tokOf(w) { return w.kind === 'fixed' ? (w.time || '07:00') : (ZWORD[w.kind] + (w.off ? (w.off < 0 ? '-' : '+') + Math.abs(w.off) : '') + (w.round ? '~5' : '')); }
     function rowToLine(r) {
       if (r.raw != null) return r.raw;
-      var tok = r.kind === 'fixed' ? (r.time || '07:00') : (ZWORD[r.kind] + (r.off ? (r.off < 0 ? '-' : '+') + Math.abs(r.off) : '') + (r.round ? '~5' : ''));
-      return tok + (r.room ? ' ' + r.room : '') + (r.note ? ' // ' + r.note : '');
+      if (r.series) return 'every ' + (r.every || 10) + ' from ' + tokOf(r.start) + (r.endMode === 'count' ? ' count ' + (r.count || 1) : ' to ' + tokOf(r.end)) + (r.rooms ? ' rooms ' + r.rooms : '') + (r.note ? ' // ' + r.note : '');
+      return tokOf(r) + (r.room ? ' ' + r.room : '') + (r.note ? ' // ' + r.note : '');
     }
     var roomsList = el('datalist', { id: 'rooms-list' });
     function refreshRooms() {
       var set = {}, probe = { period: 'am' };
       fRooms.value.split(',').forEach(function (x) { if (x.trim()) set[x.trim()] = 1; });
-      Object.keys(lines).forEach(function (k) { Object.keys(lines[k]).forEach(function (id) { lines[k][id].value.split('\n').forEach(function (l) { var p = parseLine(l, probe); if (p && p.room) set[p.room] = 1; }); }); });
-      oRows.forEach(function (r) { Object.keys(r.lines).forEach(function (id) { r.lines[id].value.split('\n').forEach(function (l) { var p = parseLine(l, probe); if (p && p.room) set[p.room] = 1; }); }); });
+      function take(l) { var p = parseLine(l, probe); if (!p) return; if (p.rooms) p.rooms.forEach(function (x) { set[x] = 1; }); else if (p.room) set[p.room] = 1; }
+      Object.keys(lines).forEach(function (k) { Object.keys(lines[k]).forEach(function (id) { lines[k][id].value.split('\n').forEach(take); }); });
+      oRows.forEach(function (r) { Object.keys(r.lines).forEach(function (id) { r.lines[id].value.split('\n').forEach(take); }); });
       roomsList.innerHTML = '';
       Object.keys(set).sort().forEach(function (name) { roomsList.appendChild(el('option', { value: name })); });
     }
     /* store = {value: lines text}; tfIndex = index into d.tefillos; typeKeyFn() = day type used for the "today" preview */
     function minyanEditor(store, tfIndex, typeKeyFn, copyFrom) {
-      var wrap = el('div', { class: 'editor' }), list = el('div', { class: 'rows' }), rows = [], ta = null, seriesBox = null;
+      var wrap = el('div', { class: 'editor' }), list = el('div', { class: 'rows' }), rows = [], ta = null;
       function tf() { return liveTefilla(tfIndex); }
       function sync() { store.value = rows.map(rowToLine).join('\n'); if (ta) ta.value = store.value; refreshRooms(); markTabs(); }
       function load() { rows = []; store.value.split('\n').forEach(function (l) { var r = lineToRow(l, tf()); if (r) rows.push(r); }); }
-      function previewOf(r) {
-        var p = parseLine(rowToLine(r), tf());
-        if (!p || !p.spec) return null;
-        return resolveMin(p.spec, todayRd, typeKeyFn());
+      function timesOf(r) { return expandLine(parseLine(rowToLine(r), tf()), todayRd, typeKeyFn()).map(function (x) { return x.start; }); }
+      function previewOf(r) { var t = timesOf(r); return t.length ? t[0] : NaN; }
+      function previewText(r) {
+        var t = timesOf(r);
+        if (!t.length) return r.series ? 'no minyanim today (check the times)' : '';
+        if (!r.series) return 'today ' + fmtTime(t[0]);
+        var head = t.slice(0, 3).map(fmtTime).join(', ');
+        return 'today ' + head + (t.length > 4 ? ' … ' : t.length === 4 ? ', ' : '') + (t.length > 3 ? fmtTime(t[t.length - 1]) : '') + ' (' + t.length + ' minyanim)';
+      }
+      /* the "when" widget: fixed time picker, or zman + minutes before/after + rounding. Mutates w and calls onChange. */
+      function timeWidget(w, onChange, label) {
+        var when = el('select', { 'aria-label': label || 'Time type' });
+        ZMAN_OPTS.forEach(function (o) { when.appendChild(el('option', { value: o[0], text: o[1] })); });
+        when.value = w.kind;
+        var time = el('input', { type: 'time', value: w.time || '', 'aria-label': 'Time' });
+        var sign = el('select', { 'aria-label': 'Before or after' }, [el('option', { value: '-', text: 'min before' }), el('option', { value: '+', text: 'min after' })]);
+        sign.value = w.off < 0 ? '-' : '+';
+        var mins = el('input', { type: 'number', min: '0', step: '1', inputmode: 'numeric', class: 'mins', value: String(Math.abs(w.off || 0)), 'aria-label': 'Minutes' });
+        var roundC = el('input', { type: 'checkbox' }); roundC.checked = !!w.round;
+        var roundL = el('label', { class: 'small' }, [roundC, ' round to 5']);
+        function show() { var fixed = when.value === 'fixed'; time.hidden = !fixed; sign.hidden = fixed; mins.hidden = fixed; roundL.hidden = fixed; }
+        when.addEventListener('change', function () { w.kind = when.value; if (w.kind === 'fixed' && !w.time) { w.time = '07:00'; time.value = w.time; } show(); onChange(); });
+        time.addEventListener('input', function () { w.time = time.value; onChange(); });
+        function offChange() { w.off = (+mins.value || 0) * (sign.value === '-' ? -1 : 1); onChange(); }
+        sign.addEventListener('change', offChange); mins.addEventListener('input', offChange);
+        roundC.addEventListener('change', function () { w.round = roundC.checked; onChange(); });
+        show();
+        return [when, time, sign, mins, roundL];
       }
       function renderRow(r) {
-        var row = el('div', { class: 'mrow' });
-        var del = el('button', { type: 'button', class: 'btn small danger', text: '✕', title: 'Remove this minyan', 'aria-label': 'Remove', onclick: function () { rows.splice(rows.indexOf(r), 1); row.remove(); sync(); } });
+        var row = el('div', { class: 'mrow' + (r.series ? ' series' : '') });
+        var del = el('button', { type: 'button', class: 'btn small danger', text: '✕', title: 'Remove', 'aria-label': 'Remove', onclick: function () { rows.splice(rows.indexOf(r), 1); row.remove(); sync(); } });
         if (r.raw != null) {
           var rawIn = el('input', { type: 'text', dir: 'auto', value: r.raw, class: 'grow' });
           rawIn.addEventListener('input', function () { r.raw = rawIn.value; sync(); });
           row.appendChild(el('div', { class: 'mrow-l' }, [el('span', { class: 'bad', text: 'Cannot read this line:' }), rawIn, del]));
           return row;
         }
-        var when = el('select', { 'aria-label': 'Time type' });
-        ZMAN_OPTS.forEach(function (o) { when.appendChild(el('option', { value: o[0], text: o[1] })); });
-        when.value = r.kind;
-        var time = el('input', { type: 'time', value: r.time || '', 'aria-label': 'Time' });
-        var sign = el('select', { 'aria-label': 'Before or after' }, [el('option', { value: '-', text: 'min before' }), el('option', { value: '+', text: 'min after' })]);
-        sign.value = r.off < 0 ? '-' : '+';
-        var mins = el('input', { type: 'number', min: '0', step: '1', inputmode: 'numeric', class: 'mins', value: String(Math.abs(r.off || 0)), 'aria-label': 'Minutes' });
-        var roundC = el('input', { type: 'checkbox' }); roundC.checked = !!r.round;
-        var roundL = el('label', { class: 'small' }, [roundC, ' round to 5']);
         var pv = el('span', { class: 'pv num' });
-        var room = el('input', { type: 'text', list: 'rooms-list', dir: 'auto', placeholder: 'Room / minyan name', value: r.room || '', class: 'room', autocomplete: 'off' });
+        function changed() { sync(); pv.textContent = previewText(r); }
         var note = el('input', { type: 'text', dir: 'auto', placeholder: 'Note (optional)', value: r.note || '', class: 'grow' });
-        function refresh() {
-          var fixed = when.value === 'fixed';
-          time.hidden = !fixed; sign.hidden = fixed; mins.hidden = fixed; roundL.hidden = fixed;
-          var m = previewOf(r);
-          pv.textContent = m == null || isNaN(m) ? '' : 'today ' + fmtTime(m);
-        }
-        when.addEventListener('change', function () { r.kind = when.value; if (r.kind === 'fixed' && !r.time) { r.time = '07:00'; time.value = r.time; } sync(); refresh(); });
-        time.addEventListener('input', function () { r.time = time.value; sync(); refresh(); });
-        function offChange() { r.off = (+mins.value || 0) * (sign.value === '-' ? -1 : 1); sync(); refresh(); }
-        sign.addEventListener('change', offChange); mins.addEventListener('input', offChange);
-        roundC.addEventListener('change', function () { r.round = roundC.checked; sync(); refresh(); });
-        room.addEventListener('input', function () { r.room = room.value; sync(); });
         note.addEventListener('input', function () { r.note = note.value; sync(); });
-        row.appendChild(el('div', { class: 'mrow-l' }, [when, time, sign, mins, roundL, pv]));
-        row.appendChild(el('div', { class: 'mrow-l' }, [room, note, del]));
-        refresh();
+        if (r.series) {
+          var every = el('input', { type: 'number', min: '1', step: '1', inputmode: 'numeric', class: 'mins', value: String(r.every || 10), 'aria-label': 'Every how many minutes' });
+          every.addEventListener('input', function () { r.every = Math.max(1, +every.value || 1); changed(); });
+          var endMode = el('select', { 'aria-label': 'Until or for' }, [el('option', { value: 'to', text: 'until' }), el('option', { value: 'count', text: 'for' })]);
+          endMode.value = r.endMode || 'to';
+          var count = el('input', { type: 'number', min: '1', step: '1', inputmode: 'numeric', class: 'mins', value: String(r.count || 10), 'aria-label': 'How many minyanim' });
+          count.addEventListener('input', function () { r.count = Math.max(1, +count.value || 1); changed(); });
+          var countL = el('span', { class: 'k', text: 'minyanim' });
+          var endW = timeWidget(r.end, changed, 'Until time');
+          var endWrap = el('span', { class: 'inl' }, endW);
+          function showEnd() { var c = endMode.value === 'count'; endWrap.hidden = c; count.hidden = !c; countL.hidden = !c; }
+          endMode.addEventListener('change', function () { r.endMode = endMode.value; showEnd(); changed(); });
+          showEnd();
+          var rooms = el('input', { type: 'text', dir: 'auto', placeholder: 'Rooms in turn, comma-separated: ברך משה, דברי יואל', value: r.rooms || '', class: 'grow', list: 'rooms-list', autocomplete: 'off' });
+          rooms.addEventListener('input', function () { r.rooms = rooms.value; changed(); });
+          row.appendChild(el('div', { class: 'mrow-l' }, [el('span', { class: 'tag', text: 'Repeating' }), el('span', { class: 'k', text: 'every' }), every, el('span', { class: 'k', text: 'min, from' })].concat(timeWidget(r.start, changed, 'From'))));
+          row.appendChild(el('div', { class: 'mrow-l' }, [endMode, endWrap, count, countL]));
+          row.appendChild(el('div', { class: 'mrow-l' }, [rooms]));
+          row.appendChild(el('div', { class: 'mrow-l' }, [note, pv, del]));
+        } else {
+          var room = el('input', { type: 'text', list: 'rooms-list', dir: 'auto', placeholder: 'Room / minyan name', value: r.room || '', class: 'room', autocomplete: 'off' });
+          room.addEventListener('input', function () { r.room = room.value; sync(); });
+          row.appendChild(el('div', { class: 'mrow-l' }, timeWidget(r, changed).concat([pv])));
+          row.appendChild(el('div', { class: 'mrow-l' }, [room, note, del]));
+        }
+        pv.textContent = previewText(r);
         return row;
       }
       function renderAll() { list.innerHTML = ''; rows.forEach(function (r) { list.appendChild(renderRow(r)); }); }
@@ -346,18 +376,12 @@
         addRow(r);
         var inputs = list.lastChild.querySelectorAll('input, select'); if (inputs.length) inputs[0].focus();
       } });
-      var seriesBtn = el('button', { type: 'button', class: 'btn small', text: 'Add a series…', onclick: function () { seriesBox.hidden = !seriesBox.hidden; } });
-      var sFirst = el('input', { type: 'time', value: '06:20' }), sLast = el('input', { type: 'time', value: '12:00' }), sEvery = el('input', { type: 'number', min: '1', value: '20', class: 'mins', inputmode: 'numeric' }), sRooms = el('input', { type: 'text', dir: 'auto', placeholder: 'rooms in turn, e.g. ברך משה, דברי יואל', class: 'grow' });
-      seriesBox = el('div', { class: 'series' }, [
-        el('div', { class: 'mrow-l' }, ['From', sFirst, 'to', sLast, 'every', sEvery, 'min']),
-        el('div', { class: 'mrow-l' }, [sRooms, el('button', { type: 'button', class: 'btn small primary', text: 'Add these', onclick: function () {
-          var a = sFirst.value.split(':'), b = sLast.value.split(':'), step = +sEvery.value || 0;
-          if (a.length < 2 || b.length < 2 || step < 1) { toast('Enter a first time, a last time and the minutes between minyanim'); return; }
-          var start = +a[0] * 60 + +a[1], end = +b[0] * 60 + +b[1], names = sRooms.value.split(',').map(function (x) { return x.trim(); }).filter(Boolean), n = 0;
-          for (var m = start; m <= end && n < 200; m += step, n++) addRow({ kind: 'fixed', time: hhmm(m), off: 0, round: false, room: names.length ? names[n % names.length] : '', note: '' });
-          seriesBox.hidden = true;
-        } })])]);
-      seriesBox.hidden = true;
+      var repeatBtn = el('button', { type: 'button', class: 'btn small', text: '+ Add repeating', title: 'A run of minyanim every few minutes, in rooms taken in turn', onclick: function () {
+        var last = rows.length ? rows[rows.length - 1] : null, m = last ? previewOf(last) : NaN;
+        addRow({ series: true, every: 15, start: { kind: 'fixed', time: hhmm(isNaN(m) ? 7 * 60 : m + 15), off: 0, round: false }, endMode: 'to',
+          end: { kind: 'fixed', time: hhmm(isNaN(m) ? 9 * 60 : m + 135), off: 0, round: false }, count: 10, rooms: fRooms.value.trim(), note: '' });
+        var inputs = list.lastChild.querySelectorAll('input, select'); if (inputs.length) inputs[0].focus();
+      } });
       var copySel = el('select', { 'aria-label': 'Copy from another day' });
       function fillCopy() {
         copySel.innerHTML = ''; copySel.appendChild(el('option', { value: '', text: 'Copy from…' }));
@@ -381,16 +405,16 @@
       ta.addEventListener('input', function () { store.value = ta.value; refreshRooms(); markTabs(); });
       load(); renderAll();
       wrap.appendChild(list); wrap.appendChild(ta);
-      wrap.appendChild(el('div', { class: 'editor-bar' }, [addBtn, seriesBtn, copySel, sortBtn, textBtn]));
-      wrap.appendChild(seriesBox);
+      wrap.appendChild(el('div', { class: 'editor-bar' }, [addBtn, repeatBtn, copySel, sortBtn, textBtn]));
       return wrap;
     }
     var sp = el('div', { class: 'col' });
     sp.appendChild(roomsList);
     sp.appendChild(el('details', { class: 'help' }, [el('summary', { text: 'How this works' }), el('div', { class: 'hint' }, [
       el('p', { text: 'Pick a day type, then add one row per minyan: a fixed time, or a zman (sunset, chatzos, candle lighting…) with minutes before or after. Type the room name; names you already used are suggested. "today" shows what that row gives today.' }),
-      el('p', { text: '"Add a series" fills a run of minyanim at once, rotating through the rooms you list. "Copy from…" starts a day type from another one. A day type with no rows uses the more general one (Rosh Chodesh empty → Weekdays; Yom Tov empty → Shabbos).' }),
-      el('p', null, ['"Edit as text" shows the same rows as lines like ', el('code', { text: '6:20 ברך משה' }), ' or ', el('code', { text: 'sunset-15 דברי יואל // note' }), ', handy for pasting a whole list.'])])]));
+      el('p', { text: '"+ Add repeating" makes one row that stands for a whole run: every N minutes, from a time or a zman, until a time or zman (or for a number of minyanim), in the rooms you list, taken in turn. It is recalculated every day, so a run that starts at sunrise moves with sunrise. Mix repeating rows and single rows freely; the board shows them all sorted by time.' }),
+      el('p', { text: '"Copy from…" starts a day type from another one. A day type with no rows uses the more general one (Rosh Chodesh empty → Weekdays; Yom Tov empty → Shabbos).' }),
+      el('p', null, ['"Edit as text" shows the same rows as lines like ', el('code', { text: '6:20 ברך משה' }), ', ', el('code', { text: 'sunset-15 דברי יואל // note' }), ' or ', el('code', { text: 'every 10 from sunrise-30 to chatzos-30 rooms ברך משה, דברי יואל' }), ', handy for pasting a whole list.'])])]));
     var typeTabs = el('div', { class: 'tabs' }), typePages = {};
     sp.appendChild(typeTabs);
     Cal.DAY_TYPES.forEach(function (t) {
