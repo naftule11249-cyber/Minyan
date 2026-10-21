@@ -1,0 +1,38 @@
+<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>שלט – לוח המנינים</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+body{margin:0;background:#e9e2d3;font-family:'Frank Ruhl Libre','David',serif;color:#2a1a1d}
+.sheet{width:8.5in;min-height:11in;margin:20px auto;background:#fff;box-sizing:border-box;padding:.7in .8in;border:1px solid #cbbfa6;display:flex;flex-direction:column;align-items:center;text-align:center;gap:.25in}
+.name{font-size:30pt;font-weight:700;color:#7a1d2a;line-height:1.15}
+.big{font-size:44pt;font-weight:700;line-height:1.1}
+.sub{font-size:20pt;color:#444}
+#qr{padding:14px;border:4px double #b8963f;border-radius:14px;background:#fff}
+.url{font-family:Arial,sans-serif;direction:ltr;font-size:16pt;color:#223b68}
+.sms{border:3px double #b8963f;border-radius:14px;padding:.25in .4in;font-size:20pt}
+.sms .n{font-family:Arial,sans-serif;direction:ltr;display:inline-block;font-size:28pt;font-weight:700;color:#7a1d2a}
+.kw{font-size:15pt;color:#555}
+.bar{text-align:center;margin:10px}
+button{font:16px system-ui;padding:8px 16px}
+@media print{body{background:#fff}.sheet{margin:0;border:0;width:auto;min-height:auto}.bar{display:none}}
+</style></head>
+<body>
+<div class="bar"><button onclick="window.print()">הדפסה</button></div>
+<div class="sheet">
+  <div class="name" id="name">לוח המנינים</div>
+  <div class="big">מתי המנין הבא?</div>
+  <div class="sub">סרקו ותראו את הלוח המעודכן בכל רגע</div>
+  <div id="qr"></div>
+  <div class="url" id="url"></div>
+  <div class="sms" id="smsbox" hidden>שלחו <b>מנין</b> בהודעת טקסט למספר<br><span class="n" id="num"></span><div class="kw">או: שחרית · מנחה · מעריב · היום · זמנים</div></div>
+  <div class="sub">הוסיפו למסך הבית ותקבלו את הלוח כאפליקציה</div>
+</div>
+<script>
+fetch('config.json', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (c) {
+  var url = (c.siteUrl || location.href.replace(/sign\.html.*$/, '')).replace(/\/?$/, '/');
+  if (c.name) document.getElementById('name').textContent = c.name;
+  document.getElementById('url').textContent = url.replace(/^https?:\/\//, '');
+  if (window.QRCode) new QRCode(document.getElementById('qr'), { text: url, width: 260, height: 260, correctLevel: QRCode.CorrectLevel.M });
+  if (c.smsNumber) { document.getElementById('num').textContent = c.smsNumber; document.getElementById('smsbox').hidden = false; }
+}).catch(function () {});
+</script>
+</body></html>

@@ -16,6 +16,17 @@
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
 
   var cfg = {}, mode = 'static', inArtifact = false, artifactNs = null, canEdit = false, pinOk = false, ui = {}, deferredInstall = null;
+  /* Which view this URL asks for: ?view=display | ?room=NAME | ?view=week, or #display | #room1..#roomN | #week (hashes work on the claude.ai page too). */
+  function currentView() {
+    var q = {}, h = (location.hash || '').replace(/^#/, ''), m;
+    try { location.search.replace(/^\?/, '').split('&').forEach(function (kv) { var p = kv.split('='); if (p[0]) q[decodeURIComponent(p[0])] = decodeURIComponent((p[1] || '').replace(/\+/g, ' ')); }); } catch (e) {}
+    if (q.room) return { kind: 'room', room: q.room };
+    if (q.view === 'display' || h === 'display') return { kind: 'display' };
+    if (q.view === 'week' || h === 'week') return { kind: 'week' };
+    m = /^room(\d+)$/.exec(h);
+    if (m) { var rooms = (cfg.rooms || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean); if (rooms[+m[1] - 1]) return { kind: 'room', room: rooms[+m[1] - 1] }; }
+    return { kind: 'board' };
+  }
 
   /* ---------- schedule engine (engine.js) ---------- */
   var engine = null;
@@ -27,8 +38,20 @@
   function resolveMin(spec, rd, type) { return engine.resolveMin(spec, rd, type); }
   function expandLine(p, rd, type) { return engine.expand(p, rd, type); }
   function tefillos() { return engine.tefillos(); }
-  function scheduleFor(rd) { return engine.scheduleFor(rd); }
-  function upcoming(nowMs, nowRd) { return engine.upcoming(nowMs, nowRd); }
+  function scheduleFor(rd) {
+    var s = engine.scheduleFor(rd);
+    if (!ui.roomFilter) return s;
+    var out = { rd: s.rd, info: s.info, type: s.type, override: s.override, byTefilla: {}, all: [] };
+    Object.keys(s.byTefilla).forEach(function (id) { out.byTefilla[id] = s.byTefilla[id].filter(function (e) { return e.room === ui.roomFilter; }); out.all = out.all.concat(out.byTefilla[id]); });
+    out.all.sort(function (a, b) { return a.start - b.start; });
+    return out;
+  }
+  function upcoming(nowMs, nowRd) {
+    if (!ui.roomFilter) return engine.upcoming(nowMs, nowRd);
+    var i, j, s;
+    for (i = 0; i < 10; i++) { s = scheduleFor(nowRd + i); for (j = 0; j < s.all.length; j++) if (s.all[j].ms > nowMs && s.all[j].tefilla.kind !== 'event') return { entry: s.all[j], sched: s, daysAhead: i }; }
+    return null;
+  }
   function fmtTime(min) { return engine.fmtTime(min); }
   function fmtCountdown(ms) { return engine.fmtCountdown(ms); }
   function dayLine(info, rd) { return engine.dayLine(info, rd); }
@@ -36,15 +59,19 @@
 
   /* ---------- rendering ---------- */
   function render() {
+    var view = currentView();
+    if (view.kind === 'week') return renderWeek();
     var now = Date.now(), tz = loc().tz, n = Cal.nowInTz(now, tz), rd = n.rd;
     var info = Cal.dayInfo(rd, !!cfg.israel), z = zmanimFor(rd);
     var root = $('#app');
     root.innerHTML = '';
+    root.className = view.kind === 'display' ? 'display' : view.kind === 'room' ? 'display room' : '';
+    ui.roomFilter = view.kind === 'room' ? view.room : null;
     var hebLine = Cal.formatHeb(info.heb);
     if (!isNaN(z.sunset) && n.min >= z.sunset) hebLine += ' · בערב: ' + Cal.formatHeb(Cal.hebFromRD(rd + 1));
     var chips = info.labels.map(function (l) { return el('span', { class: 'chip', text: l }); });
     root.appendChild(el('header', { class: 'top' }, [el('div', { class: 'inner' }, [
-      el('div', { class: 'shul' }, [cfg.logo ? el('img', { class: 'logo', src: cfg.logo, alt: '' }) : null, el('span', { text: cfg.name || 'לוח המנינים' })]),
+      el('div', { class: 'shul' }, [cfg.logo ? el('img', { class: 'logo', src: cfg.logo, alt: '' }) : null, el('span', { text: (cfg.name || 'לוח המנינים') + (ui.roomFilter ? ' · ' + ui.roomFilter : '') })]),
       el('h1', { class: 'dayline', text: dayLine(info, rd) }),
       el('div', { class: 'dates' }, [el('span', { text: hebLine }), el('span', { class: 'num', text: gregStr(rd) })]),
       chips.length ? el('div', { class: 'chips' }, chips) : null])]));
@@ -74,14 +101,49 @@
     colA.appendChild(daySections(scheduleFor(rd), now, up, true));
     if (up && up.daysAhead > 0) colA.appendChild(daySections(up.sched, now, up, false));
     colB.appendChild(zmanimPanel(info, z));
-    var sms = smsPanel();
-    if (sms) colB.appendChild(sms);
-    var push = pushPanel();
-    if (push) colB.appendChild(push);
+    if (view.kind === 'board') {
+      var sms = smsPanel();
+      if (sms) colB.appendChild(sms);
+      var push = pushPanel();
+      if (push) colB.appendChild(push);
+    }
     main.appendChild(colA); main.appendChild(colB);
     root.appendChild(main);
-    root.appendChild(footer());
+    if (view.kind === 'board') root.appendChild(footer());
     ui.lastRenderDay = rd; ui.lastMinute = Math.floor(now / 60000);
+  }
+  /* Printable weekly sheet (?view=week / #week): this week and next, Sunday to Shabbos */
+  function renderWeek() {
+    var root = $('#app'), now = Date.now(), tz = loc().tz, rd0 = Cal.nowInTz(now, tz).rd, start = rd0 - Cal.mod(rd0, 7);
+    root.innerHTML = ''; root.className = 'week';
+    root.appendChild(el('header', { class: 'top' }, [el('div', { class: 'inner' }, [el('div', { class: 'shul' }, [cfg.logo ? el('img', { class: 'logo', src: cfg.logo, alt: '' }) : null, el('span', { text: cfg.name || 'לוח המנינים' })]), el('h1', { class: 'dayline', text: 'לוח השבוע' })])]));
+    var main = el('main', { class: 'week-main' });
+    [0, 7].forEach(function (off) {
+      var first = start + off, sec = el('section', { class: 'week-block' });
+      var i0 = Cal.dayInfo(first, !!cfg.israel), i6 = Cal.dayInfo(first + 6, !!cfg.israel), parsha = Cal.parshaOfWeek(first, !!cfg.israel);
+      sec.appendChild(el('h2', { text: (off ? 'השבוע הבא' : 'השבוע') + (parsha ? ' – פרשת ' + parsha : '') + ' · ' + Cal.formatHeb(i0.heb) + ' – ' + Cal.formatHeb(i6.heb) }));
+      for (var d = 0; d < 7; d++) {
+        var rd = first + d, info = Cal.dayInfo(rd, !!cfg.israel), sched = scheduleFor(rd), z = zmanimFor(rd), day = el('div', { class: 'wday' + (rd === rd0 ? ' today' : '') });
+        var zs = [];
+        if (info.dow === 5 || info.erevYT) zs.push('הדלקת נרות ' + fmtTime(z.candles));
+        if (info.fast && !((info.heb.m === 7 && info.heb.d === 10) || info.heb.m === 5)) zs.push('תחילת הצום ' + fmtTime(z.alos));
+        zs.push('שקיעה ' + fmtTime(z.sunset));
+        if (info.shabbos || info.yomtov || info.fast) zs.push((info.fast && !info.yomKippur ? 'צאת הצום ' : info.shabbos ? 'מוצאי שבת ' : 'מוצאי יום טוב ') + fmtTime(z.tzeis));
+        day.appendChild(el('div', { class: 'whead' }, [el('strong', { text: Cal.DAY_NAMES[info.dow] }), el('span', { text: Cal.formatHeb(info.heb) + ' · ' + gregStr(rd) }), info.labels.length ? el('span', { class: 'wlabels', text: info.labels.join(', ') }) : null, el('span', { class: 'wz num', text: zs.join(' · ') })]));
+        tefillos().forEach(function (t) {
+          var list = sched.byTefilla[t.id] || [];
+          if (!list.length) return;
+          day.appendChild(el('div', { class: 'wline' }, [el('b', { text: t.name + ': ' }), el('span', { class: 'num', text: list.map(function (e) { return fmtTime(e.start) + (e.room ? ' ' + e.room : ''); }).join(' · ') })]));
+        });
+        sec.appendChild(day);
+      }
+      main.appendChild(sec);
+    });
+    root.appendChild(main);
+    var bar = el('div', { class: 'week-bar' }, [el('a', { class: 'btn', href: inArtifact ? '#' : './', text: 'ללוח' })]);
+    if (!inArtifact) bar.appendChild(el('button', { class: 'btn primary', text: 'הדפסה', onclick: function () { window.print(); } }));
+    root.appendChild(bar);
+    ui.countdown = null; ui.countdownMs = 0; ui.lastRenderDay = rd0; ui.lastMinute = Math.floor(now / 60000);
   }
   function daySections(s, now, up, isToday) {
     var wrap = el('div', { class: 'col' });
@@ -90,7 +152,8 @@
       el('span', { class: 'sub', text: typeLabel(s) })]));
     tefillos().forEach(function (t) {
       var list = s.byTefilla[t.id] || [], sec = el('section', { class: 'tefilla' });
-      sec.appendChild(el('h3', null, ['מניני ' + t.name]));
+      if ($('#app').classList.contains('display') && list.every(function (e) { return e.ms <= now && now - e.ms >= 45 * 60000; })) return;
+      sec.appendChild(el('h3', null, [t.kind === 'event' ? t.name : 'מניני ' + t.name]));
       if (!list.length) { sec.appendChild(el('div', { class: 'none', text: 'אין מנינים רשומים' })); }
       else {
         var grid = el('div', { class: 'grid' });
@@ -98,6 +161,7 @@
           var cls = 'tile';
           if (up && sameEntry(e, up.entry)) cls += ' next';
           else if (e.ms <= now) cls += (now - e.ms < 45 * 60000) ? ' now' : ' past';
+          if (t.kind === 'event') cls += ' event';
           grid.appendChild(el('div', { class: cls }, [
             el('div', { class: 'room', text: e.room || t.name }),
             el('div', { class: 'time num', text: fmtTime(e.start) }),
@@ -112,10 +176,21 @@
   }
   function zmanimPanel(info, z) {
     var keys = ['alos', 'sunrise', 'shema', 'tefilla', 'chatzos', 'minchag', 'plag', 'candles', 'sunset', 'tzeis', 'tzeis72'];
-    var ul = el('ul', { class: 'zlist' });
+    var ul = el('ul', { class: 'zlist' }), rd = info.rd, nowMin = Cal.nowInTz(Date.now(), loc().tz).min;
+    var h = info.heb, nightFast = (h.m === 7 && h.d === 10) || (h.m === 5 && info.fast); /* Yom Kippur and Tisha B'Av begin the evening before */
+    if (info.fast && !nightFast) ul.appendChild(el('li', { class: 'hi' }, [el('span', { text: 'תחילת הצום' }), el('span', { class: 'z num', text: fmtTime(z.alos) })]));
+    if (info.fast || info.yomKippur) ul.appendChild(el('li', { class: 'hi' }, [el('span', { text: 'צאת הצום' }), el('span', { class: 'z num', text: fmtTime(z.tzeis) })]));
+    if (info.shabbos || info.yomtov) ul.appendChild(el('li', { class: 'hi' }, [el('span', { text: info.shabbos ? 'מוצאי שבת' : 'מוצאי יום טוב' }), el('span', { class: 'z num', text: fmtTime(z.tzeis) })]));
+    var omer = rd - Cal.rdFromHeb(h.m <= 6 ? h.y : h.y + 1, 1, 15); /* days since 15 Nisan of this spring */
+    if (omer >= 0 && omer <= 49) {
+      var tonight = omer + 1, today = omer;
+      if (!isNaN(z.sunset) && nowMin >= z.sunset && tonight <= 49) ul.appendChild(el('li', { class: 'hi' }, [el('span', { text: 'הלילה סופרים' }), el('span', { class: 'z num', text: tonight + ' לעומר' })]));
+      else if (today >= 1) ul.appendChild(el('li', { class: 'hi' }, [el('span', { text: 'ספירת העומר' }), el('span', { class: 'z num', text: today + ' לעומר' })]));
+    }
     keys.forEach(function (k) {
       if (k === 'candles' && !(info.dow === 5 || info.erevYT)) return;
       if (k === 'tzeis72' && !cfg.showRT) return;
+      if (k === 'tzeis' && (info.shabbos || info.yomtov || info.fast)) return;
       var hi = k === 'candles' || (k === 'tzeis' && (info.shabbos || info.yomtov));
       ul.appendChild(el('li', { class: hi ? 'hi' : '' }, [el('span', { text: Cal.ZMAN_NAMES[k] }), el('span', { class: 'z num', text: fmtTime(z[k]) })]));
     });
@@ -289,8 +364,8 @@
     return el('label', { for: id }, [c, ' ' + label]);
   }
   var uid = 0;
-  function buildAdmin() {
-    var d = clone(cfg);
+  function buildAdmin(draft) {
+    var d = draft ? clone(draft) : clone(cfg);
     d.location = d.location || {}; d.schedules = d.schedules || {}; d.overrides = d.overrides || []; d.notices = d.notices || [];
     d.tefillos = (d.tefillos && d.tefillos.length) ? d.tefillos : clone(TEFILLA_DEFAULTS);
     var todayRd = Cal.nowInTz(Date.now(), loc().tz).rd;
@@ -368,15 +443,22 @@
     if (mode !== 'artifact') g.appendChild(el('div', { class: 'fields' }, [field('New PIN for the admin page', fPin, el('span', { class: 'hint', text: 'Stored scrambled (hashed), so it cannot be read from the site files. It keeps strangers out of the admin page; what everyone else sees can only be changed with the GitHub token on the Publish tab, which stays on the device that entered it.' }))]));
     g.appendChild(el('h3', { text: 'Tefillos' }));
     var tRows = [];
+    g.appendChild(el('div', { class: 'hint', text: 'Minyanim count for "next minyan" and reminders. A shiur or event category is listed on the board and in texts but never shown as the next minyan.' }));
     d.tefillos.forEach(function (t, i) {
       var r = { name: inp('t-name-' + i, t.name), ms: inp('t-ms-' + i, t.milestone), off: inp('t-off-' + i, t.offset, { inputmode: 'numeric' }),
-        period: el('select', { id: 't-period-' + i }, [el('option', { value: 'am', text: 'Morning: 6:45 means 6:45 AM' }), el('option', { value: 'pm', text: 'Afternoon/evening: 6:45 means 6:45 PM' })]) };
-      r.period.value = t.period || 'am';
+        period: el('select', { id: 't-period-' + i }, [el('option', { value: 'am', text: 'Morning: 6:45 means 6:45 AM' }), el('option', { value: 'pm', text: 'Afternoon/evening: 6:45 means 6:45 PM' })]),
+        kind: el('select', { id: 't-kind-' + i }, [el('option', { value: 'minyan', text: 'Minyan' }), el('option', { value: 'event', text: 'Shiur / event' })]) };
+      r.period.value = t.period || 'am'; r.kind.value = t.kind === 'event' ? 'event' : 'minyan';
       tRows.push(r);
-      g.appendChild(el('div', { class: 'fields' }, [field('Name (shown on the board)', r.name), field('Milestone shown under the time (e.g. הודו)', r.ms), field('Milestone: minutes after the start', r.off), field('How to read the hours', r.period)]));
+      var rowEl = el('div', { class: 'fields' }, [field('Name (shown on the board)', r.name), field('Type', r.kind), field('Milestone shown under the time (e.g. הודו)', r.ms), field('Milestone: minutes after the start', r.off), field('How to read the hours', r.period)]);
+      if (i >= 3) rowEl.appendChild(el('div', { class: 'field' }, [el('label', { text: ' ' }), el('button', { type: 'button', class: 'btn small danger', text: 'Remove category', onclick: function () { var c = collect(); c.tefillos.splice(i, 1); closeOverlay(); buildAdmin(c); } })]));
+      g.appendChild(rowEl);
     });
+    g.appendChild(el('div', null, [el('button', { type: 'button', class: 'btn', text: '+ Add category (e.g. שיעור)', onclick: function () {
+      var c = collect(); c.tefillos.push({ id: 'c' + Date.now().toString(36), name: 'שיעור', milestone: '', offset: 0, period: 'pm', kind: 'event' }); closeOverlay(); buildAdmin(c);
+    } })]));
     pages.general = g;
-    function liveTefilla(i) { var r = tRows[i], t = d.tefillos[i]; return { id: t.id, name: r.name.value.trim() || t.name, milestone: r.ms.value.trim(), offset: +r.off.value || 0, period: r.period.value }; }
+    function liveTefilla(i) { var r = tRows[i], t = d.tefillos[i]; return { id: t.id, name: r.name.value.trim() || t.name, milestone: r.ms.value.trim(), offset: +r.off.value || 0, period: r.period.value, kind: r.kind.value === 'event' ? 'event' : 'minyan' }; }
 
     /* schedule: one row per minyan */
     var lines = {};
@@ -647,10 +729,19 @@
     var op = el('div', { class: 'col' }), oList = el('div', { class: 'col' });
     function addOverride(o) {
       var id = ++uid, r = { date: inp('o-date-' + id, o.date, { type: 'date' }), label: inp('o-label-' + id, o.label), lines: {} };
+      r.when = el('select', { id: 'o-when-' + id }, [el('option', { value: 'date', text: 'One civil date' }), el('option', { value: 'hebrew', text: 'A Hebrew date, every year' }), el('option', { value: 'cal', text: 'A calendar day, every year' })]);
+      r.hm = el('select', { id: 'o-hm-' + id }); r.hd = inp('o-hd-' + id, o.hd || '', { type: 'number', min: '1', max: '30', inputmode: 'numeric' }); r.cal = el('select', { id: 'o-cal-' + id });
+      [[7, 'תשרי'], [8, 'חשון'], [9, 'כסלו'], [10, 'טבת'], [11, 'שבט'], ['adar', 'אדר (אדר ב׳ בשנה מעוברת)'], ['adar1', 'אדר א׳ (בשנה מעוברת בלבד)'], [1, 'ניסן'], [2, 'אייר'], [3, 'סיון'], [4, 'תמוז'], [5, 'אב'], [6, 'אלול']].forEach(function (m) { r.hm.appendChild(el('option', { value: String(m[0]), text: m[1] })); });
+      Cal.LABELS.forEach(function (l) { r.cal.appendChild(el('option', { value: l, text: l })); });
+      r.when.value = o.date ? 'date' : (o.hm != null ? 'hebrew' : (o.calLabel ? 'cal' : 'date'));
+      if (o.hm != null) r.hm.value = String(o.hm);
+      if (o.calLabel) r.cal.value = o.calLabel;
+      function showWhen() { var w = r.when.value; r.date.hidden = w !== 'date'; r.hm.hidden = w !== 'hebrew'; r.hd.hidden = w !== 'hebrew'; r.cal.hidden = w !== 'cal'; }
+      r.when.addEventListener('change', showWhen); showWhen();
       var row = el('div', { class: 'fields three' });
       function typeOfDate() {
         var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(r.date.value);
-        if (!m) return 'weekday';
+        if (r.when.value !== 'date' || !m) return 'weekday';
         return Cal.dayType(Cal.dayInfo(Cal.rdFromGreg(+m[1], +m[2], +m[3]), !!d.israel));
       }
       d.tefillos.forEach(function (tf, i) {
@@ -658,12 +749,12 @@
         var sources = Cal.DAY_TYPES.map(function (t) { return { key: t[0], label: t[3], store: function () { return lines[t[0]][tf.id]; } }; });
         row.appendChild(el('div', { class: 'field' }, [el('label', { text: tf.name + ' (no rows = as usual)' }), minyanEditor(r.lines[tf.id], i, typeOfDate, sources)]));
       });
-      r.wrap = el('div', { class: 'ovr' }, [el('div', { class: 'fields' }, [field('Date', r.date), field('Label shown on the board (e.g. yahrzeit, wedding)', r.label)]), row,
+      r.wrap = el('div', { class: 'ovr' }, [el('div', { class: 'mrow-l' }, [r.when, r.date, r.hm, r.hd, r.cal]), el('div', { class: 'fields' }, [field('Label shown on the board (e.g. yahrzeit, wedding, Chol Hamoed)', r.label)]), row,
         el('button', { type: 'button', class: 'btn small danger', text: 'Remove', onclick: function () { oRows.splice(oRows.indexOf(r), 1); r.wrap.remove(); } })]);
       oRows.push(r); oList.appendChild(r.wrap);
     }
     d.overrides.forEach(addOverride);
-    op.appendChild(el('div', { class: 'hint', text: 'A schedule for one date that replaces the regular one on that day only, for the tefillos you fill in.' }));
+    op.appendChild(el('div', { class: 'hint', text: 'A schedule that replaces the regular one for the tefillos you fill in: on one civil date (a yahrzeit, a wedding), on a Hebrew date every year, or on a calendar day every year (Chol Hamoed Sukkos, Purim, Tisha B\'Av, Rosh Chodesh…). A civil date wins over a Hebrew date, which wins over a calendar day.' }));
     op.appendChild(oList);
     op.appendChild(el('div', null, [el('button', { type: 'button', class: 'btn', text: '+ Date', onclick: function () { addOverride({ date: '', label: '', lines: {} }); } })]));
     pages.overrides = op;
@@ -747,8 +838,12 @@
       out.overrides = oRows.map(function (r) {
         var lines = {};
         d.tefillos.forEach(function (tf) { if (r.lines[tf.id].value.trim()) lines[tf.id] = r.lines[tf.id].value; });
-        return { date: r.date.value, label: r.label.value.trim(), lines: lines };
-      }).filter(function (o) { return o.date; });
+        var o = { label: r.label.value.trim(), lines: lines };
+        if (r.when.value === 'date') o.date = r.date.value;
+        else if (r.when.value === 'hebrew') { o.hm = /^\d+$/.test(r.hm.value) ? +r.hm.value : r.hm.value; o.hd = +r.hd.value || 0; }
+        else o.calLabel = r.cal.value;
+        return o;
+      }).filter(function (o) { return o.date || (o.hm != null && o.hd) || o.calLabel; });
       out.remoteConfigUrl = fRemote.value.trim();
       out.smsNumber = fSms.value.trim();
       out.savedAt = Date.now();

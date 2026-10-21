@@ -133,6 +133,24 @@ Messages the shul starts (reminders, the daily schedule) need an approved WhatsA
 `sms/server.js` runs the plain responder on any Node host (`CONFIG_URL=... node sms/server.js`). The worker and the server
 both answer `GET ?q=mincha` with plain text, handy for testing in a browser.
 
+## Views
+
+Same address, different screens (the `#` forms also work on the claude.ai page):
+
+| View | Address | For |
+|---|---|---|
+| Lobby screen | `index.html?view=display` or `#display` | the TV in the lobby: large tiles, finished minyanim drop off, no controls |
+| Door display | `index.html?room=ברך משה` or `#room1`, `#room2`… (order of the Rooms list) | a tablet at a room's door: that room's next minyan and its list |
+| Weekly sheet | `index.html?view=week` or `#week` | this week and next, Sunday to Shabbos, with candle lighting, Shabbos end and every minyan; Print button |
+| QR sign | `sign.html` | a printable sign with the site's QR code and the text number |
+| Text service page | `sms.html` | how the texting works (also the opt-in page for the carriers) |
+
+## Calendar
+
+- Fast days show when the fast begins and ends; Shabbos and Yom Tov show when they end; during Sefirah the board shows the count (tonight's after sunset).
+- Special dates (Edit → Special dates) can be one civil date, a Hebrew date every year, or a calendar day every year (Chol Hamoed Sukkos, Purim, Tisha B'Av, Rosh Chodesh…).
+- Categories (Edit → General → "+ Add category"): a shiur or event list such as Daf Yomi appears on the board and in text replies ("today", or the category's name) but is never the "next minyan".
+
 ## Board extras
 
 - **Temporary banner** (Edit → Notices): one line across the top of the board, and at the start of text replies, until the time you set.

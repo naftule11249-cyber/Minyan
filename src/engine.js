@@ -106,9 +106,24 @@ var MinyanEngine = (function () {
       if (m && nowMs >= Cal.epochFromWall(Cal.rdFromGreg(+m[1], +m[2], +m[3]), +m[4] * 60 + +m[5], loc().tz)) return null;
       return b;
     }
+    /* Does an override apply to this day? date (one civil day) > hebrew date (every year) > calendar day name (every year). */
+    function overrideMatches(o, rd, info) {
+      if (o.date) return o.date === isoDate(rd);
+      if (o.hm != null && o.hd) {
+        var h = info.heb, leap = Cal.hebLeap(h.y), m = o.hm === 'adar' ? (leap ? 13 : 12) : o.hm === 'adar1' ? (leap ? 12 : -1) : +o.hm;
+        return h.m === m && h.d === +o.hd;
+      }
+      if (o.calLabel) return info.labels.some(function (l) { return l === o.calLabel || l.indexOf(o.calLabel) === 0; });
+      return false;
+    }
+    function pickOverride(rd, info) {
+      var list = (cfg.overrides || []).filter(function (o) { return overrideMatches(o, rd, info); });
+      list.sort(function (a, b) { return (a.date ? 0 : a.hm != null ? 1 : 2) - (b.date ? 0 : b.hm != null ? 1 : 2); });
+      return list[0] || null;
+    }
     function dayTexts(rd, info) {
       var type = Cal.dayType(info), iso = isoDate(rd);
-      var ovr = (cfg.overrides || []).filter(function (o) { return o.date === iso; })[0] || null;
+      var ovr = pickOverride(rd, info);
       var out = { type: type, override: ovr, texts: {} };
       tefillos().forEach(function (t) {
         var text = null, src = null, k = type, s;
@@ -143,7 +158,7 @@ var MinyanEngine = (function () {
       for (i = 0; i < (days || 10); i++) {
         s = scheduleFor(nowRd + i);
         list = tefillaId ? (s.byTefilla[tefillaId] || []) : s.all;
-        for (j = 0; j < list.length; j++) if (list[j].ms > nowMs) out.push({ entry: list[j], sched: s, daysAhead: i });
+        for (j = 0; j < list.length; j++) if (list[j].ms > nowMs && (tefillaId || list[j].tefilla.kind !== 'event')) out.push({ entry: list[j], sched: s, daysAhead: i });
       }
       return out;
     }
@@ -151,7 +166,7 @@ var MinyanEngine = (function () {
       var i, j, s;
       for (i = 0; i < 10; i++) {
         s = scheduleFor(nowRd + i);
-        for (j = 0; j < s.all.length; j++) if (s.all[j].ms > nowMs) return { entry: s.all[j], sched: s, daysAhead: i };
+        for (j = 0; j < s.all.length; j++) if (s.all[j].ms > nowMs && s.all[j].tefilla.kind !== 'event') return { entry: s.all[j], sched: s, daysAhead: i };
       }
       return null;
     }

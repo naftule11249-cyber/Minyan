@@ -96,6 +96,7 @@ main { max-width: 1120px; margin: 0 auto; padding-block: 20px 40px; padding-left
 .tile .note { font-size: .72rem; opacity: .85; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tile.past { opacity: .42; filter: saturate(.4); }
 .tile.next { background: linear-gradient(180deg, var(--next), var(--next-2)); box-shadow: 0 0 0 3px var(--panel), 0 0 0 5px var(--next); }
+.tile.event { background: linear-gradient(180deg, var(--band-2), var(--band)); }
 .tile.next::after { content: "הבא"; position: absolute; top: -9px; inset-inline-start: 8px; background: var(--next-2); color: #fff; font-size: .68rem; padding: 1px 7px; border-radius: 999px; border: 1px solid rgba(255,255,255,.4); }
 .tile.now::after { content: "עכשיו"; position: absolute; top: -9px; inset-inline-start: 8px; background: var(--now); color: #fff; font-size: .68rem; padding: 1px 7px; border-radius: 999px; }
 .none { color: var(--muted); text-align: center; padding: 8px; font-size: .95rem; }
@@ -180,3 +181,41 @@ footer { max-width: 1120px; margin: 0 auto; padding-block: 0 30px; padding-left:
 details.help { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
 details.help summary { cursor: pointer; font-weight: 500; }
 @media (prefers-reduced-motion: no-preference) { .tile { transition: opacity .3s, transform .2s; } }
+
+/* Lobby screen (?view=display / #display) and door display (?room=… / #room1): larger, no controls, no scrollbars */
+#app.display { font-size: 1.3rem; cursor: none; }
+#app.display .top .dayline { font-size: 2.8rem; }
+#app.display .next .time { font-size: 6rem; }
+#app.display .next .count { font-size: 3rem; }
+#app.display .grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+#app.display .tile .time { font-size: 2.3rem; }
+#app.display .tile .room { font-size: 1.1rem; }
+#app.display main { grid-template-columns: minmax(0, 1fr) 340px; }
+#app.display .tile.past { display: none; }
+#app.display.room main { grid-template-columns: minmax(0, 1fr); }
+#app.display.room .side { display: none; }
+#app.display.room .next .time { font-size: 8rem; }
+#app.display.room .grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+@media (max-width: 820px) { #app.display main { grid-template-columns: minmax(0, 1fr); } }
+
+/* Weekly sheet */
+.week-main { max-width: 1120px; margin: 0 auto; padding-block: 16px 24px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 22px; }
+.week-block { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; }
+.week-block h2 { font-size: 1.3rem; color: var(--accent); margin-bottom: 8px; border-bottom: 2px solid var(--line); padding-bottom: 4px; }
+.wday { padding: 8px 0; border-bottom: 1px dashed var(--line); }
+.wday:last-child { border-bottom: 0; }
+.wday.today { background: var(--panel-2); border-radius: 8px; padding-inline: 8px; }
+.whead { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; }
+.whead strong { font-family: var(--font-display); font-size: 1.15rem; }
+.wlabels { color: var(--accent); font-weight: 700; }
+.wz { color: var(--muted); font-size: .9rem; }
+.wline { font-size: .98rem; margin-top: 2px; }
+.week-bar { max-width: 1120px; margin: 0 auto 30px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; gap: 8px; }
+@media print {
+  body { background: #fff; color: #000; }
+  #app.week .top { background: none; color: #000; border-bottom: 2px solid #000; }
+  .week-bar, .banner { display: none; }
+  .week-block { border: 0; padding: 0; break-inside: avoid; page-break-inside: avoid; }
+  .week-block + .week-block { break-before: page; page-break-before: always; }
+  .wday.today { background: none; }
+}

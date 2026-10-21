@@ -241,6 +241,9 @@ var Cal = (function () {
     if (info.dow === 0) return 'sunday';
     return 'weekday';
   }
+  var LABELS = ['ראש השנה', 'צום גדליה', 'ערב יום כיפור', 'יום הכיפורים', 'ערב סוכות', 'סוכות', 'חול המועד סוכות', 'הושענא רבה', 'שמיני עצרת', 'שמחת תורה',
+    'חנוכה', 'עשרה בטבת', 'ט״ו בשבט', 'פורים קטן', 'תענית אסתר', 'פורים', 'שושן פורים', 'ערב פסח', 'פסח', 'חול המועד פסח', 'שביעי של פסח', 'אחרון של פסח',
+    'אסרו חג', 'פסח שני', 'ל״ג בעומר', 'ערב שבועות', 'שבועות', 'שבעה עשר בתמוז', 'תשעה באב', 'ט״ו באב', 'ערב ראש השנה', 'ראש חודש'];
   /* [key, Hebrew name (board), fallback key, English name (settings)] */
   var DAY_TYPES = [
     ['weekday', 'ימי חול', null, 'Weekdays'], ['sunday', 'יום ראשון', 'weekday', 'Sunday'], ['friday', 'ערב שבת', 'weekday', 'Erev Shabbos (Friday)'],
@@ -340,7 +343,7 @@ var Cal = (function () {
   return {
     mod: mod, rdFromGreg: rdFromGreg, gregFromRD: gregFromRD, rdFromHeb: rdFromHeb, hebFromRD: hebFromRD, hebLeap: hebLeap,
     hebMonthLength: hebMonthLength, hebNewYear: hebNewYear, gematria: gematria, monthName: monthName, formatHeb: formatHeb,
-    DAY_NAMES: DAY_NAMES, DAY_SHORT: DAY_SHORT, PARSHIOS: PARSHIOS, parshaForShabbos: parshaForShabbos, parshaOfWeek: parshaOfWeek,
+    DAY_NAMES: DAY_NAMES, DAY_SHORT: DAY_SHORT, PARSHIOS: PARSHIOS, LABELS: LABELS, parshaForShabbos: parshaForShabbos, parshaOfWeek: parshaOfWeek,
     dayInfo: dayInfo, dayType: dayType, DAY_TYPES: DAY_TYPES, zmanim: zmanim, ZMAN_NAMES: ZMAN_NAMES,
     tzParts: tzParts, tzOffsetMin: tzOffsetMin, epochFromWall: epochFromWall, nowInTz: nowInTz
   };
@@ -455,9 +458,24 @@ var MinyanEngine = (function () {
       if (m && nowMs >= Cal.epochFromWall(Cal.rdFromGreg(+m[1], +m[2], +m[3]), +m[4] * 60 + +m[5], loc().tz)) return null;
       return b;
     }
+    /* Does an override apply to this day? date (one civil day) > hebrew date (every year) > calendar day name (every year). */
+    function overrideMatches(o, rd, info) {
+      if (o.date) return o.date === isoDate(rd);
+      if (o.hm != null && o.hd) {
+        var h = info.heb, leap = Cal.hebLeap(h.y), m = o.hm === 'adar' ? (leap ? 13 : 12) : o.hm === 'adar1' ? (leap ? 12 : -1) : +o.hm;
+        return h.m === m && h.d === +o.hd;
+      }
+      if (o.calLabel) return info.labels.some(function (l) { return l === o.calLabel || l.indexOf(o.calLabel) === 0; });
+      return false;
+    }
+    function pickOverride(rd, info) {
+      var list = (cfg.overrides || []).filter(function (o) { return overrideMatches(o, rd, info); });
+      list.sort(function (a, b) { return (a.date ? 0 : a.hm != null ? 1 : 2) - (b.date ? 0 : b.hm != null ? 1 : 2); });
+      return list[0] || null;
+    }
     function dayTexts(rd, info) {
       var type = Cal.dayType(info), iso = isoDate(rd);
-      var ovr = (cfg.overrides || []).filter(function (o) { return o.date === iso; })[0] || null;
+      var ovr = pickOverride(rd, info);
       var out = { type: type, override: ovr, texts: {} };
       tefillos().forEach(function (t) {
         var text = null, src = null, k = type, s;
@@ -492,7 +510,7 @@ var MinyanEngine = (function () {
       for (i = 0; i < (days || 10); i++) {
         s = scheduleFor(nowRd + i);
         list = tefillaId ? (s.byTefilla[tefillaId] || []) : s.all;
-        for (j = 0; j < list.length; j++) if (list[j].ms > nowMs) out.push({ entry: list[j], sched: s, daysAhead: i });
+        for (j = 0; j < list.length; j++) if (list[j].ms > nowMs && (tefillaId || list[j].tefilla.kind !== 'event')) out.push({ entry: list[j], sched: s, daysAhead: i });
       }
       return out;
     }
@@ -500,7 +518,7 @@ var MinyanEngine = (function () {
       var i, j, s;
       for (i = 0; i < 10; i++) {
         s = scheduleFor(nowRd + i);
-        for (j = 0; j < s.all.length; j++) if (s.all[j].ms > nowMs) return { entry: s.all[j], sched: s, daysAhead: i };
+        for (j = 0; j < s.all.length; j++) if (s.all[j].ms > nowMs && s.all[j].tefilla.kind !== 'event') return { entry: s.all[j], sched: s, daysAhead: i };
       }
       return null;
     }
