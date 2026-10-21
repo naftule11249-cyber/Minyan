@@ -48,6 +48,8 @@
       el('div', { class: 'dates' }, [el('span', { text: hebLine }), el('span', { class: 'num', text: gregStr(rd) })]),
       chips.length ? el('div', { class: 'chips' }, chips) : null])]));
 
+    var strip = sponsorsStrip();
+    if (strip) root.appendChild(strip);
     var up = upcoming(now, rd);
     var main = el('main'), colA = el('div', { class: 'col' }), colB = el('div', { class: 'col' });
     var next = el('section', { class: 'next', 'aria-live': 'polite' }, [el('h2', { text: 'מנין הבא' })]);
@@ -69,8 +71,6 @@
     colA.appendChild(daySections(scheduleFor(rd), now, up, true));
     if (up && up.daysAhead > 0) colA.appendChild(daySections(up.sched, now, up, false));
     colB.appendChild(zmanimPanel(info, z));
-    var notices = noticesPanel();
-    if (notices) colB.appendChild(notices);
     var sms = smsPanel();
     if (sms) colB.appendChild(sms);
     main.appendChild(colA); main.appendChild(colB);
@@ -116,14 +116,18 @@
     });
     return el('section', { class: 'side' }, [el('h3', { text: 'זמני היום' }), ul]);
   }
-  function noticesPanel() {
+  /* Sponsor boxes (פרנס החודש and friends) in a framed strip under the header */
+  function sponsorsStrip() {
     var items = [];
     (cfg.notices || []).forEach(function (n) {
       if (!(n.body || '').trim()) return;
-      items.push(el('div', { class: 'notice' }, [el('div', { class: 't', text: n.title || '' }), el('div', { class: 'b', text: n.body || '' })]));
+      items.push(el('section', { class: 'sponsor' }, [
+        el('div', { class: 'frame' }),
+        el('h2', { class: 't', text: n.title || '' }),
+        el('div', { class: 'b', text: n.body.trim() })]));
     });
     if (!items.length) return null;
-    return el('section', { class: 'side' }, [el('h3', { text: 'הודעות' })].concat(items));
+    return el('div', { class: 'sponsors' }, [el('div', { class: 'sponsors-inner' }, items)]);
   }
   function smsPanel() {
     var num = (cfg.smsNumber || '').trim();
@@ -422,7 +426,7 @@
       nRows.push(r); nList.appendChild(r.wrap);
     }
     (d.notices.length ? d.notices : [{ title: 'פרנס החודש', body: '' }, { title: 'פרנס השבוע', body: '' }, { title: 'נר למאור', body: '' }]).forEach(addNotice);
-    np.appendChild(el('div', { class: 'hint', text: 'Sponsor panels and announcements shown beside the schedule. A notice with empty text is not shown.' }));
+    np.appendChild(el('div', { class: 'hint', text: 'Sponsor panels (פרנס החודש, פרנס השבוע, נר למאור) and announcements, shown in framed boxes at the top of the board. A notice with empty text is not shown.' }));
     np.appendChild(nList);
     np.appendChild(el('div', null, [el('button', { type: 'button', class: 'btn', text: '+ Notice', onclick: function () { addNotice({ title: '', body: '' }); } })]));
     pages.notices = np;
