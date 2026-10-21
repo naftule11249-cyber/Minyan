@@ -427,6 +427,7 @@ var MinyanEngine = (function () {
       if (isNaN(start)) return out;
       var end = p.spec.end ? resolveMin(p.spec.end, rd, type) : NaN;
       if (p.spec.end && isNaN(end)) return out;
+      if (p.spec.end && end < start) end += 1440; /* "until 00:15" after a 22:15 start runs past midnight */
       var n = 0, m = start, limit = p.spec.count || 500, rnd = p.spec.start.round || 0, t;
       while (n < limit && n < 500 && (!p.spec.end || m <= end)) {
         t = rnd ? Math.floor(m / rnd) * rnd : m;

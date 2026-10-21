@@ -40,8 +40,8 @@
  "schedules": {
   "weekday": {
    "shacharis": "6:20 ברך משה\n6:50 דברי יואל\n7:15 ברך משה\n7:40 לב אהרן\n8:00 דברי יואל\n8:15 ברך משה\n8:30 שלמה יודא\n8:45 לב אהרן\n9:00 דברי יואל\n9:15 ברך משה\n9:30 שלמה יודא\n9:45 לב אהרן\n10:00 דברי יואל\n10:20 ברך משה\n10:40 שלמה יודא\n11:00 דברי יואל\n11:20 ברך משה\n11:40 שלמה יודא\n12:00 דברי יואל\nchatzos-30 ברך משה",
-   "mincha": "chatzos+30~5 ברך משה // example\nsunset-20~5 דברי יואל // example\nsunset-5 ברך משה // example",
-   "maariv": "tzeis ברך משה // example\n21:00 דברי יואל // example\n22:00 ברך משה // example"
+   "mincha": "14:00 ברך משה // וידבר\nsunset-20~5 דברי יואל // example\nsunset-5 ברך משה // example\n15:15 היכל ביהמ״ד",
+   "maariv": "tzeis ברך משה // example\n21:00 דברי יואל\nevery 15 from 22:15 to 00:15 rooms ברך משה, דברי יואל, שלמה יודא, לב אהרן"
   },
   "friday": {
    "mincha": "chatzos+30~5 ברך משה // example\ncandles דברי יואל // example\ncandles+10 ברך משה // example",
@@ -70,9 +70,9 @@
  "overrides": [],
  "smsNumber": "",
  "remoteConfigUrl": "",
- "savedAt": 1792560261573,
+ "savedAt": 1792560529720,
  "siteUrl": "",
  "logo": "",
- "rooms": "ברך משה, דברי יואל, לב אהרן, שלמה יודא",
+ "rooms": "ברך משה, דברי יואל, לב אהרן, שלמה יודא, היכל ביהמ״ד",
  "pinHash": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4"
 }
