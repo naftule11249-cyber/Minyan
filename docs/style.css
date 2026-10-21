@@ -225,3 +225,9 @@ details.help summary { cursor: pointer; font-weight: 500; }
 .sponsors-inner.rotating > .sponsor { grid-area: 1 / 1; opacity: 0; transition: opacity .9s ease; pointer-events: none; }
 .sponsors-inner.rotating > .sponsor.on { opacity: 1; pointer-events: auto; }
 @media (prefers-reduced-motion: reduce) { .sponsors-inner.rotating > .sponsor { transition: none; } }
+
+/* Big clock on the lobby and door screens */
+.top .clock { width: 100%; direction: ltr; text-align: center; font-weight: 700; line-height: 1; letter-spacing: .02em; display: flex; justify-content: center; align-items: baseline; gap: .15em; margin-top: 4px; }
+.top .clock .hm { font-size: clamp(3.5rem, 11vw, 7.5rem); }
+.top .clock .ss { font-size: clamp(1.4rem, 4vw, 2.6rem); opacity: .8; }
+#app.display.room .top .clock .hm { font-size: clamp(4rem, 14vw, 9rem); }

@@ -74,7 +74,10 @@
       el('div', { class: 'shul' }, [cfg.logo ? el('img', { class: 'logo', src: cfg.logo, alt: '' }) : null, el('span', { text: (cfg.name || 'לוח המנינים') + (ui.roomFilter ? ' · ' + ui.roomFilter : '') })]),
       el('h1', { class: 'dayline', text: dayLine(info, rd) }),
       el('div', { class: 'dates' }, [el('span', { text: hebLine }), el('span', { class: 'num', text: gregStr(rd) })]),
-      chips.length ? el('div', { class: 'chips' }, chips) : null])]));
+      chips.length ? el('div', { class: 'chips' }, chips) : null,
+      view.kind !== 'board' ? (ui.clock = el('div', { class: 'clock num', 'aria-label': 'השעה' }, [el('span', { class: 'hm' }), el('span', { class: 'ss' })])) : null])]));
+    if (view.kind === 'board') ui.clock = null;
+    updateClock(now);
 
     var banner = engine.activeBanner(now);
     if (banner) root.appendChild(el('div', { class: 'banner', role: 'status' }, [el('div', { class: 'banner-inner', text: banner.text.trim() })]));
@@ -302,9 +305,16 @@
     f.appendChild(right);
     return f;
   }
+  function updateClock(now) {
+    if (!ui.clock) return;
+    var p = Cal.tzParts(now, loc().tz), h = cfg.clock24 ? pad2(p.hh) : String(p.hh % 12 || 12);
+    ui.clock.firstChild.textContent = h + ':' + pad2(p.mm);
+    ui.clock.lastChild.textContent = pad2(p.ss);
+  }
   function tick() {
     var now = Date.now();
     if (ui.adminOpen) return;
+    updateClock(now);
     if (ui.countdownMs && now >= ui.countdownMs) { render(); return; }
     if (ui.countdown) ui.countdown.textContent = fmtCountdown(ui.countdownMs - now);
     if (Math.floor(now / 60000) !== ui.lastMinute) render();
