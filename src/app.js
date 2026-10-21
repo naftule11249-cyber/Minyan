@@ -43,7 +43,7 @@
     if (!isNaN(z.sunset) && n.min >= z.sunset) hebLine += ' · בערב: ' + Cal.formatHeb(Cal.hebFromRD(rd + 1));
     var chips = info.labels.map(function (l) { return el('span', { class: 'chip', text: l }); });
     root.appendChild(el('header', { class: 'top' }, [el('div', { class: 'inner' }, [
-      el('div', { class: 'shul', text: cfg.name || 'לוח המנינים' }),
+      el('div', { class: 'shul' }, [cfg.logo ? el('img', { class: 'logo', src: cfg.logo, alt: '' }) : null, el('span', { text: cfg.name || 'לוח המנינים' })]),
       el('h1', { class: 'dayline', text: dayLine(info, rd) }),
       el('div', { class: 'dates' }, [el('span', { text: hebLine }), el('span', { class: 'num', text: gregStr(rd) })]),
       chips.length ? el('div', { class: 'chips' }, chips) : null])]));
@@ -233,8 +233,10 @@
       fPin = inp('f-pin', d.pin == null ? '1234' : d.pin);
     var fSms = inp('f-sms', d.smsNumber || '', { dir: 'ltr', placeholder: '+1 718 555 0100' });
     var fRooms = inp('f-rooms', d.rooms || '', { placeholder: 'ברך משה, דברי יואל, לב אהרן' });
+    var fSite = inp('f-site', d.siteUrl || '', { dir: 'ltr', placeholder: 'https://yourname.github.io/minyan/' }), fLogo = inp('f-logo', d.logo || '', { dir: 'ltr', placeholder: 'logo.png' });
     g.appendChild(el('div', { class: 'fields' }, [field('Shul name (shown on the board)', fName), field('Location name (shown in the footer)', fLocName), field('SMS number (once the text service is set up)', fSms)]));
     g.appendChild(el('div', { class: 'fields' }, [field('Rooms / minyan names, comma-separated (suggested when you enter minyanim)', fRooms)]));
+    g.appendChild(el('div', { class: 'fields' }, [field('Website address (used for share previews and the app)', fSite), field('Logo file shown in the header (file name next to index.html)', fLogo)]));
     g.appendChild(el('div', { class: 'fields' }, [field('Latitude', fLat), field('Longitude', fLng), field('Time zone', fTz), field('Elevation (meters)', fElev)]));
     g.appendChild(el('datalist', { id: 'tz-list' }, ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Toronto', 'Europe/London', 'Europe/Antwerp', 'Europe/Zurich', 'Asia/Jerusalem', 'Australia/Melbourne'].map(function (z) { return el('option', { value: z }); })));
     g.appendChild(el('div', { class: 'fields' }, [field('Candle lighting: minutes before sunset', fCandles), field('Nightfall (tzeis): minutes after sunset', fTzeisMin), field('Nightfall: degrees below the horizon (used when minutes is blank)', fTzeisDeg)]));
@@ -505,6 +507,8 @@
       if (mode !== 'artifact') out.pin = fPin.value;
       out.tefillos = d.tefillos.map(function (t, i) { return liveTefilla(i); });
       out.rooms = fRooms.value.trim();
+      out.siteUrl = fSite.value.trim();
+      out.logo = fLogo.value.trim();
       out.schedules = {};
       Cal.DAY_TYPES.forEach(function (t) {
         var o = {};

@@ -37,7 +37,8 @@ button { cursor: pointer; }
 /* Header band */
 .top { background: linear-gradient(180deg, var(--band-2), var(--band)); color: var(--band-ink); }
 .top .inner { max-width: 1120px; margin: 0 auto; padding-block: 18px 20px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 24px; }
-.top .shul { font-family: var(--font-display); font-size: 1.35rem; letter-spacing: .01em; opacity: .95; }
+.top .shul { font-family: var(--font-display); font-size: 1.35rem; letter-spacing: .01em; opacity: .95; display: flex; align-items: center; gap: 10px; }
+.top .logo { height: 46px; width: auto; max-width: 170px; object-fit: contain; border-radius: 6px; background: rgba(255,255,255,.08); }
 .top .dayline { font-family: var(--font-display); font-size: clamp(1.5rem, 4vw, 2.2rem); line-height: 1.15; }
 .top .dates { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .95rem; opacity: .9; }
 .top .chips { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }

@@ -13,7 +13,14 @@ const dist = path.join(__dirname, 'docs');
 fs.mkdirSync(dist, { recursive: true });
 const reset = ':root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}';
 const pwaHead = '<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#223b68"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="מנינים"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="favicon.png">';
-const full = '<!doctype html><html lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>' + reset + '</style>' + pwaHead + '</head><body>' + body + '</body></html>';
+const esc = t => String(t).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+const site = (cfg.siteUrl || '').trim().replace(/\/?$/, m => cfg.siteUrl ? '/' : '');
+const desc = 'המנין הבא, כל המנינים לפי חדרים וזמני היום';
+const ogHead = '<meta property="og:type" content="website"><meta property="og:title" content="' + esc(cfg.name || 'לוח המנינים') + '"><meta property="og:description" content="' + desc + '">' +
+  '<meta property="og:image" content="' + (site ? site : '') + 'og-image.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:locale" content="he_IL">' +
+  (site ? '<meta property="og:url" content="' + esc(site) + '">' : '') + '<meta name="twitter:card" content="summary_large_image"><meta name="description" content="' + desc + '">';
+if (!site) console.warn('siteUrl is empty: share previews need the full site address (set it under Edit → General once the site is online, or in config.default.json).');
+const full = '<!doctype html><html lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>' + reset + '</style>' + pwaHead + ogHead + '</head><body>' + body + '</body></html>';
 fs.writeFileSync(path.join(dist, 'index.html'), full);
 for (const f of ['style.css', 'cal.js', 'engine.js', 'template.js', 'app.js', 'manifest.webmanifest']) fs.copyFileSync(path.join(__dirname, 'src', f), path.join(dist, f));
 fs.writeFileSync(path.join(dist, 'config.json'), json);
@@ -22,8 +29,8 @@ const hash = crypto.createHash('sha256');
 for (const f of ['index.html', 'style.css', 'cal.js', 'engine.js', 'template.js', 'app.js', 'manifest.webmanifest']) hash.update(fs.readFileSync(path.join(dist, f)));
 const sw = fs.readFileSync(path.join(__dirname, 'src/sw.js'), 'utf8').replace("var VERSION = 'minyan-shell-dev';", "var VERSION = 'minyan-shell-" + hash.digest('hex').slice(0, 12) + "';");
 fs.writeFileSync(path.join(dist, 'sw.js'), sw);
-for (const f of ['icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png', 'favicon.png']) {
-  if (!fs.existsSync(path.join(dist, f))) console.warn('missing icon ' + f + ' (run node assets/make-icons.js)');
+for (const f of ['icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png', 'favicon.png', 'og-image.png']) {
+  if (!fs.existsSync(path.join(dist, f))) console.warn('missing ' + f + ' (run node assets/make-icons.js and node assets/make-og.js)');
 }
 // SMS responder bundles: one file to paste into Twilio Functions, one to deploy as a Cloudflare Worker
 const strip = t => t.replace(/^if \(typeof module !== 'undefined'\) module\.exports = .*;$/mg, '');
