@@ -1,5 +1,12 @@
 global.Cal = require('../src/cal.js'); global.MinyanEngine = require('../src/engine.js');
-const MinyanSms = require('../src/sms.js'); const cfg = require('../config.default.json');
+const MinyanSms = require('../src/sms.js'); const cfg = JSON.parse(JSON.stringify(require('../config.default.json')));
+cfg.location = { name: 'x', lat: 40.6975, lng: -73.9512, tz: 'America/New_York', elev: 0 }; cfg.candles = 15; cfg.tzeisMinutes = 72;
+cfg.tefillos = [{ id: 'shacharis', name: 'שחרית', milestone: 'הודו', offset: 10, period: 'am' }, { id: 'mincha', name: 'מנחה', milestone: 'שמונה עשרה', offset: 8, period: 'pm' }, { id: 'maariv', name: 'מעריב', milestone: 'שמונה עשרה', offset: 5, period: 'pm' }];
+cfg.schedules = { weekday: { shacharis: '6:20 ברך משה\n6:50 דברי יואל\n7:15 ברך משה\n7:40 לב אהרן\n8:00 דברי יואל\n8:15 ברך משה\n8:30 שלמה יודא\n8:45 לב אהרן\n9:00 דברי יואל\n9:15 ברך משה\n9:30 שלמה יודא\n9:45 לב אהרן\n10:00 דברי יואל\n10:20 ברך משה\n10:40 שלמה יודא\n11:00 דברי יואל\n11:20 ברך משה\n11:40 שלמה יודא\n12:00 דברי יואל\nchatzos-30 ברך משה',
+  mincha: 'chatzos+30~5 ברך משה\nsunset-20~5 דברי יואל\nsunset-5 ברך משה', maariv: 'tzeis+0 ברך משה\n9:00 דברי יואל\n10:00 ברך משה' },
+  friday: { mincha: 'chatzos+30~5 ברך משה\ncandles דברי יואל\ncandles+10 ברך משה', maariv: 'candles+20 ברך משה\nsunset+15 דברי יואל' },
+  shabbos: { shacharis: '8:00 ברך משה\n9:00 דברי יואל\n9:30 לב אהרן\n10:00 שלמה יודא', mincha: 'sunset-60~5 ברך משה\nsunset-25~5 דברי יואל', maariv: 'tzeis+0 ברך משה\ntzeis+15 דברי יואל' } };
+cfg.overrides = [];
 let fails = 0;
 function check(name, text, re) { const ok = re.test(text); if (!ok) fails++; console.log((ok ? 'ok   ' : 'FAIL ') + name + ': ' + text.replace(/\n/g, ' | ')); }
 const at = (h, m, d) => Cal.epochFromWall(Cal.rdFromGreg(2026, 10, d || 20), h * 60 + m, 'America/New_York');

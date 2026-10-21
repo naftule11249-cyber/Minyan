@@ -22,7 +22,7 @@ var MinyanEngine = (function () {
     if (m) {
       var h = +m[1], mi = +m[2];
       if (h > 24 || mi > 59) return null;
-      if (tefilla.period === 'pm' && h < 12) h += 12;
+      if (tefilla.period === 'pm' && h >= 1 && h < 12) h += 12; /* 6:45 means 6:45 PM for Mincha/Maariv; 00:15 stays after midnight */
       return { kind: 'fixed', min: h * 60 + mi };
     }
     m = /^([^+\-~]+?)\s*(?:([+-])\s*(\d+))?\s*(?:~(\d+))?$/.exec(tok);
