@@ -13,8 +13,9 @@ const { chromium } = require('playwright');
     console.log(name, 'scrollWidth', await page.evaluate(() => document.documentElement.scrollWidth), 'tiles', await page.locator('.tile').count(), 'next-tiles', await page.locator('.tile.next').count());
     await page.screenshot({ path: 'test/shot-' + name + '.png', fullPage: true });
     if (name === 'desktop') {
-      await page.click('footer button:has-text("Edit")');
-      await page.fill('#pin-input', '1234'); await page.press('#pin-input', 'Enter');
+      console.log('edit button on public page:', await page.locator('footer button:has-text("Edit")').count(), 'visible:', await page.locator('footer button:has-text("Edit")').isVisible());
+      await page.goto('http://localhost:8790/admin.html', { waitUntil: 'networkidle' });
+      await page.waitForSelector('#pin-input'); await page.fill('#pin-input', '1234'); await page.press('#pin-input', 'Enter');
       await page.waitForSelector('#f-name');
       await page.fill('#f-name', 'ביהמ״ד בדיקה');
       await page.click('#tab-schedule');

@@ -78,9 +78,10 @@ var MinyanEngine = (function () {
       if (isNaN(start)) return out;
       var end = p.spec.end ? resolveMin(p.spec.end, rd, type) : NaN;
       if (p.spec.end && isNaN(end)) return out;
-      var n = 0, m = start, limit = p.spec.count || 500;
+      var n = 0, m = start, limit = p.spec.count || 500, rnd = p.spec.start.round || 0, t;
       while (n < limit && n < 500 && (!p.spec.end || m <= end)) {
-        out.push({ start: m, room: p.rooms.length ? p.rooms[n % p.rooms.length] : '', note: p.note });
+        t = rnd ? Math.floor(m / rnd) * rnd : m;
+        if (!out.length || out[out.length - 1].start !== t) out.push({ start: t, room: p.rooms.length ? p.rooms[out.length % p.rooms.length] : '', note: p.note });
         m += p.spec.every; n++;
       }
       return out;

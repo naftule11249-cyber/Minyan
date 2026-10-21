@@ -167,7 +167,20 @@
   }
 
   /* ---------- admin ---------- */
-  function canEditNow() { return mode === 'artifact' ? canEdit : true; }
+  function isAdminPage() { return /(^|\/)admin\.html$/i.test(location.pathname) || location.hash === '#admin'; }
+  function canEditNow() { return isAdminPage() && (mode === 'artifact' ? canEdit : true); }
+  function sha256Hex(str) {
+    return crypto.subtle.digest('SHA-256', new TextEncoder().encode(str)).then(function (buf) {
+      return Array.prototype.map.call(new Uint8Array(buf), function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+    });
+  }
+  function checkPin(value) {
+    var subtle = window.crypto && crypto.subtle;
+    if (cfg.pinHash && subtle) return sha256Hex(value).then(function (h) { return h === cfg.pinHash; });
+    if (cfg.pin != null && cfg.pin !== '') return Promise.resolve(value === String(cfg.pin));
+    if (cfg.pinHash) return Promise.resolve(false);
+    return Promise.resolve(value === '1234');
+  }
   function refreshEditBtn() { if (ui.editBtn) ui.editBtn.hidden = !canEditNow(); }
   function toast(msg, ms) {
     var t = $('#toast');
@@ -188,11 +201,13 @@
     var msg = el('div', { class: 'hint' });
     var form = el('form', { class: 'pin', onsubmit: function (ev) {
       ev.preventDefault();
-      if (input.value === String(cfg.pin == null ? '1234' : cfg.pin)) {
-        pinOk = true;
-        try { sessionStorage.setItem('minyan-pin', '1'); } catch (e) {}
-        closeOverlay(); buildAdmin();
-      } else { msg.textContent = 'Wrong PIN'; input.select(); }
+      checkPin(input.value).then(function (ok) {
+        if (ok) {
+          pinOk = true;
+          try { sessionStorage.setItem('minyan-pin', '1'); } catch (e) {}
+          closeOverlay(); buildAdmin();
+        } else { msg.textContent = 'Wrong PIN'; input.select(); }
+      });
     } }, [
       el('h2', { text: 'Edit access' }),
       el('div', { class: 'field' }, [el('label', { for: 'pin-input', text: 'PIN' }), input]), msg,
@@ -235,7 +250,7 @@
       fLng = inp('f-lng', d.location.lng, { inputmode: 'decimal' }), fTz = inp('f-tz', d.location.tz || 'America/New_York', { list: 'tz-list' }),
       fElev = inp('f-elev', d.location.elev || 0, { inputmode: 'numeric' }), fCandles = inp('f-candles', d.candles == null ? 18 : d.candles, { inputmode: 'numeric' }),
       fTzeisMin = inp('f-tzeismin', d.tzeisMinutes || '', { inputmode: 'numeric', placeholder: 'blank = by degrees' }), fTzeisDeg = inp('f-tzeisdeg', d.tzeisDeg || 8.5, { inputmode: 'decimal' }),
-      fPin = inp('f-pin', d.pin == null ? '1234' : d.pin);
+      fPin = inp('f-pin', '', { type: 'password', autocomplete: 'new-password', placeholder: 'leave empty to keep the current PIN' });
     var fSms = inp('f-sms', d.smsNumber || '', { dir: 'ltr', placeholder: '+1 718 555 0100' });
     var fRooms = inp('f-rooms', d.rooms || '', { placeholder: 'ברך משה, דברי יואל, לב אהרן' });
     var fSite = inp('f-site', d.siteUrl || '', { dir: 'ltr', placeholder: 'https://yourname.github.io/minyan/' }), fLogo = inp('f-logo', d.logo || '', { dir: 'ltr', placeholder: 'logo.png' });
@@ -246,7 +261,7 @@
     g.appendChild(el('datalist', { id: 'tz-list' }, ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Toronto', 'Europe/London', 'Europe/Antwerp', 'Europe/Zurich', 'Asia/Jerusalem', 'Australia/Melbourne'].map(function (z) { return el('option', { value: z }); })));
     g.appendChild(el('div', { class: 'fields' }, [field('Candle lighting: minutes before sunset', fCandles), field('Nightfall (tzeis): minutes after sunset', fTzeisMin), field('Nightfall: degrees below the horizon (used when minutes is blank)', fTzeisDeg)]));
     g.appendChild(el('div', { class: 'col' }, [chk('f-israel', d.israel, 'Eretz Yisroel calendar (one-day Yom Tov)'), chk('f-weekly', d.weeklyEarliest, 'Weekday zman-based times use the earliest sunset of the week (Sun–Thu)'), chk('f-24', d.clock24, '24-hour clock'), chk('f-rt', d.showRT, 'Show Rabbeinu Tam (72 minutes after sunset) in the zmanim list')]));
-    if (mode !== 'artifact') g.appendChild(el('div', { class: 'fields' }, [field('Edit PIN', fPin, el('span', { class: 'hint', text: 'Stored inside the page. It prevents accidental edits; it is not security.' }))]));
+    if (mode !== 'artifact') g.appendChild(el('div', { class: 'fields' }, [field('New PIN for the admin page', fPin, el('span', { class: 'hint', text: 'Stored scrambled (hashed), so it cannot be read from the site files. It keeps strangers out of the admin page; what everyone else sees can only be changed with the GitHub token on the Publish tab, which stays on the device that entered it.' }))]));
     g.appendChild(el('h3', { text: 'Tefillos' }));
     var tRows = [];
     d.tefillos.forEach(function (t, i) {
@@ -308,7 +323,7 @@
         return 'today ' + head + (t.length > 4 ? ' … ' : t.length === 4 ? ', ' : '') + (t.length > 3 ? fmtTime(t[t.length - 1]) : '') + ' (' + t.length + ' minyanim)';
       }
       /* the "when" widget: fixed time picker, or zman + minutes before/after + rounding. Mutates w and calls onChange. */
-      function timeWidget(w, onChange, label) {
+      function timeWidget(w, onChange, label, roundLabel) {
         var when = el('select', { 'aria-label': label || 'Time type' });
         ZMAN_OPTS.forEach(function (o) { when.appendChild(el('option', { value: o[0], text: o[1] })); });
         when.value = w.kind;
@@ -317,8 +332,8 @@
         sign.value = w.off < 0 ? '-' : '+';
         var mins = el('input', { type: 'number', min: '0', step: '1', inputmode: 'numeric', class: 'mins', value: String(Math.abs(w.off || 0)), 'aria-label': 'Minutes' });
         var roundC = el('input', { type: 'checkbox' }); roundC.checked = !!w.round;
-        var roundL = el('label', { class: 'small' }, [roundC, ' round to 5']);
-        function show() { var fixed = when.value === 'fixed'; time.hidden = !fixed; sign.hidden = fixed; mins.hidden = fixed; roundL.hidden = fixed; }
+        var roundL = el('label', { class: 'small' }, [roundC, ' ' + (roundLabel || 'round to 5')]);
+        function show() { var fixed = when.value === 'fixed'; time.hidden = !fixed; sign.hidden = fixed; mins.hidden = fixed; roundL.hidden = fixed || roundLabel === ''; }
         when.addEventListener('change', function () { w.kind = when.value; if (w.kind === 'fixed' && !w.time) { w.time = '07:00'; time.value = w.time; } show(); onChange(); });
         time.addEventListener('input', function () { w.time = time.value; onChange(); });
         function offChange() { w.off = (+mins.value || 0) * (sign.value === '-' ? -1 : 1); onChange(); }
@@ -348,14 +363,14 @@
           var count = el('input', { type: 'number', min: '1', step: '1', inputmode: 'numeric', class: 'mins', value: String(r.count || 10), 'aria-label': 'How many minyanim' });
           count.addEventListener('input', function () { r.count = Math.max(1, +count.value || 1); changed(); });
           var countL = el('span', { class: 'k', text: 'minyanim' });
-          var endW = timeWidget(r.end, changed, 'Until time');
+          var endW = timeWidget(r.end, changed, 'Until time', '');
           var endWrap = el('span', { class: 'inl' }, endW);
           function showEnd() { var c = endMode.value === 'count'; endWrap.hidden = c; count.hidden = !c; countL.hidden = !c; }
           endMode.addEventListener('change', function () { r.endMode = endMode.value; showEnd(); changed(); });
           showEnd();
           var rooms = el('input', { type: 'text', dir: 'auto', placeholder: 'Rooms in turn, comma-separated: ברך משה, דברי יואל', value: r.rooms || '', class: 'grow', list: 'rooms-list', autocomplete: 'off' });
           rooms.addEventListener('input', function () { r.rooms = rooms.value; changed(); });
-          row.appendChild(el('div', { class: 'mrow-l' }, [el('span', { class: 'tag', text: 'Repeating' }), el('span', { class: 'k', text: 'every' }), every, el('span', { class: 'k', text: 'min, from' })].concat(timeWidget(r.start, changed, 'From'))));
+          row.appendChild(el('div', { class: 'mrow-l' }, [el('span', { class: 'tag', text: 'Repeating' }), el('span', { class: 'k', text: 'every' }), every, el('span', { class: 'k', text: 'min, from' })].concat(timeWidget(r.start, changed, 'From', 'round every minyan to 5'))));
           row.appendChild(el('div', { class: 'mrow-l' }, [endMode, endWrap, count, countL]));
           row.appendChild(el('div', { class: 'mrow-l' }, [rooms]));
           row.appendChild(el('div', { class: 'mrow-l' }, [note, pv, del]));
@@ -532,7 +547,7 @@
       out.tzeisMinutes = fTzeisMin.value === '' ? 0 : +fTzeisMin.value;
       out.tzeisDeg = +fTzeisDeg.value || 8.5;
       out.israel = $('#f-israel').checked; out.weeklyEarliest = $('#f-weekly').checked; out.clock24 = $('#f-24').checked; out.showRT = $('#f-rt').checked;
-      if (mode !== 'artifact') out.pin = fPin.value;
+      delete out.pin;
       out.tefillos = d.tefillos.map(function (t, i) { return liveTefilla(i); });
       out.rooms = fRooms.value.trim();
       out.siteUrl = fSite.value.trim();
@@ -564,7 +579,12 @@
       if (err) { toast(err); return; }
       saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
       if (mode !== 'artifact') saveGh();
-      persist(c).then(function (r) {
+      var ready = Promise.resolve();
+      if (mode !== 'artifact' && fPin.value.trim()) {
+        c.pinHash = null;
+        ready = (window.crypto && crypto.subtle) ? sha256Hex(fPin.value.trim()).then(function (h) { c.pinHash = h; }) : Promise.resolve().then(function () { c.pin = fPin.value.trim(); delete c.pinHash; });
+      }
+      ready.then(function () { return persist(c); }).then(function (r) {
         setCfg(c);
         if (r.reloads) { toast('Saved. Reloading the page…', 8000); return; }
         closeOverlay();
@@ -717,6 +737,8 @@
     }
     render();
     setInterval(tick, 1000);
+    window.addEventListener('hashchange', function () { refreshEditBtn(); if (isAdminPage() && canEditNow() && !ui.adminOpen) openAdmin(); });
+    if (!inArtifact && isAdminPage()) openAdmin();
     if (!inArtifact) {
       loadRemote();
       setInterval(loadRemote, 15 * 60 * 1000);
@@ -727,7 +749,11 @@
     }
     if (inArtifact) {
       window.claude.use('artifact').then(function (a) { if (a) artifactNs = a; else mode = 'static'; refreshEditBtn(); });
-      window.claude.use('user').then(function (u) { canEdit = !!(u && typeof u.canEdit === 'function' && u.canEdit()); refreshEditBtn(); });
+      window.claude.use('user').then(function (u) {
+        canEdit = !!(u && typeof u.canEdit === 'function' && u.canEdit());
+        refreshEditBtn();
+        if (isAdminPage()) { if (canEdit && !ui.adminOpen) openAdmin(); else if (!canEdit) toast('Editing this board is available to its owner only', 6000); }
+      });
     }
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();

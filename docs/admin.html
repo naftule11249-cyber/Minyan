@@ -1,0 +1,88 @@
+<!doctype html><html lang="he"><head><meta name="robots" content="noindex,nofollow"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#223b68"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="מנינים"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="favicon.png"><meta property="og:type" content="website"><meta property="og:title" content="לוח המנינים"><meta property="og:description" content="המנין הבא, כל המנינים לפי חדרים וזמני היום"><meta property="og:image" content="og-image.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:locale" content="he_IL"><meta name="twitter:card" content="summary_large_image"><meta name="description" content="המנין הבא, כל המנינים לפי חדרים וזמני היום"></head><body><title>לוח המנינים – ניהול</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;700&family=Heebo:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="style.css">
+<div id="app" dir="rtl" lang="he"><header class="top"><div class="inner"><div class="shul">לוח המנינים</div><h1 class="dayline">טוען את הלוח…</h1></div></header><main><div class="col"><section class="next"><h2>מנין הבא</h2><div class="empty">מחשב את המנין הקרוב…</div></section></div></main></div>
+<script id="config" type="application/json">{
+ "name": "לוח המנינים",
+ "location": {
+  "name": "וויליאמסבורג, ברוקלין",
+  "lat": 40.7081,
+  "lng": -73.9571,
+  "tz": "America/New_York",
+  "elev": 0
+ },
+ "israel": false,
+ "candles": 15,
+ "tzeisMinutes": 72,
+ "tzeisDeg": 8.5,
+ "weeklyEarliest": false,
+ "clock24": false,
+ "showRT": false,
+ "tefillos": [
+  {
+   "id": "shacharis",
+   "name": "שחרית",
+   "milestone": "הודו",
+   "offset": 10,
+   "period": "am"
+  },
+  {
+   "id": "mincha",
+   "name": "מנחה",
+   "milestone": "שמונה עשרה",
+   "offset": 8,
+   "period": "pm"
+  },
+  {
+   "id": "maariv",
+   "name": "מעריב",
+   "milestone": "שמונה עשרה",
+   "offset": 5,
+   "period": "pm"
+  }
+ ],
+ "schedules": {
+  "weekday": {
+   "shacharis": "6:20 ברך משה\n6:50 דברי יואל\n7:15 ברך משה\n7:40 לב אהרן\n8:00 דברי יואל\n8:15 ברך משה\n8:30 שלמה יודא\n8:45 לב אהרן\n9:00 דברי יואל\n9:15 ברך משה\n9:30 שלמה יודא\n9:45 לב אהרן\n10:00 דברי יואל\n10:20 ברך משה\n10:40 שלמה יודא\n11:00 דברי יואל\n11:20 ברך משה\n11:40 שלמה יודא\n12:00 דברי יואל\nchatzos-30 ברך משה",
+   "mincha": "chatzos+30~5 ברך משה // example\nsunset-20~5 דברי יואל // example\nsunset-5 ברך משה // example",
+   "maariv": "tzeis+0 ברך משה // example\n9:00 דברי יואל // example\n10:00 ברך משה // example"
+  },
+  "friday": {
+   "mincha": "chatzos+30~5 ברך משה // example\ncandles דברי יואל // example\ncandles+10 ברך משה // example",
+   "maariv": "candles+20 ברך משה // example\nsunset+15 דברי יואל // example"
+  },
+  "shabbos": {
+   "shacharis": "8:00 ברך משה // example\n9:00 דברי יואל // example\n9:30 לב אהרן // example\n10:00 שלמה יודא // example",
+   "mincha": "sunset-60~5 ברך משה // example\nsunset-25~5 דברי יואל // example",
+   "maariv": "tzeis+0 ברך משה // example\ntzeis+15 דברי יואל // example"
+  }
+ },
+ "notices": [
+  {
+   "title": "פרנס החודש",
+   "body": "הרה״ח ר׳ חיים אליעזר פאלקאוויטש הי״ו\nלרגל הולדות בנו למזל טוב"
+  },
+  {
+   "title": "פרנס השבוע",
+   "body": ""
+  },
+  {
+   "title": "נר למאור",
+   "body": ""
+  }
+ ],
+ "overrides": [],
+ "smsNumber": "",
+ "remoteConfigUrl": "",
+ "savedAt": 1792551323788,
+ "siteUrl": "",
+ "logo": "",
+ "rooms": "",
+ "pinHash": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4"
+}</script>
+<script src="cal.js"></script>
+<script src="engine.js"></script>
+<script src="template.js"></script>
+<script src="app.js"></script>
+</body></html>

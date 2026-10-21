@@ -22,6 +22,8 @@ const ogHead = '<meta property="og:type" content="website"><meta property="og:ti
 if (!site) console.warn('siteUrl is empty: share previews need the full site address (set it under Edit → General once the site is online, or in config.default.json).');
 const full = '<!doctype html><html lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>' + reset + '</style>' + pwaHead + ogHead + '</head><body>' + body + '</body></html>';
 fs.writeFileSync(path.join(dist, 'index.html'), full);
+const adminFull = full.replace('<title>לוח המנינים</title>', '<title>לוח המנינים – ניהול</title>').replace('<head>', '<head><meta name="robots" content="noindex,nofollow">');
+fs.writeFileSync(path.join(dist, 'admin.html'), adminFull);
 for (const f of ['style.css', 'cal.js', 'engine.js', 'template.js', 'app.js', 'manifest.webmanifest']) fs.copyFileSync(path.join(__dirname, 'src', f), path.join(dist, f));
 fs.writeFileSync(path.join(dist, 'config.json'), json);
 fs.writeFileSync(path.join(dist, '.nojekyll'), '');

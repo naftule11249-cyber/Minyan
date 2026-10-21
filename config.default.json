@@ -14,7 +14,6 @@
  "weeklyEarliest": false,
  "clock24": false,
  "showRT": false,
- "pin": "1234",
  "tefillos": [
   {
    "id": "shacharis",
@@ -74,5 +73,6 @@
  "savedAt": 1792551323788,
  "siteUrl": "",
  "logo": "",
- "rooms": ""
+ "rooms": "",
+ "pinHash": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4"
 }

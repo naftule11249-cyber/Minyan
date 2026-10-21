@@ -2,14 +2,14 @@
 
 Shows the next minyan with a live countdown, every room's Shacharis / Mincha / Maariv
 minyanim (with the Hodu / Shemoneh Esrei time), the Hebrew date, the parsha of the week,
-holidays and today's zmanim. The board itself is in Hebrew; the gabbai edits everything from an in-page settings panel in English ("Edit" button at the bottom).
+holidays and today's zmanim. The board itself is in Hebrew and has no editing controls. The gabbai edits everything from a separate admin page in English: `admin.html` on the self-hosted site (PIN), or the claude.ai link with `#admin` added (owner only).
 
 Three ways to use it, all from the same code:
 
 | What | Where | Editing |
 |---|---|---|
-| Shareable page | https://claude.ai/artifact/5CiKzUDtdy3eTAeNzQrqwA | Owner clicks "Edit", saves for everyone |
-| Website + installable app (PWA) | `docs/` on any static host (GitHub Pages, Netlify…) | "Edit" → publishes `config.json` to GitHub |
+| Shareable page | https://claude.ai/artifact/5CiKzUDtdy3eTAeNzQrqwA | Owner opens the link with `#admin`, saves for everyone |
+| Website + installable app (PWA) | `docs/` on any static host (GitHub Pages, Netlify…) | `admin.html` (PIN) → publishes `config.json` to GitHub |
 | App Store / Play Store app | `app/` (Capacitor, Android + iOS projects) | Reads the website's `config.json` |
 | Text message (SMS) | `sms/` (Twilio Functions, Cloudflare Worker or Node) | Reads the website's `config.json` |
 
@@ -41,7 +41,8 @@ One minyan per line: time first, then the room / minyan name, then an optional `
 
 Zman words: `שקיעה` `נץ` `הדלקה` `צאת` `פלג` `חצות` `עלות` `שמע` `ר״ת` (or sunset, sunrise,
 candles, tzeis, plag, chatzos, alos, shema). The last weekday Shacharis is written `חצות-30 ברך משה`,
-so it moves with chatzos every day (change `-30` if your board uses a different gap). Day types fall back to a more general one when
+so it moves with chatzos every day (change `-30` if your board uses a different gap).
+A repeating run: `every 10 from sunrise-30~5 to chatzos-30 rooms ברך משה, דברי יואל` (every 10 minutes, rooms in turn; `~5` rounds every minyan to 5 minutes). The admin page builds these rows for you. Day types fall back to a more general one when
 empty (Rosh Chodesh → weekday, Yom Tov → Shabbos, Erev Yom Tov → Friday). For Mincha and
 Maariv a time like `6:45` means 6:45 PM (set per tefilla under General → Tefillos).
 
@@ -52,9 +53,11 @@ Maariv a time like `6:45` means 6:45 PM (set per tefilla under General → Tefil
 3. Repository Settings → Pages → Source: "Deploy from a branch", branch `main`, folder `/docs` (or `/ (root)` if you uploaded only the site files). The site appears at `https://USERNAME.github.io/minyan/` after a minute.
 4. On a phone, open that address: Android offers "Install app"; on iPhone use Share → "Add to Home Screen". The app works offline.
 
+Editing: open `https://USERNAME.github.io/minyan/admin.html` and enter the PIN (default 1234; change it under General, it is stored hashed). The public page has no edit button.
+
 Letting the gabbai update everyone from the page: in GitHub create a fine-grained personal
 access token (Settings → Developer settings → Fine-grained tokens) limited to that one
-repository with "Contents: Read and write". On the site: Edit → Publish tab → fill in
+repository with "Contents: Read and write". On `admin.html`: Publish tab → fill in
 `USERNAME/minyan`, branch `main`, path `docs/config.json` (or `config.json` for a root upload), paste the token, "Test connection". From then
 on every Save commits `config.json`; the site and the apps pick it up within a few minutes.
 The token stays in that browser only. Without a token, Save only changes that device, and
@@ -113,4 +116,4 @@ text, which is handy for testing in a browser.
 
 - Location defaults to Williamsburg, Brooklyn (set exact coordinates under General); candle lighting 15 minutes before sunset and nightfall 72 minutes after sunset as saved on the live page, all adjustable.
 - Verified: calendar, SMS and browser tests, offline mode, the SMS webhook replying over HTTP, and saving inside the claude.ai viewer. Not verified: GitHub publishing against a real repository, the native builds, and a real Twilio number.
-- The PIN (default 1234) only guards the edit panel on the self-hosted site and in the app; it is not security.
+- The PIN (default 1234) guards `admin.html`; it is stored as a hash in the config. Changing what everyone sees also needs the GitHub token, which stays on the device that entered it. The store app has no admin at all.

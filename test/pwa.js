@@ -24,7 +24,8 @@ const { chromium } = require('playwright'); const fs = require('fs');
   console.log('offline dayline:', await page.textContent('.dayline').catch(() => 'n/a'), '| tiles', await page.locator('.tile').count());
   await ctx.setOffline(false);
   // publish tab present in self-hosted mode
-  await page.click('footer button:has-text("Edit")'); await page.fill('#pin-input', '1234'); await page.press('#pin-input', 'Enter');
+  await page.goto('http://localhost:8790/admin.html', { waitUntil: 'networkidle' });
+  await page.waitForSelector('#pin-input'); await page.fill('#pin-input', '1234'); await page.press('#pin-input', 'Enter');
   await page.waitForSelector('#tab-publish'); await page.click('#tab-publish');
   await page.click('button:has-text("Test connection")'); await page.waitForTimeout(200);
   console.log('publish tab msg:', await page.textContent('#gh-repo ~ *').catch(() => ''), '|', await page.evaluate(() => document.querySelector('.panel .hint:last-of-type') && '' ) , (await page.textContent('.bar .hint')));
