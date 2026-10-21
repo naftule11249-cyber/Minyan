@@ -139,6 +139,8 @@ footer { max-width: 1120px; margin: 0 auto; padding-block: 0 30px; padding-left:
 .preview { font-size: .82rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 8px; min-height: 1.2em; }
 .preview .bad { color: var(--count); }
 .editor { display: grid; gap: 8px; }
+.field label.same { font-size: .95rem; color: var(--ink); display: flex; align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); }
+.same-info { margin-top: -2px; }
 .rows { display: grid; gap: 6px; }
 .mrow { border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; display: grid; gap: 6px; background: var(--panel-2); }
 .mrow-l { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }

@@ -419,6 +419,7 @@
       ta = el('textarea', { spellcheck: 'false', dir: 'auto' }); ta.hidden = true;
       ta.addEventListener('input', function () { store.value = ta.value; refreshRooms(); markTabs(); });
       load(); renderAll();
+      wrap.reload = function () { load(); renderAll(); if (ta) ta.value = store.value; };
       wrap.appendChild(list); wrap.appendChild(ta);
       wrap.appendChild(el('div', { class: 'editor-bar' }, [addBtn, repeatBtn, copySel, sortBtn, textBtn]));
       return wrap;
@@ -432,16 +433,50 @@
       el('p', null, ['"Edit as text" shows the same rows as lines like ', el('code', { text: '6:20 ברך משה' }), ', ', el('code', { text: 'sunset-15 דברי יואל // note' }), ' or ', el('code', { text: 'every 10 from sunrise-30 to chatzos-30 rooms ברך משה, דברי יואל' }), ', handy for pasting a whole list.'])])]));
     var typeTabs = el('div', { class: 'tabs' }), typePages = {};
     sp.appendChild(typeTabs);
+    var infoUpdaters = [];
+    /* which day type actually supplies this tefilla for `key` when its own box is empty */
+    function sourceOf(key, tfId) {
+      var k = FALLBACK[key];
+      while (k) { if (lines[k][tfId].value.trim()) return k; k = FALLBACK[k]; }
+      return null;
+    }
+    function countOf(key, tfId, i) {
+      var n = 0; lines[key][tfId].value.split('\n').forEach(function (l) { n += expandLine(parseLine(l, liveTefilla(i)), todayRd, key).length; });
+      return n;
+    }
     Cal.DAY_TYPES.forEach(function (t) {
       var key = t[0], b = el('button', { type: 'button', id: 'dt-' + key, text: t[3], 'aria-selected': 'false', onclick: function () { showType(key); } });
       typeTabs.appendChild(b);
       var page = el('div', { class: 'col', id: 'dtp-' + key });
       page.hidden = true;
-      page.appendChild(el('div', { class: 'hint', text: FALLBACK[key] ? t[3] + ' schedule. A tefilla with no rows here uses the ' + TYPE_EN[FALLBACK[key]] + ' schedule.' : t[3] + ' is the base schedule.' }));
+      page.appendChild(el('div', { class: 'hint', text: FALLBACK[key] ? t[3] + ': each tefilla either follows the ' + TYPE_EN[FALLBACK[key]] + ' schedule or gets its own list for this day.' : t[3] + ' is the base schedule: every day that has no list of its own for a tefilla (Sunday, Friday, Rosh Chodesh…) uses it.' }));
       var row = el('div', { class: 'fields three' });
       d.tefillos.forEach(function (tf, i) {
+        var store = lines[key][tf.id], fb = FALLBACK[key];
         var sources = Cal.DAY_TYPES.filter(function (o) { return o[0] !== key; }).map(function (o) { return { key: o[0], label: o[3], store: function () { return lines[o[0]][tf.id]; } }; });
-        row.appendChild(el('div', { class: 'field' }, [el('label', { text: tf.name }), minyanEditor(lines[key][tf.id], i, function () { return key; }, sources)]));
+        var editor = minyanEditor(store, i, function () { return key; }, sources);
+        var block = el('div', { class: 'field' }, [el('label', { text: tf.name })]);
+        if (fb) {
+          var same = el('input', { type: 'checkbox', id: 'same-' + key + '-' + tf.id }), info = el('div', { class: 'hint same-info' });
+          same.checked = !store.value.trim();
+          editor.hidden = same.checked;
+          var kept = '';
+          function update() {
+            if (!same.checked) { info.textContent = 'Own list for ' + t[3] + ' (' + countOf(key, tf.id, i) + ' minyanim today).'; return; }
+            var src = sourceOf(key, tf.id);
+            info.textContent = src ? 'Follows the ' + TYPE_EN[src] + ' list (' + countOf(src, tf.id, i) + ' minyanim today).' : 'No list here and none to follow: no ' + tf.name + ' minyanim on this day.';
+          }
+          same.addEventListener('change', function () {
+            if (same.checked) { kept = store.value; store.value = ''; editor.hidden = true; }
+            else { var src = sourceOf(key, tf.id); store.value = kept.trim() ? kept : (src ? lines[src][tf.id].value : ''); editor.hidden = false; editor.reload(); }
+            markTabs();
+          });
+          infoUpdaters.push(update);
+          block.appendChild(el('label', { class: 'same', for: same.id }, [same, ' Same as ' + TYPE_EN[fb] + (fb === 'weekday' ? '' : ' (or whatever that day follows)')]));
+          block.appendChild(info);
+        }
+        block.appendChild(editor);
+        row.appendChild(block);
       });
       page.appendChild(row);
       typePages[key] = { page: page, button: b };
@@ -452,6 +487,7 @@
         var has = d.tefillos.some(function (tf) { return lines[t[0]][tf.id].value.trim(); });
         typePages[t[0]].button.classList.toggle('has', has);
       });
+      infoUpdaters.forEach(function (f) { try { f(); } catch (e) {} });
     }
     function showType(key) { Cal.DAY_TYPES.forEach(function (t) { typePages[t[0]].page.hidden = t[0] !== key; typePages[t[0]].button.setAttribute('aria-selected', String(t[0] === key)); }); }
     pages.schedule = sp;

@@ -1,0 +1,24 @@
+const { chromium } = require('playwright');
+(async () => {
+  const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' }).catch(() => chromium.launch());
+  const errors = [];
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: 'he', timezoneId: 'America/New_York', serviceWorkers: 'block' });
+  const page = await ctx.newPage();
+  page.on('pageerror', e => errors.push('pageerror: ' + e.message)); page.on('console', m => { if (m.type() === 'error' && !/favicon/.test(m.text())) errors.push(m.text()); });
+  await page.goto('http://localhost:8790/admin.html', { waitUntil: 'networkidle' });
+  await page.evaluate(() => { try { localStorage.clear(); } catch (e) {} }); await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForSelector('#pin-input'); await page.fill('#pin-input', '1234'); await page.press('#pin-input', 'Enter');
+  await page.waitForSelector('#tab-schedule'); await page.click('#tab-schedule'); await page.click('#dt-friday');
+  const fri = page.locator('#dtp-friday .fields.three > .field');
+  console.log('friday shacharis same-as:', await fri.nth(0).locator('input[type=checkbox]').first().isChecked(), '| info:', await fri.nth(0).locator('.same-info').textContent(), '| editor hidden:', await fri.nth(0).locator('.editor').isHidden());
+  console.log('friday mincha same-as:', await fri.nth(1).locator('input[type=checkbox]').first().isChecked(), '| info:', await fri.nth(1).locator('.same-info').textContent());
+  await fri.nth(0).locator('label.same').click();
+  console.log('after switching to own: rows', await fri.nth(0).locator('.mrow').count(), '| info:', await fri.nth(0).locator('.same-info').textContent());
+  await fri.nth(0).locator('.mrow').last().locator('button.danger').click();
+  console.log('after removing one: info:', await fri.nth(0).locator('.same-info').textContent());
+  await page.click('.panel .bar button.primary'); await page.waitForTimeout(400);
+  const cfg = await page.evaluate(() => JSON.parse(localStorage.getItem('minyan-config')));
+  console.log('saved friday shacharis lines:', cfg.schedules.friday.shacharis.split('\n').length, '| weekday still:', cfg.schedules.weekday.shacharis.split('\n').length);
+  await ctx.close(); await browser.close();
+  console.log(errors.length ? 'ERRORS:\n' + errors.join('\n') : 'no console errors');
+})();

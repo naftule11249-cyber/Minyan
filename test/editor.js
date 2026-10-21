@@ -28,6 +28,8 @@ const { chromium } = require('playwright');
   // repeating row on sunday shacharis
   await page.click('#dt-sunday');
   const sun = page.locator('#dtp-sunday').locator('.fields.three > .field').nth(0);
+  await sun.locator('label.same').click(); // own list for Sunday
+  await sun.locator('button.danger').first().click({ clickCount: 1 }).catch(() => {});
   await sun.locator('button:has-text("+ Add repeating")').click();
   const srow = sun.locator('.mrow.series').first();
   await srow.locator('input[aria-label="Every how many minutes"]').fill('30');
@@ -41,6 +43,7 @@ const { chromium } = require('playwright');
   await sun.locator('button:has-text("Back to the list")').click();
   // copy weekday -> sunday mincha
   const sunMi = page.locator('#dtp-sunday').locator('.fields.three > .field').nth(1);
+  await sunMi.locator('label.same').click();
   await sunMi.locator('select[aria-label="Copy from another day"]').selectOption('weekday');
   console.log('sunday mincha rows after copy:', await sunMi.locator('.mrow').count());
   await page.click('#dt-weekday');

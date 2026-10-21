@@ -243,7 +243,7 @@ var Cal = (function () {
   }
   /* [key, Hebrew name (board), fallback key, English name (settings)] */
   var DAY_TYPES = [
-    ['weekday', 'ימי חול (ב׳–ה׳)', null, 'Weekdays (Mon–Thu)'], ['sunday', 'יום ראשון', 'weekday', 'Sunday'], ['friday', 'ערב שבת', 'weekday', 'Erev Shabbos (Friday)'],
+    ['weekday', 'ימי חול', null, 'Weekdays'], ['sunday', 'יום ראשון', 'weekday', 'Sunday'], ['friday', 'ערב שבת', 'weekday', 'Erev Shabbos (Friday)'],
     ['shabbos', 'שבת קודש', null, 'Shabbos'], ['yomtov', 'יום טוב', 'shabbos', 'Yom Tov'], ['erev_yomtov', 'ערב יום טוב', 'friday', 'Erev Yom Tov'],
     ['chol_hamoed', 'חול המועד', 'weekday', 'Chol Hamoed'], ['rosh_chodesh', 'ראש חודש', 'weekday', 'Rosh Chodesh'], ['fast', 'תענית ציבור', 'weekday', 'Fast day'],
     ['chanukah', 'חנוכה', 'weekday', 'Chanukah'], ['purim', 'פורים', 'weekday', 'Purim'], ['yomkippur', 'יום כיפור', 'yomtov', 'Yom Kippur']];
