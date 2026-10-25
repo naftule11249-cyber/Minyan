@@ -6,14 +6,15 @@ const args = process.argv.slice(2), ri = args.indexOf('--remote');
 const cfg = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.default.json'), 'utf8'));
 if (ri >= 0 && args[ri + 1]) cfg.remoteConfigUrl = args[ri + 1];
 const json = JSON.stringify(cfg, null, 1);
-const body = T(json);
+const name = cfg.name || 'לוח המנינים';
+const body = T(json).replace('<title>לוח המנינים</title>', '<title>' + name.replace(/</g, '&lt;') + '</title>').replace('<div class="shul">לוח המנינים</div>', '<div class="shul">' + name.replace(/</g, '&lt;') + '</div>');
 fs.writeFileSync(path.join(__dirname, 'src/index.html'), body);
 
 const dist = path.join(__dirname, 'docs');
 fs.mkdirSync(dist, { recursive: true });
 const reset = ':root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}';
-const pwaHead = '<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#223b68"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="מנינים"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="favicon.png">';
 const esc = t => String(t).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+const pwaHead = '<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#223b68"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="' + esc(name) + '"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="favicon.png">';
 const site = (cfg.siteUrl || '').trim().replace(/\/?$/, m => cfg.siteUrl ? '/' : '');
 const desc = 'המנין הבא, כל המנינים לפי חדרים וזמני היום';
 const ogHead = '<meta property="og:type" content="website"><meta property="og:title" content="' + esc(cfg.name || 'לוח המנינים') + '"><meta property="og:description" content="' + desc + '">' +
@@ -22,7 +23,7 @@ const ogHead = '<meta property="og:type" content="website"><meta property="og:ti
 if (!site) console.warn('siteUrl is empty: share previews need the full site address (set it under Edit → General once the site is online, or in config.default.json).');
 const full = '<!doctype html><html lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>' + reset + '</style>' + pwaHead + ogHead + '</head><body>' + body + '</body></html>';
 fs.writeFileSync(path.join(dist, 'index.html'), full);
-const adminFull = full.replace('<title>לוח המנינים</title>', '<title>לוח המנינים – ניהול</title>').replace('<head>', '<head><meta name="robots" content="noindex,nofollow">');
+const adminFull = full.replace('<title>' + esc(name) + '</title>', '<title>' + esc(name) + ' – Admin</title>').replace('<head>', '<head><meta name="robots" content="noindex,nofollow">');
 fs.writeFileSync(path.join(dist, 'admin.html'), adminFull);
 for (const f of ['style.css', 'cal.js', 'engine.js', 'template.js', 'app.js', 'manifest.webmanifest']) fs.copyFileSync(path.join(__dirname, 'src', f), path.join(dist, f));
 fs.writeFileSync(path.join(dist, 'config.json'), json);

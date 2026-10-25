@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">מנינים</string>
-    <string name="title_activity_main">מנינים</string>
+    <string name="app_name">Cascade Zmanim</string>
+    <string name="title_activity_main">Cascade Zmanim</string>
     <string name="package_name">org.minyanboard.app</string>
     <string name="custom_url_scheme">org.minyanboard.app</string>
 </resources>

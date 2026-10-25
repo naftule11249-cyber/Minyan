@@ -1,5 +1,5 @@
 /* sw.js — offline cache for the minyan board. VERSION is stamped by build.js. */
-var VERSION = 'minyan-shell-bbe0429e7e88';
+var VERSION = 'minyan-shell-d01f9457ab52';
 var FONTS = 'minyan-fonts';
 var SHELL = ['./index.html', './admin.html', './style.css', './cal.js', './engine.js', './template.js', './app.js', './manifest.webmanifest', './icon-192.png', './icon-512.png', './config.json'];
 self.addEventListener('install', function (e) {
@@ -51,7 +51,7 @@ self.addEventListener('fetch', function (e) {
 self.addEventListener('push', function (e) {
   var d = {};
   try { d = e.data ? e.data.json() : {}; } catch (err) { d = { body: e.data ? e.data.text() : '' }; }
-  e.waitUntil(self.registration.showNotification(d.title || 'לוח המנינים', { body: d.body || '', icon: './icon-192.png', badge: './icon-192.png', tag: d.tag || 'minyan', dir: 'rtl', lang: 'he', renotify: true }));
+  e.waitUntil(self.registration.showNotification(d.title || 'Cascade Zmanim', { body: d.body || '', icon: './icon-192.png', badge: './icon-192.png', tag: d.tag || 'minyan', dir: 'rtl', lang: 'he', renotify: true }));
 });
 self.addEventListener('notificationclick', function (e) {
   e.notification.close();

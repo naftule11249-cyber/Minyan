@@ -1,6 +1,6 @@
 {
   "appId": "org.minyanboard.app",
-  "appName": "מנינים",
+  "appName": "Cascade Zmanim",
   "webDir": "www",
   "server": { "androidScheme": "https" },
   "android": { "backgroundColor": "#223b68" },

@@ -1,4 +1,6 @@
-# לוח המנינים — Minyan board: website + app
+# Cascade Zmanim — minyan board: website + app
+
+Published as **Cascade Zmanim**, a privately run service: the shul's name appears nowhere in the app (the name comes from General → Name).
 
 Shows the next minyan with a live countdown, every room's Shacharis / Mincha / Maariv
 minyanim (with the Hodu / Shemoneh Esrei time), the Hebrew date, the parsha of the week,
