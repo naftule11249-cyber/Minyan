@@ -721,7 +721,7 @@ var MinyanNotify = (function () {
     if (w[0] === 'ביטול' || /^(off|stop|cancel|none|ביטול|בטל)$/.test(w[1] || '')) return { action: 'off', lang: lang };
     if (/^(list|רשימה|status)$/.test(w[1] || '')) return { action: 'list', lang: lang };
     if (!w[1]) return { action: 'help', lang: lang };
-    var tf = tefillaFrom(w[1], cfg), time = null, lead = 10, pick = null, once = null, i, j, z, zk = null, from = 2;
+    var tf = tefillaFrom(w[1], cfg), time = null, lead = 10, pick = null, once = null, ref = null, i, j, z, zk = null, from = 2;
     if (!tf) {
       /* a zman instead of a tefilla: "remind shkia 20", "תזכורת סוף זמן קריאת שמע 15" (the zman word may be a few words in) */
       for (j = 1; j < w.length && j <= 4 && !zk; j++) { zk = zmanWord(w[j]); if (zk) from = j + 1; }
@@ -740,6 +740,8 @@ var MinyanNotify = (function () {
       else if (/^(last|אחרון|אחרונה|האחרון)$/.test(w[i])) pick = 'last';
       else if (/^(first|ראשון|הראשון)$/.test(w[i])) pick = 'first';
       else if (/^(today|היום)$/.test(w[i])) once = todayIso(cfg, nowMs);
+      else if (/^(hodu|milestone|הודו)$/.test(w[i]) || (tf.milestone && w[i] === norm(tf.milestone))) ref = 'milestone'; /* count to הודו instead of the start */
+      else if (/^(start|ברכות)$/.test(w[i])) ref = 'start';
       else if (/^(before|לפני)$/.test(w[i])) {
         /* "before chatzos", "before sof zman tefilla", "לפני זמן מעריב": the zman word may come a word or two later */
         z = null;
@@ -751,16 +753,17 @@ var MinyanNotify = (function () {
     var cmd = { action: 'add', tefilla: tf.id, time: time, lead: lead, lang: lang };
     if (pick && time == null) cmd.pick = pick;
     if (once) cmd.once = once;
+    if (ref === 'milestone' && tf.milestone) cmd.ref = 'milestone';
     return cmd;
   }
   function describe(cfg, r, lang) {
-    var L = T[lang], name = lang === 'en' && EN_TEFILLA[r.tefilla] ? EN_TEFILLA[r.tefilla] : (cfg.tefillos.filter(function (x) { return x.id === r.tefilla; })[0] || {}).name || r.tefilla, what;
+    var L = T[lang], tdef = cfg.tefillos.filter(function (x) { return x.id === r.tefilla; })[0] || {}, name = lang === 'en' && EN_TEFILLA[r.tefilla] ? EN_TEFILLA[r.tefilla] : tdef.name || r.tefilla, what;
     if (r.zman) what = zmanName(r.zman, lang);
     else if (r.time != null) what = name + L.at + fmt(cfg, r.time);
     else if (r.pick === 'last') what = L.last + name;
     else if (r.pick && r.pick.indexOf('before:') === 0) what = L.last + name + L.beforeZman + (ZMAN_LABEL[lang][r.pick.slice(7)] || r.pick.slice(7));
     else what = L.first + name;
-    return r.lead + L.before + what + (r.once ? L.today : '');
+    return r.lead + L.before + what + (r.ref === 'milestone' && tdef.milestone ? ' (' + tdef.milestone + ')' : '') + (r.once ? L.today : '');
   }
   function sameTarget(a, b) { if (a.zman || b.zman) return a.zman === b.zman; return a.tefilla === b.tefilla && (a.time == null ? b.time == null && (a.pick || 'first') === (b.pick || 'first') : a.time === b.time); }
   /* Apply a parsed command to a subscription object (mutated). Returns the reply text. */
@@ -777,6 +780,7 @@ var MinyanNotify = (function () {
     if (cmd.action === 'daily') { sub.daily = cmd.at; return L.daily + fmt(cfg, cmd.at) + '.'; }
     var r = cmd.zman ? { zman: cmd.zman, lead: cmd.lead } : { tefilla: cmd.tefilla, time: cmd.time, lead: cmd.lead };
     if (cmd.pick) r.pick = cmd.pick;
+    if (cmd.ref) r.ref = cmd.ref;
     if (cmd.once) r.once = cmd.once;
     sub.reminders = sub.reminders.filter(function (x) { return !sameTarget(x, r); });
     sub.reminders.push(r);
@@ -825,11 +829,15 @@ var MinyanNotify = (function () {
       }
       var target = targetFor(sched.byTefilla[r.tefilla] || [], r, zmanim);
       if (!target) return;
-      var fireAt = target.ms - r.lead * 60000;
+      /* count to the start, or to the milestone (הודו) when the reminder says so */
+      var toMs = r.ref === 'milestone' && target.tefilla.milestone, at = toMs ? target.ms + (+target.tefilla.offset || 0) * 60000 : target.ms;
+      var fireAt = at - r.lead * 60000;
       if (fireAt < nowMs || fireAt >= nowMs + win) return;
-      var mins = Math.max(1, Math.round((target.ms - nowMs) / 60000));
+      var mins = Math.max(1, Math.round((at - nowMs) / 60000));
       var name = lang === 'en' && EN_TEFILLA[r.tefilla] ? EN_TEFILLA[r.tefilla] : target.tefilla.name;
-      var text = name + (target.room ? ' – ' + target.room : '') + ' ' + engine.fmtTime(target.start) + (target.tefilla.milestone ? ' (' + target.tefilla.milestone + ' ' + engine.fmtTime(target.milestone) + ')' : '') + ', ' + L.inMin + ' ' + mins + ' ' + L.min;
+      var times = toMs ? target.tefilla.milestone + ' ' + engine.fmtTime(target.milestone) + ' (' + (target.tefilla.startLabel || (lang === 'en' ? 'start' : 'התחלה')) + ' ' + engine.fmtTime(target.start) + ')'
+        : engine.fmtTime(target.start) + (target.tefilla.milestone ? ' (' + target.tefilla.milestone + ' ' + engine.fmtTime(target.milestone) + ')' : '');
+      var text = name + (target.room ? ' – ' + target.room : '') + ' ' + times + ', ' + L.inMin + ' ' + mins + ' ' + L.min;
       out.push({ key: 'r:' + iso + ':' + r.tefilla + ':' + target.start, title: L.remind + ': ' + name, text: (lang === 'he' ? 'תזכורת: ' : 'Reminder: ') + text, minyan: target });
     });
     if (sub.daily != null) {
@@ -949,7 +957,7 @@ export default {
       var body = await request.json().catch(function () { return null; });
       if (!body || !body.subscription || !body.subscription.endpoint || !body.subscription.keys) return json(env, { error: 'bad request' }, 400);
       var id = body.id && /^[a-z0-9]{8,32}$/.test(body.id) ? body.id : crypto.randomUUID().replace(/-/g, '').slice(0, 20);
-      var sub = { channel: 'push', push: { endpoint: body.subscription.endpoint, keys: body.subscription.keys }, reminders: (body.reminders || []).slice(0, 10).map(function (r) { var lead = Math.min(180, Math.max(1, +r.lead || 10)), o; if (/^(alos|sunrise|shema|tefilla|chatzos|minchag|plag|candles|sunset|tzeis|tzeis72)$/.test(r.zman || '')) o = { zman: r.zman, lead: lead }; else { o = { tefilla: String(r.tefilla), time: r.time == null ? null : +r.time, lead: lead }; if (o.time == null && /^(first|last|before:(chatzos|tefilla|shema|sunset|tzeis|plag|minchag))$/.test(r.pick || '')) o.pick = r.pick; } if (/^\d{4}-\d{2}-\d{2}$/.test(r.once || '')) o.once = r.once; return o; }),
+      var sub = { channel: 'push', push: { endpoint: body.subscription.endpoint, keys: body.subscription.keys }, reminders: (body.reminders || []).slice(0, 10).map(function (r) { var lead = Math.min(180, Math.max(1, +r.lead || 10)), o; if (/^(alos|sunrise|shema|tefilla|chatzos|minchag|plag|candles|sunset|tzeis|tzeis72)$/.test(r.zman || '')) o = { zman: r.zman, lead: lead }; else { o = { tefilla: String(r.tefilla), time: r.time == null ? null : +r.time, lead: lead }; if (o.time == null && /^(first|last|before:(chatzos|tefilla|shema|sunset|tzeis|plag|minchag))$/.test(r.pick || '')) o.pick = r.pick; if (r.ref === 'milestone') o.ref = 'milestone'; } if (/^\d{4}-\d{2}-\d{2}$/.test(r.once || '')) o.once = r.once; return o; }),
         daily: body.daily == null ? null : +body.daily, lang: body.lang === 'en' ? 'en' : 'he', updated: Date.now() };
       await env.SUBS.put('push:' + id, JSON.stringify(sub));
       return json(env, { id: id });

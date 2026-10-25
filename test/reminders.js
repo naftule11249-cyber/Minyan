@@ -35,6 +35,8 @@ const { chromium } = require('playwright'); const fs = require('fs');
     ok('remind-me box opens', await page.locator('#rem-overlay .panel.small').count(), 1);
     const what = await page.locator('#rem-overlay .rem-what').textContent();
     ok('box names the minyan', /שחרית/.test(what) && tileText.indexOf(what.split(' ').slice(-1)[0]) >= 0, true);
+    ok('box offers before ברכות / before הודו', [await page.locator('#rem-ref-start').count(), await page.locator('#rem-ref-ms').count(), await page.locator('#rem-ref-start').isChecked()], [1, 1, true]);
+    await page.check('#rem-ref-ms');
     await page.fill('#rem-lead', '15');
     await page.click('#rem-overlay button:has-text("Set reminder")');
     await page.waitForFunction(() => /Could not set the reminder/.test((document.querySelector('#rem-msg') || {}).textContent || ''), null, { timeout: 15000 }).catch(() => {});

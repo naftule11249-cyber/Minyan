@@ -26,10 +26,10 @@ global.Cal = require('../src/cal.js');
   const subscription = { endpoint: 'https://push.example/abc', keys: { p256dh: b64u(await subtle.exportKey('raw', ua.publicKey)), auth: b64u(require('crypto').randomBytes(16)) } };
   const rd = Cal.rdFromGreg(2026, 10, 26), iso = '2026-10-26'; // Monday
   const r = await worker.fetch(new Request('https://w.example/push/subscribe', { method: 'POST', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ subscription, reminders: [{ tefilla: 'shacharis', pick: 'before:chatzos', lead: 10 }, { tefilla: 'mincha', time: 840, lead: 5, once: iso }, { tefilla: 'maariv', pick: 'nonsense', lead: 3 }, { zman: 'sunset', lead: 20 }, { zman: 'bogus', tefilla: 'mincha', lead: 4 }], lang: 'he' }) }), env);
+    body: JSON.stringify({ subscription, reminders: [{ tefilla: 'shacharis', pick: 'before:chatzos', lead: 10 }, { tefilla: 'mincha', time: 840, lead: 5, once: iso }, { tefilla: 'maariv', pick: 'nonsense', lead: 3 }, { zman: 'sunset', lead: 20 }, { zman: 'bogus', tefilla: 'mincha', lead: 4 }, { tefilla: 'shacharis', time: 555, lead: 10, ref: 'milestone' }], lang: 'he' }) }), env);
   const { id } = await r.json();
   const saved = JSON.parse(store.get('push:' + id));
-  ok('subscription stored with pick and once (bad pick dropped)', saved.reminders, [{ tefilla: 'shacharis', time: null, lead: 10, pick: 'before:chatzos' }, { tefilla: 'mincha', time: 840, lead: 5, once: iso }, { tefilla: 'maariv', time: null, lead: 3 }, { zman: 'sunset', lead: 20 }, { tefilla: 'mincha', time: null, lead: 4 }]);
+  ok('subscription stored with pick and once (bad pick dropped)', saved.reminders, [{ tefilla: 'shacharis', time: null, lead: 10, pick: 'before:chatzos' }, { tefilla: 'mincha', time: 840, lead: 5, once: iso }, { tefilla: 'maariv', time: null, lead: 3 }, { zman: 'sunset', lead: 20 }, { tefilla: 'mincha', time: null, lead: 4 }, { tefilla: 'shacharis', time: 555, lead: 10, ref: 'milestone' }]);
   ok('cors header for the site', r.headers.get('Access-Control-Allow-Origin'), env.ALLOWED_ORIGIN);
   // 3. the cron run 10 minutes before the last Shacharis (chatzos-30) sends one encrypted push with a VAPID header
   const engine = require('../src/engine.js')(cfg), sched = engine.scheduleFor(rd), last = sched.byTefilla.shacharis.slice(-1)[0];
@@ -42,7 +42,7 @@ global.Cal = require('../src/cal.js');
   // 4. the next day the today-only reminder is pruned
   Date.now = () => Cal.epochFromWall(rd + 1, 9 * 60, 'America/New_York');
   await worker.scheduled({}, env);
-  ok('today-only reminder pruned the next day', JSON.parse(store.get('push:' + id)).reminders.length, 4);
+  ok('today-only reminder pruned the next day', JSON.parse(store.get('push:' + id)).reminders.length, 5);
   Date.now = realNow;
   console.log(fails ? fails + ' FAILURES' : 'ALL PASS');
   if (fails) process.exit(1);

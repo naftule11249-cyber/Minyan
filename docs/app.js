@@ -266,7 +266,7 @@
   function describeReminder(r) {
     if (r.zman) return r.lead + ' min before ' + (Cal.ZMAN_NAMES[r.zman] || r.zman) + (r.once ? ' (today only)' : '');
     var t = tefillos().filter(function (x) { return x.id === r.tefilla; })[0], name = t ? t.name : r.tefilla;
-    return r.lead + ' min before ' + (r.time != null ? name + ' ' + fmtTime(r.time) : (PICK_LABELS[r.pick || 'first'] || '').replace('minyan', name)) + (r.once ? ' (today only)' : '');
+    return r.lead + ' min before ' + (r.time != null ? name + ' ' + fmtTime(r.time) : (PICK_LABELS[r.pick || 'first'] || '').replace('minyan', name)) + (r.ref === 'milestone' && t && t.milestone ? ' (' + t.milestone + ')' : '') + (r.once ? ' (today only)' : '');
   }
   /* a minyan tile on the board opens a small "remind me" box */
   function makeTappable(tile, e) {
@@ -282,11 +282,16 @@
     var lead = el('input', { type: 'number', min: '1', max: '180', value: '10', class: 'mins', inputmode: 'numeric', id: 'rem-lead' });
     var once = el('input', { type: 'radio', name: 'rem-when', value: 'once', id: 'rem-once' }), daily = el('input', { type: 'radio', name: 'rem-when', value: 'daily', id: 'rem-daily' });
     once.checked = true;
+    /* for a minyan with a milestone: count to the start or to הודו, as this phone's big number says unless changed here */
+    var refStart = el('input', { type: 'radio', name: 'rem-ref', value: 'start', id: 'rem-ref-start' }), refMs = el('input', { type: 'radio', name: 'rem-ref', value: 'milestone', id: 'rem-ref-ms' });
+    (bigMode() === 'milestone' ? refMs : refStart).checked = true;
+    var refRow = (!e.zman && e.tefilla.milestone) ? el('div', { class: 'push-row' }, [el('span', { class: 'push-lbl', text: 'Before' }), el('label', { for: 'rem-ref-start' }, [refStart, ' ' + startLabel(e.tefilla) + ' ' + fmtTime(e.start)]), el('label', { for: 'rem-ref-ms' }, [refMs, ' ' + e.tefilla.milestone + ' ' + fmtTime(e.milestone)])]) : null;
     var msg = el('div', { class: 'hint', id: 'rem-msg' }), ov = el('div', { class: 'overlay', id: 'rem-overlay', dir: 'ltr' });
     function close() { ov.remove(); }
     var setB = el('button', { type: 'button', class: 'btn primary', text: 'Set reminder', onclick: function () {
       var prefs = pushPrefs(), ld = Math.max(1, Math.min(180, +lead.value || 10)), r = e.zman ? { zman: e.zman, lead: ld } : { tefilla: e.tefilla.id, time: e.start, lead: ld };
       if (once.checked) r.once = dayIso;
+      if (refRow && refMs.checked) r.ref = 'milestone';
       prefs.reminders = (prefs.reminders || []).filter(function (x) { return e.zman ? x.zman !== e.zman : !(x.tefilla === r.tefilla && x.time === r.time); }).concat([r]).slice(-10);
       setB.disabled = true; msg.textContent = 'Setting…';
       subscribePush(prefs).then(function () { close(); ui.remDraft = null; toast('Reminder set: ' + describeReminder(r), 6000); render(); },
@@ -296,6 +301,7 @@
       el('h2', { text: 'Remind me' }),
       el('div', { class: 'rem-what', dir: 'rtl', text: what }),
       el('div', { class: 'push-row' }, [el('label', { for: 'rem-lead', class: 'push-lbl', text: 'Minutes before' }), lead]),
+      refRow,
       el('div', { class: 'push-row' }, [el('label', { for: 'rem-once' }, [once, isToday ? ' Today only' : ' That day only']), el('label', { for: 'rem-daily' }, [daily, e.zman ? ' Every day' : ' Every day at this time'])]),
       el('p', { class: 'hint', text: 'A notification on this device, even when the app is closed.' }),
       msg,
@@ -314,7 +320,7 @@
     if (!tfs.length) return null;
     box.appendChild(el('p', { class: 'hint', text: 'A notification before the minyanim or zmanim you pick, even when the app is closed. Tip: tap any minyan on the board, or any zman in the list, to set a reminder for it.' }));
     /* the rows being edited survive the board's minute-by-minute refresh */
-    var draft = ui.remDraft || { list: prefs.reminders.map(function (r) { return { tefilla: r.zman ? 'z:' + r.zman : r.tefilla, time: r.time == null ? null : +r.time, pick: r.pick || 'first', lead: +r.lead || 10, once: r.once || null }; }),
+    var draft = ui.remDraft || { list: prefs.reminders.map(function (r) { return { tefilla: r.zman ? 'z:' + r.zman : r.tefilla, time: r.time == null ? null : +r.time, pick: r.pick || 'first', lead: +r.lead || 10, once: r.once || null, ref: r.ref === 'milestone' ? 'milestone' : 'start' }; }),
       daily: prefs.daily != null, dailyAt: prefs.daily != null ? pad2(Math.floor(prefs.daily / 60)) + ':' + pad2(prefs.daily % 60) : '06:00' };
     ui.remDraft = draft;
     var list = draft.list, rows = el('div', { class: 'col rem-rows' });
@@ -334,7 +340,16 @@
         if (wSel.selectedIndex < 0) { wSel.appendChild(el('option', { value: 't:' + r.time, text: fmtTime(r.time) })); wSel.value = 't:' + r.time; }
       }
       fillWhich();
-      tSel.addEventListener('change', function () { r.tefilla = tSel.value; r.time = null; r.pick = 'first'; fillWhich(); });
+      /* before the start or before the milestone (הודו), for a tefilla that has one */
+      var refSel = el('select', { 'aria-label': 'Before the start or the milestone' }, [el('option', { value: 'start', text: 'start' }), el('option', { value: 'milestone', text: 'milestone' })]);
+      function fillRef() {
+        var t = tfs.filter(function (x) { return x.id === tSel.value; })[0], has = !!(t && t.milestone) && tSel.value.indexOf('z:') !== 0;
+        refSel.hidden = !has;
+        if (has) { refSel.options[0].text = startLabel(t); refSel.options[1].text = t.milestone; refSel.value = r.ref === 'milestone' ? 'milestone' : 'start'; }
+      }
+      fillRef();
+      refSel.addEventListener('change', function () { r.ref = refSel.value; });
+      tSel.addEventListener('change', function () { r.tefilla = tSel.value; r.time = null; r.pick = 'first'; r.ref = bigMode(); fillWhich(); fillRef(); });
       wSel.addEventListener('change', function () { var v = wSel.value; if (v.charAt(0) === 't') { r.time = +v.slice(2); r.pick = 'first'; } else { r.time = null; r.pick = v.slice(2); } });
       var lead = el('input', { type: 'number', min: '1', max: '180', value: String(r.lead), class: 'mins', inputmode: 'numeric', 'aria-label': 'Minutes before' });
       lead.addEventListener('input', function () { r.lead = Math.max(1, Math.min(180, +lead.value || 10)); });
@@ -342,18 +357,18 @@
       when.value = r.once ? 'today' : 'daily';
       when.addEventListener('change', function () { r.once = when.value === 'today' ? isoOf(Cal.nowInTz(Date.now(), loc().tz).rd) : null; });
       var del = el('button', { type: 'button', class: 'btn small', text: '×', title: 'Remove this reminder', 'aria-label': 'Remove this reminder', onclick: function () { list.splice(list.indexOf(r), 1); renderRows(); } });
-      return el('div', { class: 'rem-row' }, [tSel, wSel, el('span', { class: 'rem-lead' }, [lead, ' min before']), when, del]);
+      return el('div', { class: 'rem-row' }, [tSel, wSel, el('span', { class: 'rem-lead' }, [lead, ' min before']), refSel, when, del]);
     }
     function renderRows() { rows.textContent = ''; list.forEach(function (r) { rows.appendChild(rowEl(r)); }); if (!list.length) rows.appendChild(el('div', { class: 'hint', text: 'No minyan reminders yet.' })); }
     renderRows();
-    var addB = el('button', { type: 'button', class: 'btn small', text: '+ Add reminder', onclick: function () { if (list.length >= 10) { toast('Up to 10 reminders'); return; } list.push({ tefilla: tfs[0].id, time: null, pick: 'first', lead: 10, once: null }); renderRows(); } });
+    var addB = el('button', { type: 'button', class: 'btn small', text: '+ Add reminder', onclick: function () { if (list.length >= 10) { toast('Up to 10 reminders'); return; } list.push({ tefilla: tfs[0].id, time: null, pick: 'first', lead: 10, once: null, ref: bigMode() }); renderRows(); } });
     var daily = el('input', { type: 'checkbox', id: 'push-daily' }); daily.checked = draft.daily;
     daily.addEventListener('change', function () { draft.daily = daily.checked; });
     var dailyAt = el('input', { type: 'time', id: 'push-daily-at', value: draft.dailyAt });
     dailyAt.addEventListener('change', function () { draft.dailyAt = dailyAt.value; });
     var msg = el('div', { class: 'hint', id: 'push-msg' });
     var saveB = el('button', { class: 'btn primary small', id: 'push-save', text: st ? 'Update reminders' : 'Turn on reminders', onclick: function () {
-      var reminders = list.map(function (r) { var o = r.tefilla.indexOf('z:') === 0 ? { zman: r.tefilla.slice(2), lead: r.lead } : { tefilla: r.tefilla, time: r.time, lead: r.lead }; if (!o.zman && r.time == null) o.pick = r.pick; if (r.once) o.once = r.once; return o; });
+      var reminders = list.map(function (r) { var o = r.tefilla.indexOf('z:') === 0 ? { zman: r.tefilla.slice(2), lead: r.lead } : { tefilla: r.tefilla, time: r.time, lead: r.lead }; if (!o.zman && r.time == null) o.pick = r.pick; if (!o.zman && r.ref === 'milestone') o.ref = 'milestone'; if (r.once) o.once = r.once; return o; });
       var d = daily.checked ? (function () { var m = /^(\d{2}):(\d{2})$/.exec(dailyAt.value); return m ? +m[1] * 60 + +m[2] : 6 * 60; })() : null;
       if (!reminders.length && d == null) { msg.textContent = 'Add at least one reminder.'; return; }
       saveB.disabled = true; msg.textContent = 'Turning on…';

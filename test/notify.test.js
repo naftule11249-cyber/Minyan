@@ -74,3 +74,16 @@ const s5 = {}; N.apply(N.parseCommand('remind candles 30', cfg), s5, cfg);
 const fri = Cal.rdFromGreg(2026, 10, 23), zf = eng.zmanimFor(fri);
 ok('candle-lighting reminder: silent on Wednesday, fires on Friday', [N.due(cfg, s5, Cal.epochFromWall(rd21, Math.round(z21.candles), 'America/New_York') - 30 * 60000, 5).length, N.due(cfg, s5, Cal.epochFromWall(fri, Math.round(zf.candles), 'America/New_York') - 30 * 60000, 5).map(x => x.key)], [0, ['z:2026-10-23:candles']]);
 console.log(fails ? fails + ' FAILURES' : 'ALL PASS (3)');
+
+/* ---- count to הודו instead of the start ---- */
+ok('parse hodu', N.parseCommand('remind shacharis 9:15 10 hodu', cfg), { action: 'add', tefilla: 'shacharis', time: 555, lead: 10, lang: 'en', ref: 'milestone' });
+ok('parse he הודו', N.parseCommand('תזכורת שחרית 9:15 הודו 5', cfg).ref, 'milestone');
+ok('hodu ignored for a tefilla without a milestone', N.parseCommand('remind mincha 5:45 hodu', cfg).ref, undefined);
+const s6 = {}; console.log('reply:', N.apply(N.parseCommand('remind shacharis 9:15 10 hodu', cfg), s6, cfg));
+const s7 = {}; N.apply(N.parseCommand('remind shacharis 9:15 10', cfg), s7, cfg);
+ok('to הודו: fires at 9:15 (10 before הודו 9:25)', N.due(cfg, s6, at(9, 15), 5).map(x => x.key), ['r:2026-10-21:shacharis:555']);
+ok('to הודו: silent at 9:05', N.due(cfg, s6, at(9, 5), 5).length, 0);
+ok('to the start: fires at 9:05', N.due(cfg, s7, at(9, 5), 5).map(x => x.key), ['r:2026-10-21:shacharis:555']);
+console.log('text:', N.due(cfg, s6, at(9, 15), 5)[0].text);
+ok('text leads with הודו', /הודו 9:25 \(ברכות 9:15\), in 10 min/.test(N.due(cfg, s6, at(9, 15), 5)[0].text), true);
+console.log(fails ? fails + ' FAILURES' : 'ALL PASS (4)');
