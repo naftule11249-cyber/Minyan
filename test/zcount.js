@@ -15,17 +15,18 @@ const { chromium } = require('playwright');
     const r = { n: await box.count(), what: await box.locator('.what').textContent().catch(() => ''), time: await box.locator('.time').textContent().catch(() => ''), count: await box.locator('.count').textContent().catch(() => ''), soon: await box.evaluate(e => e.classList.contains('soon')).catch(() => null) };
     await ctx.close(); return r;
   }
-  let r = await at(2026, 10, 25, 9, 30);
+  const DEF = ['shema', 'tefilla', 'candles', 'sunset']; /* the test's own set, so the gabbai's choice in General does not move the expectations */
+  let r = await at(2026, 10, 25, 9, 30, '', DEF);
   ok('9:30: counts down to sof zman Shema 9:59, red (under 30 min)', [r.what, r.time, /^00:2[89]:/.test(r.count), r.soon], ['סוף זמן ק״ש', '9:59', true, true]);
-  r = await at(2026, 10, 25, 10, 5);
+  r = await at(2026, 10, 25, 10, 5, '', DEF);
   ok('10:05: sof zman tefilla 10:52, not red yet', [r.what, r.time, r.soon], ['סוף זמן תפילה', '10:52', false]);
-  r = await at(2026, 10, 25, 13, 0);
+  r = await at(2026, 10, 25, 13, 0, '', DEF);
   ok('13:00 Sunday: shkia (no candle lighting today)', [r.what, r.time], ['שקיעה', '6:01']);
-  r = await at(2026, 10, 30, 13, 0);
+  r = await at(2026, 10, 30, 13, 0, '', DEF);
   ok('Friday 13:00: candle lighting comes first', r.what, 'הדלקת נרות');
-  r = await at(2026, 10, 25, 19, 0);
+  r = await at(2026, 10, 25, 19, 0, '', DEF);
   ok('after shkia: no box', r.n, 0);
-  r = await at(2026, 10, 25, 9, 30, '#display');
+  r = await at(2026, 10, 25, 9, 30, '#display', DEF);
   ok('lobby screen shows it too', r.what, 'סוף זמן ק״ש');
   r = await at(2026, 10, 25, 9, 30, '', ['chatzos']);
   ok('a device that picked only chatzos gets chatzos', [r.what, r.time], ['חצות', '12:40']);
@@ -34,9 +35,10 @@ const { chromium } = require('playwright');
     const page = await ctx.newPage(); await page.goto('http://localhost:8790/index.html', { waitUntil: 'networkidle' }); await page.waitForTimeout(300);
     await page.click('#zc-open');
     ok('chooser opens from the footer with the zmanim', await page.locator('#zc-overlay input[type=checkbox]').count() >= 8, true);
-    await page.uncheck('#zc-shema'); await page.uncheck('#zc-tefilla'); await page.uncheck('#zc-candles'); await page.uncheck('#zc-sunset'); await page.check('#zc-tzeis');
+    for (const id of await page.locator('#zc-overlay input[type=checkbox]:checked').evaluateAll(els => els.map(e => e.id))) await page.uncheck('#' + id);
+    await page.check('#zc-tzeis60');
     await page.click('#zc-overlay button:has-text("Save")'); await page.waitForTimeout(300);
-    ok('the choice is saved on the device', await page.evaluate(() => localStorage.getItem('minyan-countdown')), '["tzeis"]');
+    ok('the choice is saved on the device', await page.evaluate(() => localStorage.getItem('minyan-countdown')), '["tzeis60"]');
     await ctx.close();
   }
   {
