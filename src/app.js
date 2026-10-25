@@ -445,7 +445,8 @@
     if (ui.swReg && ui.pushKey) { try { p = doSubscribe(); } catch (e) { p = Promise.reject(e); } }
     else p = preparePush().then(doSubscribe);
     return p.catch(function (e) {
-      var perm = (typeof Notification !== 'undefined' && Notification.permission) || '?', detail = ' [' + perm + '; ' + ((e && e.name) || '') + ': ' + ((e && e.message) || e) + ']';
+      var ua = navigator.userAgent || '', eng = /CriOS/.test(ua) ? 'Chrome' : /FxiOS/.test(ua) ? 'Firefox' : /EdgiOS/.test(ua) ? 'Edge' : 'Safari', osm = /OS (\d+)[_.](\d+)/.exec(ua);
+      var perm = (typeof Notification !== 'undefined' && Notification.permission) || '?', detail = ' [' + perm + '; ' + ((e && e.name) || '') + ': ' + ((e && e.message) || e) + '; ' + eng + (osm ? ', iOS ' + osm[1] + '.' + osm[2] : '') + (isStandalone() ? ', installed' : ', browser tab') + ']';
       if (e && (e.name === 'NotAllowedError' || /denied/i.test(e.message || ''))) {
         if (perm === 'denied') throw new Error('Notifications are blocked for this app. iPhone/iPad: Settings → Notifications → ' + (cfg.name || 'the app') + ' → Allow Notifications. Chrome: the lock next to the address → Notifications → Allow. Then tap again.' + detail);
         throw new Error('The device did not let the app ask for notifications. Close the app fully, open it again from its icon and tap once more.' + detail);
