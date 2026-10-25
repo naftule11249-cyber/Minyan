@@ -782,7 +782,7 @@
     var pp = el('div', { class: 'col' }), gh = ghSettings();
     var fRemote = inp('f-remote', d.remoteConfigUrl || '', { dir: 'ltr', placeholder: 'https://.../config.json' });
     var gRepo = inp('gh-repo', gh.repo || d.githubRepo || '', { dir: 'ltr', placeholder: 'username/minyan', autocomplete: 'off' }), gBranch = inp('gh-branch', gh.branch || d.githubBranch || 'main', { dir: 'ltr' }),
-      gPath = inp('gh-path', gh.path || 'docs/config.json', { dir: 'ltr' }), gToken = inp('gh-token', gh.token || '', { type: 'password', dir: 'ltr', autocomplete: 'off' });
+      gPath = inp('gh-path', gh.path || d.githubPath || 'docs/config.json', { dir: 'ltr' }), gToken = inp('gh-token', gh.token || '', { type: 'password', dir: 'ltr', autocomplete: 'off' });
     var ghMsg = el('div', { class: 'hint' });
     function saveGh() {
       var s = { repo: gRepo.value.trim(), branch: gBranch.value.trim() || 'main', path: gPath.value.trim() || 'config.json', token: gToken.value.trim() };
