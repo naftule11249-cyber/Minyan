@@ -47,7 +47,7 @@ async function serve() {
     .en{font-size:40px;font-weight:700;margin-top:10px;opacity:.95}
     .tag{font-size:26px;margin-top:22px;opacity:.85}
     .tile{position:absolute;right:60px;bottom:34px;background:#7a1d2a;color:#fff3e3;border-radius:14px;padding:10px 22px;font-size:22px;font-weight:700}
-    </style></head><body><img class="ic" src="data:image/png;base64,${icon}"><div class="t"><div class="he" style="direction:ltr">Cascade Zmanim</div><div class="en">The next minyan, live</div><div class="tag">The next minyan, live · every room · today's zmanim</div></div><div class="tile">מנין הבא · 11:00</div></body></html>`);
+    </style></head><body><img class="ic" src="data:image/png;base64,${icon}"><div class="t"><div class="he" style="direction:ltr">Cascade Zmanim</div><div class="en">The next minyan, live</div><div class="tag">Every room · today's zmanim · reminders</div></div><div class="tile">מנין הבא · 11:00</div></body></html>`);
   await page.waitForTimeout(200);
   await page.screenshot({ path: path.join(out, 'android-feature-graphic.png') });
   await ctx.close(); await browser.close(); srv.close();
