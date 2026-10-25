@@ -52,6 +52,33 @@
   function startLabel(t) { return t.startLabel || (t.id === 'shacharis' ? 'ברכות' : 'התחלה'); }
   /* the moment a minyan counts from: its start, or its milestone when that is the big number */
   function keyMs(e) { return bigIsMilestone(e.tefilla) ? e.ms + (+e.tefilla.offset || 0) * 60000 : e.ms; }
+  /* the zman countdown box: the next of the chosen zmanim still ahead today */
+  var COUNTDOWN_DEFAULT = ['shema', 'tefilla', 'candles', 'sunset'], COUNTDOWN_KEYS = ['shema', 'tefilla', 'chatzos', 'minchag', 'plag', 'candles', 'sunset', 'tzeis', 'tzeis72'];
+  function countdownKeysOf(c) { return Array.isArray(c.countdownZmanim) ? c.countdownZmanim : COUNTDOWN_DEFAULT; }
+  /* each device may choose its own set; the board's set (General tab) is the default */
+  function countdownKeys() { var v = null; try { v = JSON.parse(localStorage.getItem('minyan-countdown') || 'null'); } catch (e) {} return Array.isArray(v) ? v : countdownKeysOf(cfg); }
+  function openCountdownChooser() {
+    var old = $('#zc-overlay'); if (old) old.remove();
+    var cur = countdownKeys(), boxes = {}, ov = el('div', { class: 'overlay', id: 'zc-overlay', dir: 'ltr' });
+    function close() { ov.remove(); }
+    var list = el('div', { class: 'col' }, COUNTDOWN_KEYS.filter(function (k) { return k !== 'tzeis72' || cfg.showRT; }).map(function (k) { var c = el('input', { type: 'checkbox', id: 'zc-' + k }); c.checked = cur.indexOf(k) >= 0; boxes[k] = c; return el('label', { for: 'zc-' + k, class: 'push-row' }, [c, ' ' + Cal.ZMAN_NAMES[k]]); }));
+    ov.appendChild(el('div', { class: 'panel small' }, [el('h2', { text: 'Countdown zmanim' }), el('p', { class: 'hint', text: 'The הזמן הבא box counts down to the next of these. Your choice stays on this device.' }), list,
+      el('div', { class: 'bar' }, [el('button', { type: 'button', class: 'btn', text: 'Board default', onclick: function () { try { localStorage.removeItem('minyan-countdown'); } catch (e) {} close(); render(); } }), el('button', { type: 'button', class: 'btn', text: 'Cancel', onclick: close }),
+        el('button', { type: 'button', class: 'btn primary', text: 'Save', onclick: function () { var sel = COUNTDOWN_KEYS.filter(function (k) { return boxes[k] && boxes[k].checked; }); try { localStorage.setItem('minyan-countdown', JSON.stringify(sel)); } catch (e) {} close(); render(); } })])]));
+    ov.addEventListener('click', function (ev) { if (ev.target === ov) close(); });
+    document.body.appendChild(ov);
+  }
+  function nextZman(info, z, rd, now) {
+    var tz = loc().tz, best = null;
+    countdownKeys().forEach(function (k) {
+      if (k === 'candles' && !(info.dow === 5 || info.erevYT)) return;
+      if (k === 'tzeis72' && !cfg.showRT) return;
+      var v = z[k]; if (v == null || isNaN(v)) return;
+      var ms = Cal.epochFromWall(rd, Math.round(v), tz);
+      if (ms > now && (!best || ms < best.ms)) best = { key: k, min: v, ms: ms };
+    });
+    return best;
+  }
   function upcoming(nowMs, nowRd) {
     if (!ui.roomFilter && bigMode() !== 'milestone') return engine.upcoming(nowMs, nowRd);
     var i, j, s;
@@ -108,6 +135,13 @@
       next.appendChild(el('div', { class: 'empty', text: 'לא רשומים מנינים לימים הקרובים. בכפתור Edit למטה אפשר להוסיף.' }));
     }
     colA.appendChild(next);
+    ui.zcount = null; ui.zcountMs = 0;
+    var nz = nextZman(info, z, rd, now);
+    if (nz) {
+      ui.zcountMs = nz.ms; ui.zcount = el('div', { class: 'count num', text: fmtCountdown(nz.ms - now) });
+      colA.appendChild(el('section', { class: 'next zman' + (nz.ms - now < 30 * 60000 ? ' soon' : ''), 'aria-live': 'polite' }, [el('h2', { text: 'הזמן הבא' }), el('div', { class: 'what', text: Cal.ZMAN_NAMES[nz.key] }), el('div', { class: 'time num', text: fmtTime(nz.min) }), ui.zcount,
+        el('button', { type: 'button', class: 'gear', 'aria-label': 'Choose the countdown zmanim', title: 'Choose zmanim', text: '⚙', onclick: openCountdownChooser })]));
+    }
     colA.appendChild(daySections(scheduleFor(rd), now, up, true));
     if (up && up.daysAhead > 0 && !(up.daysAhead === 1 && ui.todayAllSwitched)) colA.appendChild(daySections(up.sched, now, up, false)); /* tomorrow is already shown section by section once today is over */
     colB.appendChild(zmanimPanel(info, z));
@@ -435,6 +469,7 @@
       bigSel.addEventListener('change', function () { try { localStorage.setItem('minyan-big', bigSel.value); } catch (e) {} render(); });
       right.appendChild(el('label', { class: 'hint bigpick', for: 'big-time' }, ['Big number: ', bigSel]));
     }
+    right.appendChild(el('button', { type: 'button', class: 'btn small', id: 'zc-open', text: 'Countdown zmanim', onclick: openCountdownChooser }));
     right.appendChild(ui.iosHint); right.appendChild(ui.installBtn); right.appendChild(ui.editBtn);
     refreshInstallBtn();
     f.appendChild(right);
@@ -451,7 +486,9 @@
     if (ui.adminOpen) return;
     updateClock(now);
     if (ui.countdownMs && now >= ui.countdownMs) { render(); return; }
+    if (ui.zcountMs && now >= ui.zcountMs) { render(); return; }
     if (ui.countdown) ui.countdown.textContent = fmtCountdown(ui.countdownMs - now);
+    if (ui.zcount) ui.zcount.textContent = fmtCountdown(ui.zcountMs - now);
     if (Math.floor(now / 60000) !== ui.lastMinute) render();
   }
 
@@ -601,6 +638,7 @@
     g.appendChild(el('datalist', { id: 'tz-list' }, ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Toronto', 'Europe/London', 'Europe/Antwerp', 'Europe/Zurich', 'Asia/Jerusalem', 'Australia/Melbourne'].map(function (z) { return el('option', { value: z }); })));
     g.appendChild(el('div', { class: 'fields' }, [field('Candle lighting: minutes before sunset', fCandles), field('Nightfall (tzeis): minutes after sunset', fTzeisMin), field('Nightfall: degrees below the horizon (used when minutes is blank)', fTzeisDeg)]));
     g.appendChild(el('div', { class: 'fields' }, [field('Civil date on the board and the weekly sheet', fDateFmt), field('Big number on the tiles, by default (everyone may switch it on their own phone)', fBig)]));
+    g.appendChild(el('div', { class: 'col' }, [el('label', { text: 'Countdown box ("הזמן הבא"): the next of these zmanim still ahead today' }), el('div', { class: 'tabs' }, COUNTDOWN_KEYS.map(function (k) { return chk('cd-' + k, countdownKeysOf(d).indexOf(k) >= 0, Cal.ZMAN_NAMES[k]); }))]));
     g.appendChild(el('div', { class: 'col' }, [chk('f-israel', d.israel, 'Eretz Yisroel calendar (one-day Yom Tov)'), chk('f-weekly', d.weeklyEarliest, 'Weekday zman-based times use the earliest sunset of the week (Sun–Thu)'), chk('f-24', d.clock24, '24-hour clock'), chk('f-rt', d.showRT, 'Show Rabbeinu Tam (72 minutes after sunset) in the zmanim list')]));
     if (mode !== 'artifact') g.appendChild(el('div', { class: 'fields' }, [field('New PIN for the admin page', fPin, el('span', { class: 'hint', text: 'Stored scrambled (hashed), so it cannot be read from the site files. It keeps strangers out of the admin page; what everyone else sees can only be changed with the GitHub token on the Publish tab, which stays on the device that entered it.' }))]));
     g.appendChild(el('h3', { text: 'Tefillos' }));
@@ -1044,6 +1082,7 @@
       out.nowMinutes = fNowMins.value === '' ? 20 : Math.max(0, Math.min(180, +fNowMins.value || 0));
       out.dateFormat = fDateFmt.value;
       out.bigTime = fBig.value;
+      out.countdownZmanim = COUNTDOWN_KEYS.filter(function (k) { return $('#cd-' + k).checked; });
       out.logo = fLogo.value.trim();
       out.schedules = {};
       Cal.DAY_TYPES.forEach(function (t) {

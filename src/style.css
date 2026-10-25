@@ -249,3 +249,14 @@ details.help summary { cursor: pointer; font-weight: 500; }
 .bigpick select { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; color: inherit; }
 .tile .ms.pre { margin-top: 1px; margin-bottom: -3px; }
 .next .ms.pre { margin-bottom: -4px; }
+/* the zman countdown box: a smaller twin of the next-minyan box */
+.next.zman { padding: 10px 16px 12px; }
+.next.zman h2 { font-size: 1.1rem; }
+.next.zman .time { font-size: clamp(1.8rem, 6vw, 2.4rem); margin-top: 2px; }
+.next.zman .count { font-size: clamp(1.2rem, 4vw, 1.5rem); margin-top: 4px; }
+.next.zman.soon .count { color: #b3261e; }
+#app.display .next.zman .time { font-size: 3.2rem; }
+#app.display .next.zman .count { font-size: 2rem; }
+.next.zman { position: relative; }
+.next .gear { position: absolute; top: 6px; inset-inline-end: 8px; background: none; border: 0; font-size: 1.1rem; color: var(--muted); cursor: pointer; padding: 2px 6px; }
+#app.display .next .gear { display: none; }
