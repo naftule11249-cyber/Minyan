@@ -17,8 +17,10 @@ const esc = t => String(t).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replac
 const pwaHead = '<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#223b68"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="' + esc(name) + '"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" type="image/png" href="favicon.png">';
 const site = (cfg.siteUrl || '').trim().replace(/\/?$/, m => cfg.siteUrl ? '/' : '');
 const desc = 'המנין הבא, כל המנינים לפי חדרים וזמני היום';
+// the share image URL carries a version, so WhatsApp and friends fetch a changed image instead of their cached copy
+const ogVer = (() => { try { return '?v=' + crypto.createHash('sha1').update(fs.readFileSync(path.join(dist, 'og-image.png'))).digest('hex').slice(0, 8); } catch (e) { return ''; } })();
 const ogHead = '<meta property="og:type" content="website"><meta property="og:title" content="' + esc(cfg.name || 'לוח המנינים') + '"><meta property="og:description" content="' + desc + '">' +
-  '<meta property="og:image" content="' + (site ? site : '') + 'og-image.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:locale" content="he_IL">' +
+  '<meta property="og:image" content="' + (site ? site : '') + 'og-image.png' + ogVer + '"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:locale" content="he_IL">' +
   (site ? '<meta property="og:url" content="' + esc(site) + '">' : '') + '<meta name="twitter:card" content="summary_large_image"><meta name="description" content="' + desc + '">';
 if (!site) console.warn('siteUrl is empty: share previews need the full site address (set it under Edit → General once the site is online, or in config.default.json).');
 const full = '<!doctype html><html lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>' + reset + '</style>' + pwaHead + ogHead + '</head><body>' + body + '</body></html>';
