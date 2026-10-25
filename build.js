@@ -3,7 +3,13 @@
 const fs = require('fs'), path = require('path'), crypto = require('crypto');
 const T = require('./src/template.js');
 const args = process.argv.slice(2), ri = args.indexOf('--remote');
-const cfg = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.default.json'), 'utf8'));
+let cfg = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.default.json'), 'utf8'));
+// docs/config.json is what the admin page publishes (the gabbai's live data). When it is newer than config.default.json,
+// it becomes the source, so a rebuild never undoes a published change.
+try {
+  const pub = JSON.parse(fs.readFileSync(path.join(__dirname, 'docs/config.json'), 'utf8'));
+  if ((pub.savedAt || 0) > (cfg.savedAt || 0)) { cfg = pub; fs.writeFileSync(path.join(__dirname, 'config.default.json'), JSON.stringify(cfg, null, 1) + '\n'); console.log('config.default.json taken from the newer published docs/config.json'); }
+} catch (e) {}
 if (ri >= 0 && args[ri + 1]) cfg.remoteConfigUrl = args[ri + 1];
 const json = JSON.stringify(cfg, null, 1);
 const name = cfg.name || 'לוח המנינים';

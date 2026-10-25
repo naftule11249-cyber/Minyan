@@ -69,7 +69,7 @@
     if (view.kind === 'week') return renderWeek();
     var now = Date.now(), tz = loc().tz, n = Cal.nowInTz(now, tz), rd = n.rd;
     var info = Cal.dayInfo(rd, !!cfg.israel), z = zmanimFor(rd);
-    var root = $('#app');
+    var root = $('#app'), keepOv = ui.adminOpen ? $('#overlay') : null; /* an open settings panel survives a re-render of the board behind it */
     root.innerHTML = '';
     root.className = view.kind === 'display' ? 'display' : view.kind === 'room' ? 'display room' : '';
     ui.roomFilter = view.kind === 'room' ? view.room : null;
@@ -120,6 +120,7 @@
     main.appendChild(colA); main.appendChild(colB);
     root.appendChild(main);
     if (view.kind === 'board') root.appendChild(footer());
+    if (keepOv) root.appendChild(keepOv);
     ui.lastRenderDay = rd; ui.lastMinute = Math.floor(now / 60000);
   }
   /* Printable weekly sheet (?view=week / #week): this week and next, Sunday to Shabbos */
@@ -473,6 +474,7 @@
     setTimeout(function () { t.remove(); }, ms || 3500);
   }
   function overlay(content) {
+    var old = $('#overlay'); if (old) old.remove();
     var o = el('div', { id: 'overlay', class: 'overlay', dir: 'ltr' }, [el('div', { class: 'panel' }, [content])]);
     $('#app').appendChild(o);
     ui.adminOpen = true;
@@ -1079,7 +1081,7 @@
       ready.then(function () { return persist(c); }).then(function (r) {
         setCfg(c);
         if (r.reloads) { toast('Saved. Reloading the page…', 8000); return; }
-        closeOverlay();
+        render(); buildAdmin(c); /* stay in the settings, on the same tab, with the board behind refreshed */
         if (r.published) toast('Saved and published. Everyone gets the update within a few minutes.', 6000);
         else if (r.configured) toast('Saved on this device, but publishing to the site failed: ' + (r.error && r.error.message || ''), 8000);
         else toast(remoteUrl() ? 'Saved on this device only. Use the Publish tab to update everyone.' : 'Saved on this device', 6000);
