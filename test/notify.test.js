@@ -24,3 +24,33 @@ ok('shacharis first at 6:10 (10 before 6:20)', N.due(cfg, sub, at(6, 10), 5).map
 const d2 = N.due(cfg, sub, at(6, 27), 5); ok('daily at 6:27 window', d2.map(x => x.key), ['d:2026-10-21']); console.log('daily text starts:', d2[0] && d2[0].text.slice(0, 60));
 ok('off clears', (N.apply(N.parseCommand('remind off', cfg), sub, cfg), sub.reminders.length + (sub.daily == null ? 0 : 1)), 0);
 console.log(fails ? fails + ' FAILURES' : 'ALL PASS');
+
+/* ---- which minyan: last, last before a zman, a set time today only ---- */
+ok('parse last', N.parseCommand('remind shacharis last 15', cfg), { action: 'add', tefilla: 'shacharis', time: null, lead: 15, lang: 'en', pick: 'last' });
+ok('parse before chatzos', N.parseCommand('REMIND SHACHARIS BEFORE CHATZOS', cfg), { action: 'add', tefilla: 'shacharis', time: null, lead: 10, lang: 'en', pick: 'before:chatzos' });
+ok('parse he before sof zman tefilla', N.parseCommand('תזכורת שחרית לפני סוף זמן תפילה 5', cfg), { action: 'add', tefilla: 'shacharis', time: null, lead: 5, lang: 'he', pick: 'before:tefilla' });
+ok('parse he mincha before zman maariv', N.parseCommand('תזכורת מנחה לפני זמן מעריב', cfg).pick, 'before:tzeis');
+ok('parse he mincha before shkia', N.parseCommand('תזכורת מנחה לפני שקיעה', cfg).pick, 'before:sunset');
+ok('parse today', N.parseCommand('remind mincha 5:45 today', cfg, at(9, 0)), { action: 'add', tefilla: 'mincha', time: 1065, lead: 10, lang: 'en', once: '2026-10-21' });
+ok('parse before nonsense -> help', N.parseCommand('remind mincha before lunch', cfg).action, 'help');
+const s2 = {};
+console.log('reply:', N.apply(N.parseCommand('remind shacharis before chatzos 15', cfg), s2, cfg));
+console.log('reply:', N.apply(N.parseCommand('תזכורת מנחה 5:45 היום', cfg, at(9, 0)), s2, cfg));
+console.log('reply:', N.apply(N.parseCommand('remind mincha last', cfg), s2, cfg));
+console.log('list:', N.apply(N.parseCommand('remind list', cfg), s2, cfg).replace(/\n/g, ' | '));
+ok('three reminders', s2.reminders.length, 3);
+const eng = MinyanEngine(cfg), rd21 = Cal.rdFromGreg(2026, 10, 21), sched21 = eng.scheduleFor(rd21), z21 = eng.zmanimFor(rd21);
+const lastSh = sched21.byTefilla.shacharis.slice(-1)[0];
+ok('last shacharis is chatzos-30', eng.fmtTime(lastSh.start), eng.fmtTime(Math.round(z21.chatzos) - 30));
+ok('before chatzos fires 15 min before the last shacharis', N.due(cfg, s2, lastSh.ms - 15 * 60000, 5).map(x => x.key), ['r:2026-10-21:shacharis:' + lastSh.start]);
+ok('mincha last (18:02) fires at 17:52', N.due(cfg, s2, at(17, 52), 5).map(x => x.key), ['r:2026-10-21:mincha:1082']);
+ok('today-only 5:45 fires on its day at 17:35', N.due(cfg, s2, at(17, 35), 5).map(x => x.key), ['r:2026-10-21:mincha:1065']);
+const d22 = (h, m) => Cal.epochFromWall(Cal.rdFromGreg(2026, 10, 22), h * 60 + m, 'America/New_York');
+ok('today-only is silent the next day', N.due(cfg, s2, d22(17, 35), 5).map(x => x.key), []);
+ok('prune drops it after its day', [N.prune(cfg, s2, d22(9, 0)), s2.reminders.length, N.prune(cfg, s2, d22(9, 0))], [true, 2, false]);
+const s3 = {}; N.apply(N.parseCommand('remind shacharis before tefilla', cfg), s3, cfg);
+const bt = N.targetFor(sched21.byTefilla.shacharis, s3.reminders[0], z21);
+ok('last shacharis before sof zman tefilla starts before it', [bt.start < z21.tefilla, sched21.byTefilla.shacharis[sched21.byTefilla.shacharis.indexOf(bt) + 1].start >= z21.tefilla], [true, true]);
+ok('…and fires 10 min before it', N.due(cfg, s3, bt.ms - 10 * 60000, 5).map(x => x.key), ['r:2026-10-21:shacharis:' + bt.start]);
+ok('before a zman with no minyan before it: nothing', N.targetFor(sched21.byTefilla.shacharis, { tefilla: 'shacharis', pick: 'before:alos', lead: 10 }, z21), null);
+console.log(fails ? fails + ' FAILURES' : 'ALL PASS (2)');

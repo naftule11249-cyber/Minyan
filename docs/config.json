@@ -13,6 +13,7 @@
  "tzeisDeg": 8.5,
  "weeklyEarliest": false,
  "clock24": false,
+ "dateFormat": "mdy",
  "showRT": true,
  "nowMinutes": 20,
  "tefillos": [
@@ -74,7 +75,7 @@
  "overrides": [],
  "smsNumber": "",
  "remoteConfigUrl": "",
- "savedAt": 1792934324818,
+ "savedAt": 1792936228831,
  "siteUrl": "https://minyan.cascadeshul.org/",
  "logo": "",
  "rooms": "ברך משה, דברי יואל, לב אהרן, שלמה יודא, היכל אדל, היכל ביהמ״ד",

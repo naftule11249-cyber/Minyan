@@ -182,6 +182,11 @@ var MinyanEngine = (function () {
       var core = pad2(Math.floor(s / 3600)) + ':' + pad2(Math.floor((s % 3600) / 60)) + ':' + pad2(s % 60);
       return d ? d + (d === 1 ? ' יום ' : ' ימים ') + core : core;
     }
+    /* the civil date as people here write it: cfg.dateFormat 'mdy' (10/25/2026), 'dmy' (25.10.2026) or 'iso'; US time zones default to mdy */
+    function fmtDate(rd) {
+      var g = Cal.gregFromRD(rd), f = cfg.dateFormat || (/^America\//.test(loc().tz) ? 'mdy' : 'dmy');
+      return f === 'mdy' ? g.m + '/' + g.d + '/' + g.y : f === 'iso' ? isoDate(rd) : g.d + '.' + g.m + '.' + g.y;
+    }
     function dayLine(info, rd) {
       var parsha = Cal.parshaOfWeek(rd, !!cfg.israel);
       return Cal.DAY_NAMES[info.dow] + (parsha ? ' פרשת ' + parsha : '');
@@ -190,7 +195,7 @@ var MinyanEngine = (function () {
       if (s.override) return 'לוח מיוחד' + (s.override.label ? ': ' + s.override.label : '');
       return 'לוח ' + (TYPE_NAME[s.type] || s.type);
     }
-    return { cfg: cfg, loc: loc, zmanimFor: zmanimFor, resolveMin: resolveMin, expand: expand, tefillos: tefillos, activeNotices: activeNotices, activeBanner: activeBanner, dayTexts: dayTexts, scheduleFor: scheduleFor,
+    return { cfg: cfg, loc: loc, zmanimFor: zmanimFor, resolveMin: resolveMin, expand: expand, tefillos: tefillos, activeNotices: activeNotices, activeBanner: activeBanner, dayTexts: dayTexts, scheduleFor: scheduleFor, fmtDate: fmtDate,
       after: after, upcoming: upcoming, fmtTime: fmtTime, fmtCountdown: fmtCountdown, dayLine: dayLine, typeLabel: typeLabel, parseLine: parseLine };
   }
   create.parseLine = parseLine; create.parseSpec = parseSpec; create.sameEntry = sameEntry; create.gregStr = gregStr; create.isoDate = isoDate;

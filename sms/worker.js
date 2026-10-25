@@ -43,7 +43,7 @@ export default {
       var body = await request.json().catch(function () { return null; });
       if (!body || !body.subscription || !body.subscription.endpoint || !body.subscription.keys) return json(env, { error: 'bad request' }, 400);
       var id = body.id && /^[a-z0-9]{8,32}$/.test(body.id) ? body.id : crypto.randomUUID().replace(/-/g, '').slice(0, 20);
-      var sub = { channel: 'push', push: { endpoint: body.subscription.endpoint, keys: body.subscription.keys }, reminders: (body.reminders || []).slice(0, 10).map(function (r) { return { tefilla: String(r.tefilla), time: r.time == null ? null : +r.time, lead: Math.min(180, Math.max(1, +r.lead || 10)) }; }),
+      var sub = { channel: 'push', push: { endpoint: body.subscription.endpoint, keys: body.subscription.keys }, reminders: (body.reminders || []).slice(0, 10).map(function (r) { var o = { tefilla: String(r.tefilla), time: r.time == null ? null : +r.time, lead: Math.min(180, Math.max(1, +r.lead || 10)) }; if (o.time == null && /^(first|last|before:(chatzos|tefilla|shema|sunset|tzeis|plag|minchag))$/.test(r.pick || '')) o.pick = r.pick; if (/^\d{4}-\d{2}-\d{2}$/.test(r.once || '')) o.once = r.once; return o; }),
         daily: body.daily == null ? null : +body.daily, lang: body.lang === 'en' ? 'en' : 'he', updated: Date.now() };
       await env.SUBS.put('push:' + id, JSON.stringify(sub));
       return json(env, { id: id });
@@ -82,6 +82,10 @@ export default {
     for (i = 0; i < names.length; i++) {
       var sub = await env.SUBS.get(names[i], 'json');
       if (!sub) continue;
+      if (MinyanNotify.prune(cfg, sub, now)) { /* a "today only" reminder whose day has passed */
+        if (!sub.reminders.length && sub.daily == null) { await env.SUBS.delete(names[i]); continue; }
+        await env.SUBS.put(names[i], JSON.stringify(sub));
+      }
       var due = MinyanNotify.due(cfg, sub, now, 5);
       for (j = 0; j < due.length; j++) {
         var sentKey = 'sent:' + names[i] + ':' + due[j].key;

@@ -27,3 +27,5 @@ ok('~5 still rounds down to 5 minutes', eng.fmtTime((E.MinyanEngine || E)(Object
 ok('new room is in the room list', cfg.rooms.split(',').map(s => s.trim()).indexOf('היכל אדל') >= 0, true);
 ok('now window setting', cfg.nowMinutes, 20);
 if (fails) { console.log(fails + ' FAILING'); process.exit(1); } else console.log('schedule: all good');
+ok('civil date in US format', eng.fmtDate(sunRd), '10/25/2026');
+ok('civil date d.m.y when asked', (E.MinyanEngine || E)(Object.assign({}, cfg, { dateFormat: 'dmy' })).fmtDate(sunRd), '25.10.2026');

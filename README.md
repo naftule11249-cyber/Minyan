@@ -112,8 +112,10 @@ The same function works for WhatsApp through Twilio's WhatsApp sender.
 
 **Reminders, daily texts, WhatsApp and app notifications** need the Cloudflare Worker version (`sms/dist/worker.js`,
 free tier), which also answers the texts. People text `REMIND MINCHA 5:45 15` (15 minutes before the 5:45 Mincha),
-`REMIND SHACHARIS` (the first Shacharis), `DAILY 6:30` (the day's schedule every morning), `REMIND LIST`, `REMIND OFF`
-(Hebrew: `תזכורת מנחה 5:45 15`, `יומי 6:30`, `תזכורות`, `ביטול`). The worker checks every 5 minutes what is due and sends it
+`REMIND SHACHARIS` (the first Shacharis), `REMIND SHACHARIS LAST`, `REMIND SHACHARIS BEFORE CHATZOS` / `BEFORE TEFILLA` (the last one before
+sof zman tefilla) / `BEFORE SHEMA`, `REMIND MINCHA BEFORE SUNSET` / `BEFORE MAARIV` (the last Mincha before zman Maariv), `REMIND MINCHA 5:45 TODAY`
+(today only, dropped afterwards), `DAILY 6:30` (the day's schedule every morning), `REMIND LIST`, `REMIND OFF`
+(Hebrew: `תזכורת מנחה 5:45 15`, `תזכורת שחרית אחרון`, `תזכורת שחרית לפני חצות`, `תזכורת שחרית לפני סוף זמן תפילה`, `תזכורת מנחה לפני שקיעה`, `תזכורת מנחה 5:45 היום`, `יומי 6:30`, `תזכורות`, `ביטול`). The worker checks every 5 minutes what is due and sends it
 through Twilio. Setup (once, on a computer with Node):
 
 ```
@@ -126,7 +128,7 @@ cd .. && node build.js && cd sms && npx wrangler deploy
 ```
 Edit `wrangler.toml` first (CONFIG_URL, ALLOWED_ORIGIN, VAPID_SUBJECT). Point the Twilio number's webhook at the worker
 address instead of the Twilio Function, and enter the same address under Edit → General → "Notification service address":
-the website and the installed app then show a "Reminders on your phone" box (like the install button, this phone-settings box is in English; the board itself is Hebrew) where people pick the minyanim they want to be reminded
+the website and the installed app then show a "Reminders on your phone" box (like the install button, this phone-settings box is in English; the board itself is Hebrew). Each reminder row picks a tefilla, which minyan (first, last, last before sof zman Shema / tefilla / chatzos, last before sunset / zman Maariv, or any of today's times), the minutes before, and every day or today only. Tapping any minyan on the board opens the same choice for that minyan where people pick the minyanim they want to be reminded
 of (works on Android, and on iPhone once the site is added to the home screen).
 
 WhatsApp: enable the WhatsApp sender on the Twilio number, set `WA_FROM` (`whatsapp:+1718…`); the same keywords work.
@@ -149,6 +151,8 @@ Same address, different screens (the `#` forms also work on the claude.ai page):
 | Text service page | `sms.html` | how the texting works (also the opt-in page for the carriers) |
 
 ## Calendar
+
+- The civil date next to the Hebrew date is written Month/Day/Year in US time zones (General → "Civil date" switches to Day.Month.Year or Year-Month-Day).
 
 - Fast days show when the fast begins and ends; Shabbos and Yom Tov show when they end; during Sefirah the board shows the count (tonight's after sunset).
 - Special dates (Edit → Special dates) can be one civil date, a Hebrew date every year, or a calendar day every year (Chol Hamoed Sukkos, Purim, Tisha B'Av, Rosh Chodesh…).
