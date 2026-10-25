@@ -260,3 +260,5 @@ details.help summary { cursor: pointer; font-weight: 500; }
 .next.zman { position: relative; }
 .next .gear { position: absolute; top: 6px; inset-inline-end: 8px; background: none; border: 0; font-size: 1.1rem; color: var(--muted); cursor: pointer; padding: 2px 6px; }
 #app.display .next .gear { display: none; }
+.next.tap { cursor: pointer; }
+.next.tap:hover, .next.tap:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }

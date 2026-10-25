@@ -135,13 +135,17 @@
     } else {
       next.appendChild(el('div', { class: 'empty', text: 'לא רשומים מנינים לימים הקרובים. בכפתור Edit למטה אפשר להוסיף.' }));
     }
+    var canTap = canSetReminders();
+    if (up && canTap && up.entry.tefilla.kind !== 'event') makeTappable(next, up.entry); /* tap the next minyan to be reminded of it */
     colA.appendChild(next);
     ui.zcount = null; ui.zcountMs = 0;
     var nz = nextZman(info, z, rd, now);
     if (nz) {
       ui.zcountMs = nz.ms; ui.zcount = el('div', { class: 'count num', text: fmtCountdown(nz.ms - now) });
-      colA.appendChild(el('section', { class: 'next zman' + (nz.ms - now < 30 * 60000 ? ' soon' : ''), 'aria-live': 'polite' }, [el('h2', { text: 'הזמן הבא' }), el('div', { class: 'what', text: Cal.ZMAN_NAMES[nz.key] }), el('div', { class: 'time num', text: fmtTime(nz.min) }), ui.zcount,
-        el('button', { type: 'button', class: 'gear', 'aria-label': 'Choose the countdown zmanim', title: 'Choose zmanim', text: '⚙', onclick: openCountdownChooser })]));
+      var zb = el('section', { class: 'next zman' + (nz.ms - now < 30 * 60000 ? ' soon' : ''), 'aria-live': 'polite' }, [el('h2', { text: 'הזמן הבא' }), el('div', { class: 'what', text: Cal.ZMAN_NAMES[nz.key] }), el('div', { class: 'time num', text: fmtTime(nz.min) }), ui.zcount,
+        el('button', { type: 'button', class: 'gear', 'aria-label': 'Choose the countdown zmanim', title: 'Choose zmanim', text: '⚙', onclick: function (ev) { ev.stopPropagation(); openCountdownChooser(); } })]);
+      if (canTap) makeTappable(zb, { zman: nz.key, rd: rd, min: nz.min }); /* tap the zman to be reminded before it */
+      colA.appendChild(zb);
     }
     colA.appendChild(daySections(scheduleFor(rd), now, up, true));
     if (up && up.daysAhead > 0 && !(up.daysAhead === 1 && ui.todayAllSwitched)) colA.appendChild(daySections(up.sched, now, up, false)); /* tomorrow is already shown section by section once today is over */

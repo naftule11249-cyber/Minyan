@@ -15,6 +15,11 @@ const { chromium } = require('playwright'); const fs = require('fs');
     await page.goto('http://localhost:8790/index.html', { waitUntil: 'networkidle' }); await page.waitForTimeout(600);
     ok('reminders panel shown', await page.locator('section.side h3:has-text("Reminders on your phone")').count(), 1);
     ok('tiles are tappable', (await page.locator('.tile.tap').count()) > 10, true);
+    ok('the next-minyan box is tappable', await page.locator('section.next:not(.zman).tap').count(), 1);
+    await page.locator('section.next:not(.zman).tap').click();
+    ok('…and opens the remind-me box for that minyan', await page.locator('#rem-overlay .rem-what').count(), 1);
+    await page.click('#rem-overlay button:has-text("Cancel")');
+    if (await page.locator('section.next.zman').count()) { await page.locator('section.next.zman .gear').click(); ok('the gear opens the chooser, not the reminder', [await page.locator('#zc-overlay').count(), await page.locator('#rem-overlay').count()], [1, 0]); await page.click('#zc-overlay button:has-text("Cancel")'); }
     await page.click('button:has-text("+ Add reminder")');
     ok('a reminder row appears', await page.locator('.rem-row').count(), 1);
     const which = await page.locator('.rem-row select[aria-label="Which minyan"] option').allTextContents();
