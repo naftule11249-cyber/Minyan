@@ -485,12 +485,13 @@
     d.location = d.location || {}; d.schedules = d.schedules || {}; d.overrides = d.overrides || []; d.notices = d.notices || [];
     d.tefillos = (d.tefillos && d.tefillos.length) ? d.tefillos : clone(TEFILLA_DEFAULTS);
     var todayRd = Cal.nowInTz(Date.now(), loc().tz).rd;
-    var tabs = [['general', 'General'], ['schedule', 'Schedule'], ['notices', 'Notices'], ['overrides', 'Special dates']];
+    var tabs = [['today', 'Today'], ['general', 'General'], ['schedule', 'Schedule'], ['notices', 'Notices'], ['overrides', 'Special dates']];
     if (mode !== 'artifact') tabs.push(['publish', 'Publish']);
     tabs.push(['data', 'Backup']);
     var pages = {}, tabBar = el('div', { class: 'tabs', role: 'tablist' });
     tabs.forEach(function (t) { tabBar.appendChild(el('button', { type: 'button', role: 'tab', id: 'tab-' + t[0], 'aria-selected': 'false', text: t[1], onclick: function () { selectTab(t[0]); } })); });
     function selectTab(id) {
+      ui.adminTab = id; /* a rebuild (adding a category, restoring a backup) keeps the gabbai on the same tab */
       tabs.forEach(function (t) { pages[t[0]].hidden = t[0] !== id; $('#tab-' + t[0], tabBar).setAttribute('aria-selected', String(t[0] === id)); });
       if (id === 'data') dataArea.value = JSON.stringify(collect(), null, 2);
     }
@@ -846,6 +847,51 @@
     np.appendChild(el('div', null, [el('button', { type: 'button', class: 'btn', text: '+ Notice', onclick: function () { addNotice({ title: '', body: '' }); } })]));
     pages.notices = np;
 
+    /* today: add, move or cancel a minyan for today only, without the editor; saved as a one-date special schedule */
+    var tp = el('div', { class: 'col', id: 'page-today' }), todayIso = MinyanEngine.isoDate(todayRd), todaySched = scheduleFor(todayRd), quick = {};
+    function hhmm(min) { var m = Math.round(min); return pad2(Math.floor(m / 60) % 24) + ':' + pad2(m % 60); }
+    function parseHHMM(v) { var m = /^(\d{2}):(\d{2})$/.exec(v || ''); return m ? +m[1] * 60 + +m[2] : null; }
+    function todayList(tf) { return quick[tf.id] || (todaySched.byTefilla[tf.id] || []).map(function (e) { return { start: e.start, room: e.room, note: e.note }; }); }
+    function touch(tf) { if (!quick[tf.id]) quick[tf.id] = todayList(tf).map(function (x) { return { start: x.start, room: x.room, note: x.note }; }); return quick[tf.id]; }
+    function quickLines(tf) {
+      var list = quick[tf.id]; if (!list) return null;
+      if (!list.length) return '# בוטל להיום'; /* a comment line: the special schedule applies, with no minyanim */
+      return list.slice().sort(function (a, b) { return a.start - b.start; }).map(function (x) { return hhmm(x.start) + (x.room ? ' ' + x.room : '') + (x.note ? ' // ' + x.note : ''); }).join('\n');
+    }
+    function renderToday() {
+      tp.textContent = '';
+      var existing = d.overrides.filter(function (o) { return o.date === todayIso; })[0], changed = Object.keys(quick).length > 0;
+      tp.appendChild(el('div', { class: 'hint' }, [el('b', { text: 'Today, ' + engine.fmtDate(todayRd) + ' · ' + Cal.DAY_NAMES[todaySched.info.dow] + ' ' + Cal.formatHeb(todaySched.info.heb) }), ' — ',
+        existing ? 'today already has its own schedule' + (existing.label ? ' (' + existing.label + ')' : '') + '. ' : '', 'Move a time, cancel a minyan or add one. It applies to today only; the regular schedule stays as it is.']));
+      d.tefillos.filter(function (t) { return t.kind !== 'event'; }).forEach(function (tf) {
+        var box = el('div', { class: 'col' }), list = todayList(tf);
+        list.forEach(function (x, i) {
+          var t = el('input', { type: 'time', value: hhmm(x.start), 'aria-label': 'Time' });
+          t.addEventListener('change', function () { var m = parseHHMM(t.value); if (m == null) return; touch(tf)[i].start = m; renderToday(); });
+          box.appendChild(el('div', { class: 'mrow-l today-row' }, [t, el('span', { class: 'today-room', text: x.room || '' }), x.note ? el('span', { class: 'hint', text: x.note }) : null,
+            el('button', { type: 'button', class: 'btn small danger', text: 'Cancel', title: 'No such minyan today', onclick: function () { touch(tf).splice(i, 1); renderToday(); } })]));
+        });
+        if (!list.length) box.appendChild(el('div', { class: 'hint', text: 'No ' + tf.name + ' minyanim today.' }));
+        var addT = el('input', { type: 'time', 'aria-label': 'New time' }), addRoom = '';
+        var picker = roomPicker(function () { return addRoom; }, function (v) { addRoom = v; }, 'Add a room');
+        var addB = el('button', { type: 'button', class: 'btn small', text: '+ Add for today', onclick: function () { var m = parseHHMM(addT.value); if (m == null) { toast('Pick a time first'); return; } touch(tf).push({ start: m, room: addRoom, note: '' }); renderToday(); } });
+        box.appendChild(el('div', { class: 'mrow-l' }, [addT].concat(picker, [addB])));
+        tp.appendChild(el('div', { class: 'field' }, [el('label', { text: tf.name }), box]));
+      });
+      var saveT = el('button', { type: 'button', class: 'btn primary', text: 'Save today\'s changes', onclick: function () {
+        if (!changed) { toast('Nothing changed yet'); return; }
+        var c = collect(), ovr = c.overrides.filter(function (o) { return o.date === todayIso; })[0];
+        if (!ovr) { ovr = { date: todayIso, label: 'שינוי להיום', lines: {} }; c.overrides.push(ovr); }
+        d.tefillos.forEach(function (tf) { var l = quickLines(tf); if (l != null) ovr.lines[tf.id] = l; });
+        saveConfig(c);
+      } });
+      var row = el('div', { class: 'tabs' }, [saveT]);
+      if (existing) row.appendChild(el('button', { type: 'button', class: 'btn', text: 'Back to the regular schedule for today', onclick: function () { var c = collect(); c.overrides = c.overrides.filter(function (o) { return o.date !== todayIso; }); saveConfig(c); } }));
+      tp.appendChild(row);
+    }
+    renderToday();
+    pages.today = tp;
+
     /* overrides */
     var op = el('div', { class: 'col' }), oList = el('div', { class: 'col' });
     function addOverride(o) {
@@ -978,8 +1024,8 @@
       try { new Intl.DateTimeFormat('en-US', { timeZone: c.location.tz }); } catch (e) { return 'Invalid time zone'; }
       return null;
     }
-    var saveBtn = el('button', { type: 'button', class: 'btn primary', text: 'Save', onclick: function () {
-      var c = collect(), err = validate(c);
+    function saveConfig(c) {
+      var err = validate(c);
       if (err) { toast(err); return; }
       saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
       if (mode !== 'artifact') saveGh();
@@ -997,13 +1043,14 @@
         else if (r.configured) toast('Saved on this device, but publishing to the site failed: ' + (r.error && r.error.message || ''), 8000);
         else toast(remoteUrl() ? 'Saved on this device only. Use the Publish tab to update everyone.' : 'Saved on this device', 6000);
       }, function (e) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; toast(errorText(e), 6000); });
-    } });
+    }
+    var saveBtn = el('button', { type: 'button', class: 'btn primary', text: 'Save', onclick: function () { saveConfig(collect()); } });
     var panel = el('div', { class: 'col' }, [
       el('div', { class: 'bar' }, [el('h2', { text: 'Board settings' }), el('div', { class: 'tabs' }, [saveBtn, el('button', { type: 'button', class: 'btn', text: 'Cancel', onclick: closeOverlay })])]),
-      tabBar, pages.general, pages.schedule, pages.notices, pages.overrides, mode !== 'artifact' ? pages.publish : null, pages.data,
+      tabBar, pages.today, pages.general, pages.schedule, pages.notices, pages.overrides, mode !== 'artifact' ? pages.publish : null, pages.data,
       el('div', { class: 'bar' }, [el('span', { class: 'hint', text: mode === 'artifact' ? 'Save publishes a new version of this page for everyone who has the link.' : 'Save keeps the settings in this browser. Use the Publish tab to update the website and app, or Backup to copy them.' }), saveBtn.cloneNode(true)])]);
     overlay(panel);
-    selectTab('general'); showType('weekday'); markTabs();
+    selectTab(draft && ui.adminTab && pages[ui.adminTab] ? ui.adminTab : 'today'); showType('weekday'); markTabs();
     var bottomSave = panel.lastChild.lastChild;
     bottomSave.addEventListener('click', function () { saveBtn.click(); });
   }

@@ -243,3 +243,5 @@ details.help summary { cursor: pointer; font-weight: 500; }
 .ltr { direction: ltr; text-align: left; }
 .zlist li.tap { cursor: pointer; border-radius: 6px; }
 .zlist li.tap:hover, .zlist li.tap:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.today-row input[type=time] { font-size: 1.05rem; }
+.today-room { font-weight: 700; min-width: 90px; }

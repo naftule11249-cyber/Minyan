@@ -16,7 +16,7 @@ const { chromium } = require('playwright');
       console.log('edit button on public page:', await page.locator('footer button:has-text("Edit")').count(), 'visible:', await page.locator('footer button:has-text("Edit")').isVisible());
       await page.goto('http://localhost:8790/admin.html', { waitUntil: 'networkidle' });
       await page.waitForSelector('#pin-input'); await page.fill('#pin-input', '1234'); await page.press('#pin-input', 'Enter');
-      await page.waitForSelector('#f-name');
+      await page.click('#tab-general'); await page.waitForSelector('#f-name');
       await page.fill('#f-name', 'ביהמ״ד בדיקה');
       await page.click('#tab-schedule');
       const mincha = page.locator('#dtp-weekday .fields.three > .field').nth(1);

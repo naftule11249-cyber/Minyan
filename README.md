@@ -51,6 +51,13 @@ Day types fall back to a more general one when
 empty (Sunday → weekday for the tefillos it has no list for, Rosh Chodesh → weekday, Yom Tov → Shabbos, Erev Yom Tov → Friday). For Mincha and
 Maariv a time like `6:45` means 6:45 PM (set per tefilla under General → Tefillos).
 
+## Quick changes for today
+
+The admin page opens on a **Today** tab: today's minyanim with a time box and a Cancel button each, and an "+ Add for today" row per tefilla.
+Move, cancel or add, then "Save today's changes". It is stored as a one-date special schedule (Special dates tab), so the regular
+schedule is untouched and tomorrow is back to normal; "Back to the regular schedule for today" removes it. On a phone this is the
+fastest way to say "Mincha is 5:30 today".
+
 ## Putting the website online (GitHub Pages, free)
 
 1. Create a GitHub account and a new public repository, e.g. `minyan`.
