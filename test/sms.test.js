@@ -15,7 +15,7 @@ check('he next', R('מנין', at(10, 59)), /^המנין הבא: שחרית – 
 check('en next', R('next', at(10, 45)), /^Next minyan: Shacharis – דברי יואל 11:00 \(Hodu 11:10\), in 15 min\./);
 check('empty = next', R('', at(10, 30)), /^Next minyan/);
 check('en hours', R('when', at(4, 0)), /ברך משה 6:20 \(Hodu 6:30\), in 2 hr 20 min\./);
-check('he mincha list', R('מנחה', at(10, 0)), /^מנחה היום \(3 נותרו\): 1:10 ברך משה, 5:45 דברי יואל, 6:02 ברך משה$/);
+check('he mincha list', R('מנחה', at(10, 0)), /^מנחה היום \(3 נותרו\): 1:10 ברך משה, 5:45 דברי יואל, 6:03 ברך משה$/);
 check('en shacharis list', R('Shacharis', at(11, 30)), /^Shacharis Today \(3 left\): 11:40 שלמה יודא, 12:00 דברי יואל, 12:\d\d ברך משה$/);
 check('shacharis after last -> tomorrow', R('shacharis', at(13, 0)), /^Shacharis Tomorrow \(Wednesday \(לך לך\)\): 6:20 ברך משה, .*more 5$/);
 check('he today', R('היום', at(11, 30)), /^היום – יום שלישי פרשת לך לך, ט׳ חשון תשפ״ז\nשחרית: 11:40 שלמה יודא, 12:00 דברי יואל, 12:\d\d ברך משה\nמנחה: .*\nמעריב: /);

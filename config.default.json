@@ -14,6 +14,7 @@
  "weeklyEarliest": false,
  "clock24": false,
  "showRT": true,
+ "nowMinutes": 20,
  "tefillos": [
   {
    "id": "shacharis",
@@ -43,6 +44,9 @@
    "mincha": "14:00 ברך משה // וידבר\nsunset-20~5 דברי יואל // example\nsunset-5 ברך משה // example\n15:15 היכל ביהמ״ד",
    "maariv": "tzeis ברך משה // example\n21:00 דברי יואל\nevery 15 from 22:15 to 00:15 rooms ברך משה, דברי יואל, שלמה יודא, לב אהרן"
   },
+  "sunday": {
+   "shacharis": "7:30 לב אהרן\nevery 15 from 8:00 to 11:15 rooms דברי יואל, ברך משה, שלמה יודא, לב אהרן\n11:30 היכל אדל\n11:45 לב אהרן\n12:00 דברי יואל\nchatzos-30 ברך משה"
+  },
   "friday": {
    "mincha": "chatzos+30~5 ברך משה // example\ncandles דברי יואל // example\ncandles+10 ברך משה // example",
    "maariv": "candles+20 ברך משה // example\nsunset+15 דברי יואל // example"
@@ -70,10 +74,10 @@
  "overrides": [],
  "smsNumber": "",
  "remoteConfigUrl": "",
- "savedAt": 1792560529720,
+ "savedAt": 1792934324818,
  "siteUrl": "https://minyan.cascadeshul.org/",
  "logo": "",
- "rooms": "ברך משה, דברי יואל, לב אהרן, שלמה יודא, היכל ביהמ״ד",
+ "rooms": "ברך משה, דברי יואל, לב אהרן, שלמה יודא, היכל אדל, היכל ביהמ״ד",
  "pinHash": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
  "githubRepo": "naftule11249-cyber/Minyan",
  "githubBranch": "main",

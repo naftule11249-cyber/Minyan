@@ -67,8 +67,8 @@ var MinyanEngine = (function () {
       if (spec.kind === 'fixed') return spec.min;
       var base = (cfg.weeklyEarliest && WEEKLY_TYPES[type]) ? weeklyBase(rd, spec.zman) : zmanimFor(rd)[spec.zman];
       if (isNaN(base) || !isFinite(base)) return NaN;
-      var v = base + spec.offset;
-      return spec.round ? Math.floor(v / spec.round) * spec.round : Math.floor(v);
+      var v = Math.round(base) + spec.offset; /* start from the zman as the zmanim list shows it (to the minute), then add the offset */
+      return spec.round ? Math.floor(v / spec.round) * spec.round : v;
     }
     /* A parsed line -> the minyanim it produces on day rd: [{start, room, note}] (a repeating line gives many). */
     function expand(p, rd, type) {

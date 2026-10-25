@@ -28,7 +28,7 @@ const { chromium } = require('playwright');
   // repeating row on sunday shacharis
   await page.click('#dt-sunday');
   const sun = page.locator('#dtp-sunday').locator('.fields.three > .field').nth(0);
-  await sun.locator('label.same').click(); // own list for Sunday
+  if (await sun.locator('input[type=checkbox]').first().isChecked()) await sun.locator('label.same').click(); // own list for Sunday (the shul config already gives it one)
   await sun.locator('button.danger').first().click({ clickCount: 1 }).catch(() => {});
   await sun.locator('button:has-text("+ Add repeating")').click();
   const srow = sun.locator('.mrow.series').first();

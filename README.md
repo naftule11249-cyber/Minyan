@@ -42,8 +42,11 @@ One minyan per line: time first, then the room / minyan name, then an optional `
 Zman words: `שקיעה` `נץ` `הדלקה` `צאת` `פלג` `חצות` `עלות` `שמע` `ר״ת` (or sunset, sunrise,
 candles, tzeis, plag, chatzos, alos, shema). The last weekday Shacharis is written `חצות-30 ברך משה`,
 so it moves with chatzos every day (change `-30` if your board uses a different gap).
-A repeating run: `every 10 from sunrise-30~5 to chatzos-30 rooms ברך משה, דברי יואל` (every 10 minutes, rooms in turn; `~5` rounds every minyan to 5 minutes). The admin page builds these rows for you. Day types fall back to a more general one when
-empty (Rosh Chodesh → weekday, Yom Tov → Shabbos, Erev Yom Tov → Friday). For Mincha and
+A repeating run: `every 10 from sunrise-30~5 to chatzos-30 rooms ברך משה, דברי יואל` (every 10 minutes, rooms in turn; `~5` rounds every minyan to 5 minutes). The admin page builds these rows for you.
+A zman-based time starts from the zman as the zmanim list shows it (to the minute), so with chatzos at 12:40 `חצות-30` is 12:10.
+Fixed and repeating rows mix freely; the Sunday Shacharis list is `7:30 לב אהרן`, then `every 15 from 8:00 to 11:15 rooms דברי יואל, ברך משה, שלמה יודא, לב אהרן`, then `11:30 היכל אדל`, `11:45 לב אהרן`, `12:00 דברי יואל` and `חצות-30 ברך משה`.
+Day types fall back to a more general one when
+empty (Sunday → weekday for the tefillos it has no list for, Rosh Chodesh → weekday, Yom Tov → Shabbos, Erev Yom Tov → Friday). For Mincha and
 Maariv a time like `6:45` means 6:45 PM (set per tefilla under General → Tefillos).
 
 ## Putting the website online (GitHub Pages, free)
@@ -123,7 +126,7 @@ cd .. && node build.js && cd sms && npx wrangler deploy
 ```
 Edit `wrangler.toml` first (CONFIG_URL, ALLOWED_ORIGIN, VAPID_SUBJECT). Point the Twilio number's webhook at the worker
 address instead of the Twilio Function, and enter the same address under Edit → General → "Notification service address":
-the website and the installed app then show a "תזכורות בנייד" box where people pick the minyanim they want to be reminded
+the website and the installed app then show a "Reminders on your phone" box (like the install button, this phone-settings box is in English; the board itself is Hebrew) where people pick the minyanim they want to be reminded
 of (works on Android, and on iPhone once the site is added to the home screen).
 
 WhatsApp: enable the WhatsApp sender on the Twilio number, set `WA_FROM` (`whatsapp:+1718…`); the same keywords work.
@@ -139,7 +142,7 @@ Same address, different screens (the `#` forms also work on the claude.ai page):
 
 | View | Address | For |
 |---|---|---|
-| Lobby screen | `index.html?view=display` or `#display` | the TV in the lobby: large tiles, finished minyanim drop off, no controls |
+| Lobby screen | `index.html?view=display` or `#display` | the TV in the lobby: large tiles, no controls. A minyan is marked עכשיו for 20 minutes after it starts (General → "Minutes a minyan stays marked now"), then it drops off; on the normal board it is dimmed instead |
 | Door display | `index.html?room=ברך משה` or `#room1`, `#room2`… (order of the Rooms list) | a tablet at a room's door: that room's next minyan and its list |
 | Weekly sheet | `index.html?view=week` or `#week` | this week and next, Sunday to Shabbos, with candle lighting, Shabbos end and every minyan; Print button |
 | QR sign | `sign.html` | a printable sign with the site's QR code and the text number |

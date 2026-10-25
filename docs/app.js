@@ -148,6 +148,8 @@
     root.appendChild(bar);
     ui.countdown = null; ui.countdownMs = 0; ui.lastRenderDay = rd0; ui.lastMinute = Math.floor(now / 60000);
   }
+  /* How long a minyan that has started stays marked "now" (cfg.nowMinutes, default 20). After that it is dimmed, and the lobby screen hides it. */
+  function nowWindowMs() { var m = cfg.nowMinutes; m = (m == null || m === '') ? 20 : +m; return (isNaN(m) || m < 0 ? 20 : m) * 60000; }
   function daySections(s, now, up, isToday) {
     var wrap = el('div', { class: 'col' });
     wrap.appendChild(el('div', { class: 'day-head' }, [
@@ -155,7 +157,7 @@
       el('span', { class: 'sub', text: typeLabel(s) })]));
     tefillos().forEach(function (t) {
       var list = s.byTefilla[t.id] || [], sec = el('section', { class: 'tefilla' });
-      if ($('#app').classList.contains('display') && list.every(function (e) { return e.ms <= now && now - e.ms >= 45 * 60000; })) return;
+      if ($('#app').classList.contains('display') && list.every(function (e) { return e.ms <= now && now - e.ms >= nowWindowMs(); })) return;
       sec.appendChild(el('h3', null, [t.kind === 'event' ? t.name : 'מניני ' + t.name]));
       if (!list.length) { sec.appendChild(el('div', { class: 'none', text: 'אין מנינים רשומים' })); }
       else {
@@ -163,7 +165,7 @@
         list.forEach(function (e) {
           var cls = 'tile';
           if (up && sameEntry(e, up.entry)) cls += ' next';
-          else if (e.ms <= now) cls += (now - e.ms < 45 * 60000) ? ' now' : ' past';
+          else if (e.ms <= now) cls += (now - e.ms < nowWindowMs()) ? ' now' : ' past';
           if (t.kind === 'event') cls += ' event';
           grid.appendChild(el('div', { class: cls }, [
             el('div', { class: 'room', text: e.room || t.name }),
@@ -238,11 +240,11 @@
   function notifyBase() { return cfg.notifyUrl.trim().replace(/\/+$/, ''); }
   function pushPanel() {
     if (!pushSupported()) return null;
-    var st = pushState(), box = el('section', { class: 'side' }, [el('h3', { text: 'תזכורות בנייד' })]);
-    if (isIOS() && !isStandalone()) { box.appendChild(el('p', { class: 'hint', text: 'באייפון התזכורות עובדות אחרי התקנה: שיתוף ← הוספה למסך הבית, ואז לפתוח מהאייקון.' })); return box; }
+    var st = pushState(), box = el('section', { class: 'side ltr', dir: 'ltr' }, [el('h3', { text: 'Reminders on your phone' })]);
+    if (isIOS() && !isStandalone()) { box.appendChild(el('p', { class: 'hint', text: 'On iPhone, reminders work after installing: Share, then "Add to Home Screen", and open the app from its icon.' })); return box; }
     var form = el('div', { class: 'col' }), today = scheduleFor(Cal.nowInTz(Date.now(), loc().tz).rd), prefs = (st && st.prefs) || { reminders: [], daily: null };
     var rows = tefillos().map(function (t) {
-      var sel = el('select', { id: 'push-' + t.id }, [el('option', { value: '', text: 'בלי תזכורת' }), el('option', { value: 'first', text: 'המנין הראשון' })]);
+      var sel = el('select', { id: 'push-' + t.id }, [el('option', { value: '', text: 'No reminder' }), el('option', { value: 'first', text: 'First minyan of the day' })]);
       (today.byTefilla[t.id] || []).forEach(function (e) { sel.appendChild(el('option', { value: String(e.start), text: fmtTime(e.start) + (e.room ? ' ' + e.room : '') })); });
       var cur = prefs.reminders.filter(function (r) { return r.tefilla === t.id; })[0];
       if (cur) sel.value = cur.time == null ? 'first' : String(cur.time);
@@ -250,28 +252,28 @@
       return { t: t, sel: sel };
     });
     var lead = el('input', { type: 'number', min: '1', max: '120', value: String((prefs.reminders[0] && prefs.reminders[0].lead) || 10), class: 'mins', id: 'push-lead', inputmode: 'numeric' });
-    form.appendChild(el('div', { class: 'push-row' }, [el('label', { for: 'push-lead', class: 'push-lbl', text: 'דקות לפני' }), lead]));
+    form.appendChild(el('div', { class: 'push-row' }, [el('label', { for: 'push-lead', class: 'push-lbl', text: 'Minutes before' }), lead]));
     var daily = el('input', { type: 'checkbox', id: 'push-daily' }); daily.checked = prefs.daily != null;
     var dailyAt = el('input', { type: 'time', id: 'push-daily-at', value: prefs.daily != null ? pad2(Math.floor(prefs.daily / 60)) + ':' + pad2(prefs.daily % 60) : '06:00' });
-    form.appendChild(el('div', { class: 'push-row' }, [el('label', { for: 'push-daily', class: 'push-lbl' }, [daily, ' הלוח היומי בבוקר ב-']), dailyAt]));
+    form.appendChild(el('div', { class: 'push-row' }, [el('label', { for: 'push-daily', class: 'push-lbl' }, [daily, ' Daily board every morning at ']), dailyAt]));
     var msg = el('div', { class: 'hint' });
-    var saveB = el('button', { class: 'btn primary small', text: st ? 'עדכון התזכורות' : 'הפעלת תזכורות', onclick: function () {
+    var saveB = el('button', { class: 'btn primary small', text: st ? 'Update reminders' : 'Turn on reminders', onclick: function () {
       var reminders = []; rows.forEach(function (r) { if (r.sel.value) reminders.push({ tefilla: r.t.id, time: r.sel.value === 'first' ? null : +r.sel.value, lead: Math.max(1, +lead.value || 10) }); });
       var d = daily.checked ? (function () { var m = /^(\d{2}):(\d{2})$/.exec(dailyAt.value); return m ? +m[1] * 60 + +m[2] : 6 * 60; })() : null;
-      if (!reminders.length && d == null) { msg.textContent = 'בחרו לפחות תזכורת אחת.'; return; }
-      saveB.disabled = true; msg.textContent = 'מפעיל…';
-      subscribePush({ reminders: reminders, daily: d }).then(function () { msg.textContent = 'התזכורות פעילות במכשיר הזה.'; render(); }, function (e) { saveB.disabled = false; msg.textContent = 'לא הצלחתי להפעיל: ' + (e && e.message || e); });
+      if (!reminders.length && d == null) { msg.textContent = 'Pick at least one reminder.'; return; }
+      saveB.disabled = true; msg.textContent = 'Turning on…';
+      subscribePush({ reminders: reminders, daily: d }).then(function () { msg.textContent = 'Reminders are on for this device.'; render(); }, function (e) { saveB.disabled = false; msg.textContent = 'Could not turn on reminders: ' + (e && e.message || e); });
     } });
-    form.appendChild(el('div', { class: 'tabs' }, [saveB, st ? el('button', { class: 'btn small', text: 'ביטול התזכורות', onclick: function () { unsubscribePush().then(function () { render(); }); } }) : null]));
+    form.appendChild(el('div', { class: 'tabs' }, [saveB, st ? el('button', { class: 'btn small', text: 'Turn off reminders', onclick: function () { unsubscribePush().then(function () { render(); }); } }) : null]));
     form.appendChild(msg);
-    box.appendChild(el('p', { class: 'hint', text: 'הודעה בנייד לפני המנין שבחרתם, גם כשהאפליקציה סגורה.' }));
+    box.appendChild(el('p', { class: 'hint', text: 'A notification before the minyan you pick, even when the app is closed.' }));
     box.appendChild(form);
     return box;
   }
   function subscribePush(prefs) {
     var base = notifyBase(), st = pushState();
     return Notification.requestPermission().then(function (perm) {
-      if (perm !== 'granted') throw new Error('לא ניתנה הרשאה להודעות');
+      if (perm !== 'granted') throw new Error('Notification permission was not granted');
       return navigator.serviceWorker.ready;
     }).then(function (reg) {
       return fetch(base + '/push/key').then(function (r) { return r.text(); }).then(function (key) {
@@ -279,7 +281,7 @@
       });
     }).then(function (sub) {
       return fetch(base + '/push/subscribe', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: st && st.id, subscription: sub.toJSON(), reminders: prefs.reminders, daily: prefs.daily, lang: 'he' }) })
-        .then(function (r) { if (!r.ok) throw new Error('השירות לא ענה (' + r.status + ')'); return r.json(); });
+        .then(function (r) { if (!r.ok) throw new Error('The service did not answer (' + r.status + ')'); return r.json(); });
     }).then(function (j) { try { localStorage.setItem('minyan-push', JSON.stringify({ id: j.id, prefs: prefs })); } catch (e) {} });
   }
   function unsubscribePush() {
@@ -291,9 +293,9 @@
   function footer() {
     var L = cfg.location || {};
     var f = el('footer', null, [el('span', { text: 'הזמנים לפי ' + (L.name || (L.lat + ', ' + L.lng)) + ' · ' + (cfg.israel ? 'לוח ארץ ישראל' : 'לוח חוץ לארץ') })]);
-    var right = el('div', { class: 'tabs' });
-    ui.iosHint = el('span', { class: 'hint', text: 'להתקנה באייפון: „שיתוף” ואז „הוספה למסך הבית”' });
-    ui.installBtn = el('button', { class: 'btn small primary', text: 'התקנת האפליקציה', onclick: function () {
+    var right = el('div', { class: 'tabs ltr', dir: 'ltr' });
+    ui.iosHint = el('span', { class: 'hint', text: 'To install on iPhone: Share, then "Add to Home Screen"' });
+    ui.installBtn = el('button', { class: 'btn small primary', text: 'Install the app', onclick: function () {
       if (!deferredInstall) return;
       var ev = deferredInstall; deferredInstall = null;
       ev.prompt(); ev.userChoice.then(refreshInstallBtn, refreshInstallBtn);
@@ -410,6 +412,7 @@
     var fSite = inp('f-site', d.siteUrl || '', { dir: 'ltr', placeholder: 'https://yourname.github.io/minyan/' }), fLogo = inp('f-logo', d.logo || '', { dir: 'ltr', placeholder: 'logo.png' });
     var fNotify = inp('f-notify', d.notifyUrl || '', { dir: 'ltr', placeholder: 'https://minyan-sms.yourname.workers.dev' });
     var fSponsorSecs = inp('f-sponsor-secs', d.sponsorSeconds || 8, { type: 'number', min: '2', max: '120', inputmode: 'numeric' });
+    var fNowMins = inp('f-now-mins', d.nowMinutes == null || d.nowMinutes === '' ? 20 : d.nowMinutes, { type: 'number', min: '0', max: '180', inputmode: 'numeric' });
     g.appendChild(el('div', { class: 'fields' }, [field('Shul name (shown on the board)', fName), field('Location name (shown in the footer)', fLocName), field('SMS number (once the text service is set up)', fSms)]));
     var roomSelects = [];
     function roomList() { return fRooms.value.split(',').map(function (x) { return x.trim(); }).filter(Boolean); }
@@ -454,7 +457,7 @@
       return [sel, newIn, okBtn];
     }
     g.appendChild(el('div', { class: 'fields' }, [field('Website address (used for share previews and the app)', fSite), field('Logo file shown in the header (file name next to index.html)', fLogo)]));
-    g.appendChild(el('div', { class: 'fields' }, [field('Notification service address (the Cloudflare worker; enables reminders in the app)', fNotify), field('Lobby screen: seconds per sponsor box (they take turns when there is more than one)', fSponsorSecs)]));
+    g.appendChild(el('div', { class: 'fields' }, [field('Notification service address (the Cloudflare worker; enables reminders in the app)', fNotify), field('Lobby screen: seconds per sponsor box (they take turns when there is more than one)', fSponsorSecs), field('Minutes a minyan stays marked "now" after it starts (then it is dimmed, and the lobby screen hides it)', fNowMins)]));
     g.appendChild(el('div', { class: 'fields' }, [field('Latitude', fLat), field('Longitude', fLng), field('Time zone', fTz), field('Elevation (meters)', fElev)]));
     g.appendChild(el('datalist', { id: 'tz-list' }, ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Toronto', 'Europe/London', 'Europe/Antwerp', 'Europe/Zurich', 'Asia/Jerusalem', 'Australia/Melbourne'].map(function (z) { return el('option', { value: z }); })));
     g.appendChild(el('div', { class: 'fields' }, [field('Candle lighting: minutes before sunset', fCandles), field('Nightfall (tzeis): minutes after sunset', fTzeisMin), field('Nightfall: degrees below the horizon (used when minutes is blank)', fTzeisDeg)]));
@@ -846,6 +849,7 @@
       out.siteUrl = fSite.value.trim();
       out.notifyUrl = fNotify.value.trim();
       out.sponsorSeconds = Math.max(2, +fSponsorSecs.value || 8);
+      out.nowMinutes = fNowMins.value === '' ? 20 : Math.max(0, Math.min(180, +fNowMins.value || 0));
       out.logo = fLogo.value.trim();
       out.schedules = {};
       Cal.DAY_TYPES.forEach(function (t) {
@@ -1045,7 +1049,7 @@
       setInterval(loadRemote, 15 * 60 * 1000);
       document.addEventListener('visibilitychange', function () { if (!document.hidden) loadRemote(); });
       window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferredInstall = e; refreshInstallBtn(); });
-      window.addEventListener('appinstalled', function () { deferredInstall = null; refreshInstallBtn(); toast('האפליקציה הותקנה'); });
+      window.addEventListener('appinstalled', function () { deferredInstall = null; refreshInstallBtn(); toast('App installed'); });
       registerSW();
     }
     if (inArtifact) {
