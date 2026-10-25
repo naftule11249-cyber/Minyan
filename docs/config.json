@@ -23,28 +23,33 @@
    "name": "שחרית",
    "milestone": "הודו",
    "offset": 10,
+   "startLabel": "ברכות",
    "period": "am",
-   "startLabel": "ברכות"
+   "kind": "minyan"
   },
   {
    "id": "mincha",
    "name": "מנחה",
    "milestone": "",
    "offset": 0,
-   "period": "pm"
+   "startLabel": "",
+   "period": "pm",
+   "kind": "minyan"
   },
   {
    "id": "maariv",
    "name": "מעריב",
    "milestone": "",
    "offset": 0,
-   "period": "pm"
+   "startLabel": "",
+   "period": "pm",
+   "kind": "minyan"
   }
  ],
  "schedules": {
   "weekday": {
    "shacharis": "6:20 ברך משה\n6:50 דברי יואל\n7:15 ברך משה\n7:40 לב אהרן\n8:00 דברי יואל\n8:15 ברך משה\n8:30 שלמה יודא\n8:45 לב אהרן\n9:00 דברי יואל\n9:15 ברך משה\n9:30 שלמה יודא\n9:45 לב אהרן\n10:00 דברי יואל\n10:20 ברך משה\n10:40 שלמה יודא\n11:00 דברי יואל\n11:20 ברך משה\n11:40 שלמה יודא\n12:00 דברי יואל\nchatzos-30 ברך משה",
-   "mincha": "14:00 ברך משה // וידבר\nsunset-20~5 דברי יואל // example\nsunset-5 ברך משה // example\n15:15 היכל ביהמ״ד",
+   "mincha": "14:00 ברך משה // וידבר\n18:00 ברך משה // example\n18:15 דברי יואל // example\n15:15 היכל ביהמ״ד",
    "maariv": "tzeis ברך משה // example\n21:00 דברי יואל\nevery 15 from 22:15 to 00:15 rooms ברך משה, דברי יואל, שלמה יודא, לב אהרן"
   },
   "sunday": {
@@ -63,21 +68,27 @@
  "notices": [
   {
    "title": "פרנס החודש",
-   "body": "הרה״ח ר׳ חיים אליעזר פאלקאוויטש הי״ו\nלרגל הולדות בנו למזל טוב"
+   "body": "הרה״ח ר׳ חיים אליעזר פאלקאוויטש הי״ו\nלרגל הולדות בנו למזל טוב",
+   "from": "",
+   "to": ""
   },
   {
    "title": "פרנס השבוע",
-   "body": ""
+   "body": "",
+   "from": "",
+   "to": ""
   },
   {
    "title": "נר למאור",
-   "body": ""
+   "body": "",
+   "from": "",
+   "to": ""
   }
  ],
  "overrides": [],
  "smsNumber": "",
  "remoteConfigUrl": "",
- "savedAt": 1792945282482,
+ "savedAt": 1792953013071,
  "siteUrl": "https://minyan.cascadeshul.org/",
  "logo": "",
  "rooms": "ברך משה, דברי יואל, לב אהרן, שלמה יודא, היכל אדל, היכל ביהמ״ד",
@@ -85,5 +96,10 @@
  "githubRepo": "naftule11249-cyber/Minyan",
  "githubBranch": "main",
  "githubPath": "docs/config.json",
- "notifyUrl": "https://cascade-zmanim-notify.naftule11249.workers.dev"
+ "notifyUrl": "https://cascade-zmanim-notify.naftule11249.workers.dev",
+ "sponsorSeconds": 8,
+ "banner": {
+  "text": "",
+  "until": ""
+ }
 }
