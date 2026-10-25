@@ -901,8 +901,9 @@
         list.forEach(function (x, i) {
           var t = el('input', { type: 'time', value: hhmm(x.start), 'aria-label': 'Time' });
           t.addEventListener('change', function () { var m = parseHHMM(t.value); if (m == null) return; touch(tf)[i].start = m; renderToday(); });
-          box.appendChild(el('div', { class: 'mrow-l today-row' }, [t, el('span', { class: 'today-room', text: x.room || '' }), x.note ? el('span', { class: 'hint', text: x.note }) : null,
-            el('button', { type: 'button', class: 'btn small danger', text: 'Cancel', title: 'No such minyan today', onclick: function () { touch(tf).splice(i, 1); renderToday(); } })]));
+          var roomSel = roomPicker(function () { return (quick[tf.id] ? quick[tf.id][i] : x).room || ''; }, function (v) { touch(tf)[i].room = v; }, 'Room'); /* change the room for today */
+          box.appendChild(el('div', { class: 'mrow-l today-row' }, [t].concat(roomSel, [x.note ? el('span', { class: 'hint', text: x.note }) : null,
+            el('button', { type: 'button', class: 'btn small danger', text: 'Cancel', title: 'No such minyan today', onclick: function () { touch(tf).splice(i, 1); renderToday(); } })])));
         });
         if (!list.length) box.appendChild(el('div', { class: 'hint', text: 'No ' + tf.name + ' minyanim today.' }));
         var addT = el('input', { type: 'time', 'aria-label': 'New time' }), addRoom = '';
@@ -912,7 +913,7 @@
         tp.appendChild(el('div', { class: 'field' }, [el('label', { text: tf.name }), box]));
       });
       var saveT = el('button', { type: 'button', class: 'btn primary', text: 'Save today\'s changes', onclick: function () {
-        if (!changed) { toast('Nothing changed yet'); return; }
+        if (!Object.keys(quick).length) { toast('Nothing changed yet'); return; }
         var c = collect(), ovr = c.overrides.filter(function (o) { return o.date === todayIso; })[0];
         if (!ovr) { ovr = { date: todayIso, label: 'שינוי להיום', lines: {} }; c.overrides.push(ovr); }
         d.tefillos.forEach(function (tf) { var l = quickLines(tf); if (l != null) ovr.lines[tf.id] = l; });

@@ -53,7 +53,7 @@ Maariv a time like `6:45` means 6:45 PM (set per tefilla under General → Tefil
 
 ## Quick changes for today
 
-The admin page opens on a **Today** tab: today's minyanim with a time box and a Cancel button each, and an "+ Add for today" row per tefilla.
+The admin page opens on a **Today** tab: today's minyanim with a time box, a room picker and a Cancel button each, and an "+ Add for today" row per tefilla.
 Move, cancel or add, then "Save today's changes". It is stored as a one-date special schedule (Special dates tab), so the regular
 schedule is untouched and tomorrow is back to normal; "Back to the regular schedule for today" removes it. On a phone this is the
 fastest way to say "Mincha is 5:30 today".

@@ -23,27 +23,22 @@
    "name": "שחרית",
    "milestone": "הודו",
    "offset": 10,
-   "startLabel": "ברכות",
    "period": "am",
-   "kind": "minyan"
+   "startLabel": "ברכות"
   },
   {
    "id": "mincha",
    "name": "מנחה",
    "milestone": "",
    "offset": 0,
-   "startLabel": "",
-   "period": "pm",
-   "kind": "minyan"
+   "period": "pm"
   },
   {
    "id": "maariv",
    "name": "מעריב",
    "milestone": "",
    "offset": 0,
-   "startLabel": "",
-   "period": "pm",
-   "kind": "minyan"
+   "period": "pm"
   }
  ],
  "schedules": {
@@ -68,27 +63,21 @@
  "notices": [
   {
    "title": "פרנס החודש",
-   "body": "הרה״ח ר׳ חיים אליעזר פאלקאוויטש הי״ו\nלרגל הולדות בנו למזל טוב",
-   "from": "",
-   "to": ""
+   "body": "הרה״ח ר׳ חיים אליעזר פאלקאוויטש הי״ו\nלרגל הולדות בנו למזל טוב"
   },
   {
    "title": "פרנס השבוע",
-   "body": "",
-   "from": "",
-   "to": ""
+   "body": ""
   },
   {
    "title": "נר למאור",
-   "body": "",
-   "from": "",
-   "to": ""
+   "body": ""
   }
  ],
  "overrides": [],
  "smsNumber": "",
  "remoteConfigUrl": "",
- "savedAt": 1792951956076,
+ "savedAt": 1792945282482,
  "siteUrl": "https://minyan.cascadeshul.org/",
  "logo": "",
  "rooms": "ברך משה, דברי יואל, לב אהרן, שלמה יודא, היכל אדל, היכל ביהמ״ד",
@@ -96,10 +85,5 @@
  "githubRepo": "naftule11249-cyber/Minyan",
  "githubBranch": "main",
  "githubPath": "docs/config.json",
- "notifyUrl": "https://cascade-zmanim-notify.naftule11249.workers.dev",
- "sponsorSeconds": 8,
- "banner": {
-  "text": "",
-  "until": ""
- }
+ "notifyUrl": "https://cascade-zmanim-notify.naftule11249.workers.dev"
 }
