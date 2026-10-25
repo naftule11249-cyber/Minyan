@@ -118,18 +118,21 @@ free tier), which also answers the texts. People text `REMIND MINCHA 5:45 15` (1
 sof zman tefilla) / `BEFORE SHEMA`, `REMIND MINCHA BEFORE SUNSET` / `BEFORE MAARIV` (the last Mincha before zman Maariv), `REMIND MINCHA 5:45 TODAY`
 (today only, dropped afterwards), `DAILY 6:30` (the day's schedule every morning), `REMIND LIST`, `REMIND OFF`
 (Hebrew: `תזכורת מנחה 5:45 15`, `תזכורת שחרית אחרון`, `תזכורת שחרית לפני חצות`, `תזכורת שחרית לפני סוף זמן תפילה`, `תזכורת מנחה לפני שקיעה`, `תזכורת מנחה 5:45 היום`, `יומי 6:30`, `תזכורות`, `ביטול`). The worker checks every 5 minutes what is due and sends it
-through Twilio. Setup (once, on a computer with Node):
+through Twilio. Setup, free, from the Cloudflare dashboard (no computer needed):
 
-```
-cd sms
-npx wrangler login
-npx wrangler kv namespace create SUBS      # paste the id into wrangler.toml
-node vapid-keys.js                          # keys for app notifications
-npx wrangler secret put TWILIO_ACCOUNT_SID  # then TWILIO_AUTH_TOKEN, TWILIO_FROM, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY
-cd .. && node build.js && cd sms && npx wrangler deploy
-```
-Edit `wrangler.toml` first (CONFIG_URL, ALLOWED_ORIGIN, VAPID_SUBJECT). Point the Twilio number's webhook at the worker
-address instead of the Twilio Function, and enter the same address under Edit → General → "Notification service address":
+1. Create a Cloudflare account at dash.cloudflare.com.
+2. Workers & Pages → Create → Workers → "Import a repository" → connect GitHub and pick this repository.
+3. Root directory `sms`, build command empty, deploy command `npx wrangler deploy` → Deploy. `sms/wrangler.toml` already
+   carries the site address, the 5-minute schedule and the KV storage (created on the first deploy); the worker makes its own
+   notification keys. Every later push to the repository redeploys it.
+4. Copy the worker's address (`cascade-zmanim-notify.<account>.workers.dev`) into General → "Notification service address"
+   (or `notifyUrl` in `config.default.json`).
+
+For texting, add the Twilio secrets under the worker's Settings → Variables and Secrets (`TWILIO_ACCOUNT_SID`,
+`TWILIO_AUTH_TOKEN`, `TWILIO_FROM`, optional `WA_FROM`, `WA_CONTENT_SID`) and point the Twilio number's webhook at the
+worker address instead of the Twilio Function. From a computer with Node the same deploy is `cd sms && npx wrangler login && npx wrangler deploy`
+(`node vapid-keys.js` + `wrangler secret put VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY` only if you prefer your own keys).
+With the address entered under General → "Notification service address":
 the website and the installed app then show a "Reminders on your phone" box (like the install button, this phone-settings box is in English; the board itself is Hebrew). Each reminder row picks a tefilla, which minyan (first, last, last before sof zman Shema / tefilla / chatzos, last before sunset / zman Maariv, or any of today's times), the minutes before, and every day or today only. Tapping any minyan on the board opens the same choice for that minyan where people pick the minyanim they want to be reminded
 of (works on Android, and on iPhone once the site is added to the home screen).
 

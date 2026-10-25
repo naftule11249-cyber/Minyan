@@ -25,6 +25,19 @@ async function sendTwilio(env, to, body) {
     method: 'POST', headers: { Authorization: 'Basic ' + btoa(env.TWILIO_ACCOUNT_SID + ':' + env.TWILIO_AUTH_TOKEN), 'content-type': 'application/x-www-form-urlencoded' }, body: form });
   return r.ok;
 }
+/* VAPID keys for app notifications: from the secrets when set, otherwise made once on first use and kept in KV, so there is nothing to configure */
+async function vapidKeys(env) {
+  if (env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY) return { pub: env.VAPID_PUBLIC_KEY, priv: env.VAPID_PRIVATE_KEY };
+  var saved = await env.SUBS.get('vapid', 'json');
+  if (saved && saved.pub && saved.priv) return saved;
+  var kp = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+  var jwk = await crypto.subtle.exportKey('jwk', kp.privateKey), raw = new Uint8Array(await crypto.subtle.exportKey('raw', kp.publicKey)), s = '', i;
+  for (i = 0; i < raw.length; i++) s += String.fromCharCode(raw[i]);
+  saved = { pub: btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''), priv: jwk.d };
+  await env.SUBS.put('vapid', JSON.stringify(saved));
+  return saved;
+}
+async function pushEnv(env) { var k = await vapidKeys(env); return { VAPID_SUBJECT: env.VAPID_SUBJECT || 'https://minyan.cascadeshul.org', VAPID_PUBLIC_KEY: k.pub, VAPID_PRIVATE_KEY: k.priv }; }
 async function allSubscriptions(env) {
   var out = [], cursor;
   do {
@@ -38,7 +51,7 @@ export default {
   async fetch(request, env) {
     var url = new URL(request.url), path = url.pathname.replace(/\/+$/, '');
     if (request.method === 'OPTIONS') return new Response(null, { headers: cors(env) });
-    if (path === '/push/key') return new Response(env.VAPID_PUBLIC_KEY || '', { headers: cors(env, { 'content-type': 'text/plain' }) });
+    if (path === '/push/key') return new Response((await vapidKeys(env)).pub, { headers: cors(env, { 'content-type': 'text/plain' }) });
     if (path === '/push/subscribe' && request.method === 'POST') {
       var body = await request.json().catch(function () { return null; });
       if (!body || !body.subscription || !body.subscription.endpoint || !body.subscription.keys) return json(env, { error: 'bad request' }, 400);
@@ -93,7 +106,7 @@ export default {
         await env.SUBS.put(sentKey, '1', { expirationTtl: 86400 });
         try {
           if (sub.channel === 'push') {
-            var r = await WebPush.send(sub.push, JSON.stringify({ title: due[j].title, body: due[j].text, tag: due[j].key }), env);
+            var r = await WebPush.send(sub.push, JSON.stringify({ title: due[j].title, body: due[j].text, tag: due[j].key }), await pushEnv(env));
             if (r.status === 404 || r.status === 410) await env.SUBS.delete(names[i]);
           } else await sendTwilio(env, sub.to, due[j].text);
         } catch (e) {}

@@ -1,12 +1,10 @@
-# Cloudflare Worker for the minyan text service. One-time setup:
-#   cd sms && npx wrangler login
-#   npx wrangler kv namespace create SUBS          -> paste the id below
-#   node vapid-keys.js                              -> VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY
-#   npx wrangler secret put TWILIO_ACCOUNT_SID ; TWILIO_AUTH_TOKEN ; TWILIO_FROM ; VAPID_PUBLIC_KEY ; VAPID_PRIVATE_KEY   (WA_FROM, WA_CONTENT_SID optional)
-#   (cd .. && node build.js) && npx wrangler deploy
-# Then point the Twilio number's "A message comes in" webhook at https://minyan-sms.<you>.workers.dev/
-# and enter that address under Edit → General → "Notification service address".
-name = "minyan-sms"
+# Cloudflare Worker: answers texts, sends reminder texts and app notifications. Deployed from the dashboard:
+#   Workers & Pages -> Create -> Import a repository -> this repo -> root directory "sms" -> deploy command "npx wrangler deploy".
+# Nothing else to configure for app notifications: the KV namespace below is created on the first deploy and the
+# notification keys are made by the worker itself. Texting needs the Twilio secrets (Settings -> Variables and Secrets):
+#   TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM (+1718...), optional WA_FROM (whatsapp:+1...) and WA_CONTENT_SID.
+# From a computer instead: cd sms && npx wrangler login && npx wrangler deploy
+name = "cascade-zmanim-notify"
 main = "dist/worker.js"
 compatibility_date = "2025-01-01"
 
@@ -15,9 +13,10 @@ crons = ["*/5 * * * *"]
 
 [[kv_namespaces]]
 binding = "SUBS"
-id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+# No id: Wrangler creates the namespace on the first deploy. If the deploy log asks for one, create a KV namespace
+# in the dashboard (Storage & Databases -> KV), paste its ID here as  id = "..."  and deploy again.
 
 [vars]
-CONFIG_URL = "https://USERNAME.github.io/minyan/config.json"
-ALLOWED_ORIGIN = "https://USERNAME.github.io"
-VAPID_SUBJECT = "mailto:shul@example.com"
+CONFIG_URL = "https://minyan.cascadeshul.org/config.json"
+ALLOWED_ORIGIN = "https://minyan.cascadeshul.org"
+VAPID_SUBJECT = "https://minyan.cascadeshul.org"
