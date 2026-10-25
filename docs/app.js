@@ -441,15 +441,19 @@
   function subscribePush(prefs) {
     var base = notifyBase(), st = pushState(), p;
     function doSubscribe() { return ui.swReg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToBytes(ui.pushKey) }); }
-    /* Safari only honours the request while the tap is being handled, so when everything is prepared the call is made right here, synchronously */
-    if (ui.swReg && ui.pushKey) { try { p = doSubscribe(); } catch (e) { p = Promise.reject(e); } }
+    /* Safari only honours these calls while the tap is being handled. Permission not granted yet: ask for it first (that is what shows the
+       system prompt), then subscribe straight away. Already granted and prepared: subscribe synchronously, right here. */
+    var perm0 = (typeof Notification !== 'undefined' && Notification.permission) || '?', asked = '';
+    if (perm0 !== 'granted') {
+      p = Notification.requestPermission().then(function (res) { asked = res; if (res !== 'granted') throw new Error('Notification permission: ' + res); return (ui.swReg && ui.pushKey) ? doSubscribe() : preparePush().then(doSubscribe); });
+    } else if (ui.swReg && ui.pushKey) { try { p = doSubscribe(); } catch (e) { p = Promise.reject(e); } }
     else p = preparePush().then(doSubscribe);
     return p.catch(function (e) {
       var ua = navigator.userAgent || '', eng = /CriOS/.test(ua) ? 'Chrome' : /FxiOS/.test(ua) ? 'Firefox' : /EdgiOS/.test(ua) ? 'Edge' : 'Safari', osm = /OS (\d+)[_.](\d+)/.exec(ua);
-      var perm = (typeof Notification !== 'undefined' && Notification.permission) || '?', detail = ' [' + perm + '; ' + ((e && e.name) || '') + ': ' + ((e && e.message) || e) + '; ' + eng + (osm ? ', iOS ' + osm[1] + '.' + osm[2] : '') + (isStandalone() ? ', installed' : ', browser tab') + ']';
+      var perm = (typeof Notification !== 'undefined' && Notification.permission) || '?', detail = ' [was ' + perm0 + (asked ? ', asked: ' + asked : '') + ', now ' + perm + '; ' + ((e && e.name) || '') + ': ' + ((e && e.message) || e) + '; ' + eng + (osm ? ', iOS ' + osm[1] + '.' + osm[2] : '') + (isStandalone() ? ', installed' : ', browser tab') + ']';
       if (e && (e.name === 'NotAllowedError' || /denied/i.test(e.message || ''))) {
-        if (perm === 'denied') throw new Error('Notifications are blocked for this app. iPhone/iPad: Settings → Notifications → ' + (cfg.name || 'the app') + ' → Allow Notifications. Chrome: the lock next to the address → Notifications → Allow. Then tap again.' + detail);
-        throw new Error('The device did not let the app ask for notifications. Close the app fully, open it again from its icon and tap once more.' + detail);
+        if (perm === 'denied') throw new Error('Notifications are blocked for this app. iPhone/iPad: Settings → Notifications → ' + (cfg.name || 'the app') + ' → Allow Notifications; if the app is not listed there, check Settings → Apps → Safari → Advanced → Feature Flags (Notifications, Push API on), Screen Time restrictions and Lockdown Mode. Chrome: the lock next to the address → Notifications → Allow. Then tap again.' + detail);
+        throw new Error('The device did not let the app ask for notifications. Tap "Set reminder" once more; if it fails again, close the app fully, open it again from its icon and retry.' + detail);
       }
       throw e;
     }).then(function (sub) {
