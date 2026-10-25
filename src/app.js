@@ -97,8 +97,9 @@
       var e = up.entry, bigMs = bigIsMilestone(e.tefilla);
       ui.countdownMs = keyMs(e);
       next.appendChild(el('div', { class: 'what', text: e.tefilla.name + (e.room ? ' – ' + e.room : '') }));
+      if (bigMs) next.appendChild(el('div', { class: 'ms num pre', text: startLabel(e.tefilla) + ' ' + fmtTime(e.start) })); /* the start stays first: ברכות above, הודו big below */
       next.appendChild(el('div', { class: 'time num', text: fmtTime(bigMs ? e.milestone : e.start) }));
-      if (e.tefilla.milestone) next.appendChild(el('div', { class: 'ms num', text: bigMs ? startLabel(e.tefilla) + ' ' + fmtTime(e.start) : e.tefilla.milestone + ' ' + fmtTime(e.milestone) }));
+      if (e.tefilla.milestone && !bigMs) next.appendChild(el('div', { class: 'ms num', text: e.tefilla.milestone + ' ' + fmtTime(e.milestone) }));
       ui.countdown = el('div', { class: 'count num', text: fmtCountdown(ui.countdownMs - now) });
       next.appendChild(ui.countdown);
       if (up.daysAhead > 0) next.appendChild(el('div', { class: 'when', text: (up.daysAhead === 1 ? 'מחר, ' : '') + Cal.DAY_NAMES[up.sched.info.dow] + ' ' + Cal.formatHeb(up.sched.info.heb) }));
@@ -175,8 +176,9 @@
           if (t.kind === 'event') cls += ' event';
           var tile = el('div', { class: cls }, [
             el('div', { class: 'room', text: e.room || t.name }),
+            bigIsMilestone(t) ? el('div', { class: 'ms num pre', text: startLabel(t) + ' ' + fmtTime(e.start) }) : null, /* chronological: ברכות above, הודו big below */
             el('div', { class: 'time num', text: fmtTime(bigIsMilestone(t) ? e.milestone : e.start) }),
-            t.milestone ? el('div', { class: 'ms num', text: bigIsMilestone(t) ? startLabel(t) + ' ' + fmtTime(e.start) : t.milestone + ' ' + fmtTime(e.milestone) }) : null,
+            t.milestone && !bigIsMilestone(t) ? el('div', { class: 'ms num', text: t.milestone + ' ' + fmtTime(e.milestone) }) : null,
             e.note ? el('div', { class: 'note', text: e.note }) : null]);
           if (canRemind && t.kind !== 'event') makeTappable(tile, e);
           grid.appendChild(tile);

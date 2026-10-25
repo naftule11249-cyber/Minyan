@@ -247,3 +247,5 @@ details.help summary { cursor: pointer; font-weight: 500; }
 .today-room { font-weight: 700; min-width: 90px; }
 .bigpick { display: inline-flex; align-items: center; gap: 4px; }
 .bigpick select { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; color: inherit; }
+.tile .ms.pre { margin-top: 1px; margin-bottom: -3px; }
+.next .ms.pre { margin-bottom: -4px; }
