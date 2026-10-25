@@ -46,10 +46,16 @@
     out.all.sort(function (a, b) { return a.start - b.start; });
     return out;
   }
+  /* Which number is big on a tile: the start (ברכות) or the milestone (הודו). The board's default is cfg.bigTime; each device may pick its own. */
+  function bigMode() { var v = null; try { v = localStorage.getItem('minyan-big'); } catch (e) {} if (v !== 'milestone' && v !== 'start') v = cfg.bigTime === 'milestone' ? 'milestone' : 'start'; return v; }
+  function bigIsMilestone(t) { return !!t.milestone && bigMode() === 'milestone'; }
+  function startLabel(t) { return t.startLabel || (t.id === 'shacharis' ? 'ברכות' : 'התחלה'); }
+  /* the moment a minyan counts from: its start, or its milestone when that is the big number */
+  function keyMs(e) { return bigIsMilestone(e.tefilla) ? e.ms + (+e.tefilla.offset || 0) * 60000 : e.ms; }
   function upcoming(nowMs, nowRd) {
-    if (!ui.roomFilter) return engine.upcoming(nowMs, nowRd);
+    if (!ui.roomFilter && bigMode() !== 'milestone') return engine.upcoming(nowMs, nowRd);
     var i, j, s;
-    for (i = 0; i < 10; i++) { s = scheduleFor(nowRd + i); for (j = 0; j < s.all.length; j++) if (s.all[j].ms > nowMs && s.all[j].tefilla.kind !== 'event') return { entry: s.all[j], sched: s, daysAhead: i }; }
+    for (i = 0; i < 10; i++) { s = scheduleFor(nowRd + i); for (j = 0; j < s.all.length; j++) if (keyMs(s.all[j]) > nowMs && s.all[j].tefilla.kind !== 'event') return { entry: s.all[j], sched: s, daysAhead: i }; }
     return null;
   }
   function fmtTime(min) { return engine.fmtTime(min); }
@@ -88,12 +94,12 @@
     var next = el('section', { class: 'next', 'aria-live': 'polite' }, [el('h2', { text: 'מנין הבא' })]);
     ui.countdown = null; ui.countdownMs = 0;
     if (up) {
-      var e = up.entry;
-      ui.countdownMs = e.ms;
+      var e = up.entry, bigMs = bigIsMilestone(e.tefilla);
+      ui.countdownMs = keyMs(e);
       next.appendChild(el('div', { class: 'what', text: e.tefilla.name + (e.room ? ' – ' + e.room : '') }));
-      next.appendChild(el('div', { class: 'time num', text: fmtTime(e.start) }));
-      if (e.tefilla.milestone) next.appendChild(el('div', { class: 'ms num', text: e.tefilla.milestone + ' ' + fmtTime(e.milestone) }));
-      ui.countdown = el('div', { class: 'count num', text: fmtCountdown(e.ms - now) });
+      next.appendChild(el('div', { class: 'time num', text: fmtTime(bigMs ? e.milestone : e.start) }));
+      if (e.tefilla.milestone) next.appendChild(el('div', { class: 'ms num', text: bigMs ? startLabel(e.tefilla) + ' ' + fmtTime(e.start) : e.tefilla.milestone + ' ' + fmtTime(e.milestone) }));
+      ui.countdown = el('div', { class: 'count num', text: fmtCountdown(ui.countdownMs - now) });
       next.appendChild(ui.countdown);
       if (up.daysAhead > 0) next.appendChild(el('div', { class: 'when', text: (up.daysAhead === 1 ? 'מחר, ' : '') + Cal.DAY_NAMES[up.sched.info.dow] + ' ' + Cal.formatHeb(up.sched.info.heb) }));
       if (e.note) next.appendChild(el('div', { class: 'when', text: e.note }));
@@ -169,8 +175,8 @@
           if (t.kind === 'event') cls += ' event';
           var tile = el('div', { class: cls }, [
             el('div', { class: 'room', text: e.room || t.name }),
-            el('div', { class: 'time num', text: fmtTime(e.start) }),
-            t.milestone ? el('div', { class: 'ms num', text: t.milestone + ' ' + fmtTime(e.milestone) }) : null,
+            el('div', { class: 'time num', text: fmtTime(bigIsMilestone(t) ? e.milestone : e.start) }),
+            t.milestone ? el('div', { class: 'ms num', text: bigIsMilestone(t) ? startLabel(t) + ' ' + fmtTime(e.start) : t.milestone + ' ' + fmtTime(e.milestone) }) : null,
             e.note ? el('div', { class: 'note', text: e.note }) : null]);
           if (canRemind && t.kind !== 'event') makeTappable(tile, e);
           grid.appendChild(tile);
@@ -398,6 +404,14 @@
     } });
     ui.editBtn = el('button', { class: 'btn small', text: 'Edit', onclick: openAdmin });
     ui.editBtn.hidden = !canEditNow();
+    /* each phone may show the milestone (הודו) as the big number instead of the start */
+    var msT = tefillos().filter(function (t) { return t.milestone && t.kind !== 'event'; })[0];
+    if (msT) {
+      var bigSel = el('select', { id: 'big-time', 'aria-label': 'Which time is the big number' }, [el('option', { value: 'start', text: startLabel(msT) + ' (start)' }), el('option', { value: 'milestone', text: msT.milestone })]);
+      bigSel.value = bigMode();
+      bigSel.addEventListener('change', function () { try { localStorage.setItem('minyan-big', bigSel.value); } catch (e) {} render(); });
+      right.appendChild(el('label', { class: 'hint bigpick', for: 'big-time' }, ['Big number: ', bigSel]));
+    }
     right.appendChild(ui.iosHint); right.appendChild(ui.installBtn); right.appendChild(ui.editBtn);
     refreshInstallBtn();
     f.appendChild(right);
@@ -511,6 +525,8 @@
     var fSponsorSecs = inp('f-sponsor-secs', d.sponsorSeconds || 8, { type: 'number', min: '2', max: '120', inputmode: 'numeric' });
     var fDateFmt = el('select', { id: 'f-datefmt' }, [el('option', { value: 'mdy', text: 'Month/Day/Year (10/25/2026)' }), el('option', { value: 'dmy', text: 'Day.Month.Year (25.10.2026)' }), el('option', { value: 'iso', text: 'Year-Month-Day (2026-10-25)' })]);
     fDateFmt.value = d.dateFormat || (/^America\//.test((d.location || {}).tz || '') ? 'mdy' : 'dmy');
+    var fBig = el('select', { id: 'f-bigtime' }, [el('option', { value: 'start', text: 'The start time (e.g. ברכות)' }), el('option', { value: 'milestone', text: 'The milestone (e.g. הודו)' })]);
+    fBig.value = d.bigTime === 'milestone' ? 'milestone' : 'start';
     var fNowMins = inp('f-now-mins', d.nowMinutes == null || d.nowMinutes === '' ? 20 : d.nowMinutes, { type: 'number', min: '0', max: '180', inputmode: 'numeric' });
     g.appendChild(el('div', { class: 'fields' }, [field('Shul name (shown on the board)', fName), field('Location name (shown in the footer)', fLocName), field('SMS number (once the text service is set up)', fSms)]));
     var roomSelects = [];
@@ -560,19 +576,19 @@
     g.appendChild(el('div', { class: 'fields' }, [field('Latitude', fLat), field('Longitude', fLng), field('Time zone', fTz), field('Elevation (meters)', fElev)]));
     g.appendChild(el('datalist', { id: 'tz-list' }, ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Toronto', 'Europe/London', 'Europe/Antwerp', 'Europe/Zurich', 'Asia/Jerusalem', 'Australia/Melbourne'].map(function (z) { return el('option', { value: z }); })));
     g.appendChild(el('div', { class: 'fields' }, [field('Candle lighting: minutes before sunset', fCandles), field('Nightfall (tzeis): minutes after sunset', fTzeisMin), field('Nightfall: degrees below the horizon (used when minutes is blank)', fTzeisDeg)]));
-    g.appendChild(el('div', { class: 'fields' }, [field('Civil date on the board and the weekly sheet', fDateFmt)]));
+    g.appendChild(el('div', { class: 'fields' }, [field('Civil date on the board and the weekly sheet', fDateFmt), field('Big number on the tiles, by default (everyone may switch it on their own phone)', fBig)]));
     g.appendChild(el('div', { class: 'col' }, [chk('f-israel', d.israel, 'Eretz Yisroel calendar (one-day Yom Tov)'), chk('f-weekly', d.weeklyEarliest, 'Weekday zman-based times use the earliest sunset of the week (Sun–Thu)'), chk('f-24', d.clock24, '24-hour clock'), chk('f-rt', d.showRT, 'Show Rabbeinu Tam (72 minutes after sunset) in the zmanim list')]));
     if (mode !== 'artifact') g.appendChild(el('div', { class: 'fields' }, [field('New PIN for the admin page', fPin, el('span', { class: 'hint', text: 'Stored scrambled (hashed), so it cannot be read from the site files. It keeps strangers out of the admin page; what everyone else sees can only be changed with the GitHub token on the Publish tab, which stays on the device that entered it.' }))]));
     g.appendChild(el('h3', { text: 'Tefillos' }));
     var tRows = [];
     g.appendChild(el('div', { class: 'hint', text: 'Minyanim count for "next minyan" and reminders. A shiur or event category is listed on the board and in texts but never shown as the next minyan.' }));
     d.tefillos.forEach(function (t, i) {
-      var r = { name: inp('t-name-' + i, t.name), ms: inp('t-ms-' + i, t.milestone), off: inp('t-off-' + i, t.offset, { inputmode: 'numeric' }),
+      var r = { name: inp('t-name-' + i, t.name), ms: inp('t-ms-' + i, t.milestone), off: inp('t-off-' + i, t.offset, { inputmode: 'numeric' }), start: inp('t-start-' + i, t.startLabel || ''),
         period: el('select', { id: 't-period-' + i }, [el('option', { value: 'am', text: 'Morning: 6:45 means 6:45 AM' }), el('option', { value: 'pm', text: 'Afternoon/evening: 6:45 means 6:45 PM' })]),
         kind: el('select', { id: 't-kind-' + i }, [el('option', { value: 'minyan', text: 'Minyan' }), el('option', { value: 'event', text: 'Shiur / event' })]) };
       r.period.value = t.period || 'am'; r.kind.value = t.kind === 'event' ? 'event' : 'minyan';
       tRows.push(r);
-      var rowEl = el('div', { class: 'fields' }, [field('Name (shown on the board)', r.name), field('Type', r.kind), field('Milestone shown under the time (e.g. הודו)', r.ms), field('Milestone: minutes after the start', r.off), field('How to read the hours', r.period)]);
+      var rowEl = el('div', { class: 'fields' }, [field('Name (shown on the board)', r.name), field('Type', r.kind), field('Milestone shown under the time (e.g. הודו)', r.ms), field('Milestone: minutes after the start', r.off), field('Name of the start, shown small when the milestone is the big number (e.g. ברכות)', r.start), field('How to read the hours', r.period)]);
       if (i >= 3) rowEl.appendChild(el('div', { class: 'field' }, [el('label', { text: ' ' }), el('button', { type: 'button', class: 'btn small danger', text: 'Remove category', onclick: function () { var c = collect(); c.tefillos.splice(i, 1); closeOverlay(); buildAdmin(c); } })]));
       g.appendChild(rowEl);
     });
@@ -580,7 +596,7 @@
       var c = collect(); c.tefillos.push({ id: 'c' + Date.now().toString(36), name: 'שיעור', milestone: '', offset: 0, period: 'pm', kind: 'event' }); closeOverlay(); buildAdmin(c);
     } })]));
     pages.general = g;
-    function liveTefilla(i) { var r = tRows[i], t = d.tefillos[i]; return { id: t.id, name: r.name.value.trim() || t.name, milestone: r.ms.value.trim(), offset: +r.off.value || 0, period: r.period.value, kind: r.kind.value === 'event' ? 'event' : 'minyan' }; }
+    function liveTefilla(i) { var r = tRows[i], t = d.tefillos[i]; return { id: t.id, name: r.name.value.trim() || t.name, milestone: r.ms.value.trim(), offset: +r.off.value || 0, startLabel: r.start.value.trim(), period: r.period.value, kind: r.kind.value === 'event' ? 'event' : 'minyan' }; }
 
     /* schedule: one row per minyan */
     var lines = {};
@@ -996,6 +1012,7 @@
       out.sponsorSeconds = Math.max(2, +fSponsorSecs.value || 8);
       out.nowMinutes = fNowMins.value === '' ? 20 : Math.max(0, Math.min(180, +fNowMins.value || 0));
       out.dateFormat = fDateFmt.value;
+      out.bigTime = fBig.value;
       out.logo = fLogo.value.trim();
       out.schedules = {};
       Cal.DAY_TYPES.forEach(function (t) {

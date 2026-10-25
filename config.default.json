@@ -16,13 +16,15 @@
  "dateFormat": "mdy",
  "showRT": true,
  "nowMinutes": 20,
+ "bigTime": "start",
  "tefillos": [
   {
    "id": "shacharis",
    "name": "שחרית",
    "milestone": "הודו",
    "offset": 10,
-   "period": "am"
+   "period": "am",
+   "startLabel": "ברכות"
   },
   {
    "id": "mincha",
@@ -75,7 +77,7 @@
  "overrides": [],
  "smsNumber": "",
  "remoteConfigUrl": "",
- "savedAt": 1792938798723,
+ "savedAt": 1792945282482,
  "siteUrl": "https://minyan.cascadeshul.org/",
  "logo": "",
  "rooms": "ברך משה, דברי יואל, לב אהרן, שלמה יודא, היכל אדל, היכל ביהמ״ד",

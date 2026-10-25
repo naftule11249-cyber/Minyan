@@ -245,3 +245,5 @@ details.help summary { cursor: pointer; font-weight: 500; }
 .zlist li.tap:hover, .zlist li.tap:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .today-row input[type=time] { font-size: 1.05rem; }
 .today-room { font-weight: 700; min-width: 90px; }
+.bigpick { display: inline-flex; align-items: center; gap: 4px; }
+.bigpick select { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; color: inherit; }
