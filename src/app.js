@@ -236,7 +236,12 @@
       cfg.siteUrl ? el('p', { class: 'hint' }, [el('a', { href: cfg.siteUrl.replace(/\/?$/, '/') + 'sms.html', text: 'פרטי השירות' })]) : null]);
   }
   /* ---------- app notifications (web push through the notification service) ---------- */
-  function pushSupported() { return !inArtifact && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && window.isSecureContext && !!(cfg.notifyUrl || '').trim(); }
+  /* a reminder service is configured for this board */
+  function pushConfigured() { return !inArtifact && window.isSecureContext && !!(cfg.notifyUrl || '').trim(); }
+  /* ...and this browser can actually receive notifications (on iPhone/iPad only the installed app can) */
+  function pushSupported() { return pushConfigured() && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
+  var INSTALL_FIRST = 'To get reminders on iPhone or iPad, add the board to your home screen first: in Safari tap Share, then "Add to Home Screen", and open it from that icon.';
+  var NO_PUSH = 'This browser cannot receive notifications. Use Chrome, or the installed app.';
   function pushState() { try { return JSON.parse(localStorage.getItem('minyan-push') || 'null'); } catch (e) { return null; } }
   function urlB64ToBytes(b) { b = b.replace(/-/g, '+').replace(/_/g, '/'); while (b.length % 4) b += '='; var bin = atob(b), out = new Uint8Array(bin.length), i; for (i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i); return out; }
   function notifyBase() { return cfg.notifyUrl.trim().replace(/\/+$/, ''); }
@@ -246,7 +251,7 @@
   function picksFor(t) { return t.period === 'pm' ? ['first', 'last', 'before:sunset', 'before:tzeis'] : ['first', 'last', 'before:shema', 'before:tefilla', 'before:chatzos']; }
   function pushPrefs() { var st = pushState(); return (st && st.prefs) || { reminders: [], daily: null }; }
   function isoOf(rd) { return MinyanEngine.isoDate(rd); }
-  function canSetReminders() { return pushSupported() && !(isIOS() && !isStandalone()) && !$('#app').classList.contains('display') && !ui.roomFilter; }
+  function canSetReminders() { return pushConfigured() && !$('#app').classList.contains('display') && !ui.roomFilter; }
   function describeReminder(r) {
     var t = tefillos().filter(function (x) { return x.id === r.tefilla; })[0], name = t ? t.name : r.tefilla;
     return r.lead + ' min before ' + (r.time != null ? name + ' ' + fmtTime(r.time) : (PICK_LABELS[r.pick || 'first'] || '').replace('minyan', name)) + (r.once ? ' (today only)' : '');
@@ -258,6 +263,8 @@
     tile.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); openReminder(e); } });
   }
   function openReminder(e) {
+    if (isIOS() && !isStandalone()) { toast(INSTALL_FIRST, 9000); return; }
+    if (!pushSupported()) { toast(NO_PUSH, 7000); return; }
     var old = $('#rem-overlay'); if (old) old.remove();
     var what = e.tefilla.name + (e.room ? ' – ' + e.room : '') + ' ' + fmtTime(e.start), dayIso = isoOf(e.rd), isToday = dayIso === isoOf(Cal.nowInTz(Date.now(), loc().tz).rd);
     var lead = el('input', { type: 'number', min: '1', max: '180', value: '10', class: 'mins', inputmode: 'numeric', id: 'rem-lead' });
@@ -286,9 +293,10 @@
     lead.focus();
   }
   function pushPanel() {
-    if (!pushSupported()) return null;
+    if (!pushConfigured()) return null;
     var st = pushState(), box = el('section', { class: 'side ltr', dir: 'ltr' }, [el('h3', { text: 'Reminders on your phone' })]);
-    if (isIOS() && !isStandalone()) { box.appendChild(el('p', { class: 'hint', text: 'On iPhone, reminders work after installing: Share, then "Add to Home Screen", and open the app from its icon.' })); return box; }
+    if (isIOS() && !isStandalone()) { box.appendChild(el('p', { class: 'hint', text: INSTALL_FIRST })); return box; }
+    if (!pushSupported()) { box.appendChild(el('p', { class: 'hint', text: NO_PUSH })); return box; }
     var prefs = pushPrefs(), today = scheduleFor(Cal.nowInTz(Date.now(), loc().tz).rd), tfs = tefillos().filter(function (t) { return t.kind !== 'event'; });
     if (!tfs.length) return null;
     box.appendChild(el('p', { class: 'hint', text: 'A notification before the minyanim you pick, even when the app is closed. Tip: tap any minyan on the board to set a reminder for it.' }));
@@ -414,7 +422,7 @@
   function toast(msg, ms) {
     var t = $('#toast');
     if (t) t.remove();
-    t = el('div', { id: 'toast', class: 'toast', dir: 'rtl', text: msg });
+    t = el('div', { id: 'toast', class: 'toast', dir: /[\u0590-\u05FF]/.test(msg) ? 'rtl' : 'ltr', text: msg });
     document.body.appendChild(t);
     setTimeout(function () { t.remove(); }, ms || 3500);
   }
