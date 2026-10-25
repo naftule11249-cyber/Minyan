@@ -4,7 +4,7 @@ const { chromium } = require('playwright');
   const errors = [];
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: 'he', timezoneId: 'America/New_York', serviceWorkers: 'block' });
   const page = await ctx.newPage();
-  page.on('console', m => { if (m.type() === 'error' && !/favicon/.test(m.text())) errors.push(m.text()); });
+  page.on('console', m => { if (m.type() === 'error' && !/favicon|ERR_TUNNEL|ERR_NAME_NOT_RESOLVED|ERR_INTERNET|ERR_CONNECTION/.test(m.text())) errors.push(m.text()); });
   page.on('pageerror', e => errors.push('pageerror: ' + e.message));
   await page.goto('http://localhost:8790/admin.html', { waitUntil: 'networkidle' });
   await page.evaluate(() => { try { localStorage.clear(); } catch (e) {} }); await page.reload({ waitUntil: 'networkidle' });

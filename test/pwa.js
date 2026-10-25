@@ -4,7 +4,7 @@ const { chromium } = require('playwright'); const fs = require('fs');
   const errors = [];
   const ctx = await browser.newContext({ viewport: { width: 400, height: 860 }, locale: 'he', timezoneId: 'America/New_York' });
   const page = await ctx.newPage();
-  page.on('console', m => { if (m.type() === 'error' && !/favicon/.test(m.text())) errors.push(m.text()); });
+  page.on('console', m => { if (m.type() === 'error' && !/favicon|ERR_TUNNEL|ERR_NAME_NOT_RESOLVED|ERR_INTERNET|ERR_CONNECTION/.test(m.text())) errors.push(m.text()); });
   page.on('pageerror', e => errors.push('pageerror: ' + e.message));
   await page.goto('http://localhost:8790/index.html', { waitUntil: 'networkidle' });
   const swState = await page.evaluate(async () => { const r = await navigator.serviceWorker.ready; await new Promise(r => setTimeout(r, 800)); return { scope: r.scope, caches: await caches.keys() }; });
