@@ -109,7 +109,7 @@
     }
     colA.appendChild(next);
     colA.appendChild(daySections(scheduleFor(rd), now, up, true));
-    if (up && up.daysAhead > 0) colA.appendChild(daySections(up.sched, now, up, false));
+    if (up && up.daysAhead > 0 && !(up.daysAhead === 1 && ui.todayAllSwitched)) colA.appendChild(daySections(up.sched, now, up, false)); /* tomorrow is already shown section by section once today is over */
     colB.appendChild(zmanimPanel(info, z));
     if (view.kind === 'board') {
       var sms = smsPanel();
@@ -163,10 +163,14 @@
     wrap.appendChild(el('div', { class: 'day-head' }, [
       el('h2', { text: isToday ? 'היום' : Cal.DAY_NAMES[s.info.dow] + ' – ' + Cal.formatHeb(s.info.heb) }),
       el('span', { class: 'sub', text: typeLabel(s) })]));
+    /* once all of today's minyanim of a tefilla are over (after chatzos for Shacharis), its section shows tomorrow's list, marked מחר */
+    var tomorrow = isToday ? scheduleFor(s.rd + 1) : null, allSwitched = true;
     tefillos().forEach(function (t) {
-      var list = s.byTefilla[t.id] || [], sec = el('section', { class: 'tefilla' });
-      if ($('#app').classList.contains('display') && list.every(function (e) { return e.ms <= now && now - e.ms >= nowWindowMs(); })) return;
-      sec.appendChild(el('h3', null, [t.kind === 'event' ? t.name : 'מניני ' + t.name]));
+      var list = s.byTefilla[t.id] || [], sec = el('section', { class: 'tefilla' }), fromTomorrow = false;
+      if (tomorrow && t.kind !== 'event' && list.every(function (e) { return now - e.ms >= nowWindowMs(); }) && (tomorrow.byTefilla[t.id] || []).length) { list = tomorrow.byTefilla[t.id]; fromTomorrow = true; }
+      if (!fromTomorrow && t.kind !== 'event') allSwitched = false;
+      if ($('#app').classList.contains('display') && !fromTomorrow && list.every(function (e) { return e.ms <= now && now - e.ms >= nowWindowMs(); })) return;
+      sec.appendChild(el('h3', null, [t.kind === 'event' ? t.name : 'מניני ' + t.name + (fromTomorrow ? ' – מחר, ' + Cal.DAY_NAMES[tomorrow.info.dow] : '')]));
       if (!list.length) { sec.appendChild(el('div', { class: 'none', text: 'אין מנינים רשומים' })); }
       else {
         var grid = el('div', { class: 'grid' });
@@ -188,6 +192,7 @@
       }
       wrap.appendChild(sec);
     });
+    if (isToday) ui.todayAllSwitched = allSwitched;
     return wrap;
   }
   function zmanimPanel(info, z) {

@@ -166,6 +166,7 @@ Same address, different screens (the `#` forms also work on the claude.ai page):
 ## Calendar
 
 - The big number on a Shacharis tile is the start (ברכות) by default; a "Big number" switch in the footer lets each phone show הודו big instead (then the countdown and "next minyan" follow הודו). General → "Big number on the tiles" sets the board's default; each tefilla has a "name of the start" for the small line.
+- Once all of today's minyanim of a tefilla are over (for Shacharis, around chatzos), that section shows tomorrow's list, headed מחר with the day's name; the lobby screen does the same.
 - The civil date next to the Hebrew date is written Month/Day/Year in US time zones (General → "Civil date" switches to Day.Month.Year or Year-Month-Day).
 
 - Fast days show when the fast begins and ends; Shabbos and Yom Tov show when they end; during Sefirah the board shows the count (tonight's after sunset).
