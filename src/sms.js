@@ -13,7 +13,7 @@ var MinyanSms = (function () {
   var EN_TEFILLA = { shacharis: 'Shacharis', mincha: 'Mincha', maariv: 'Maariv' };
   var EN_MILESTONE = { 'הודו': 'Hodu', 'שמונה עשרה': 'Shemoneh Esrei', 'ברכו': 'Borchu', 'ישתבח': 'Yishtabach', 'נשמת': 'Nishmas' };
   var EN_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Shabbos'];
-  var EN_ZMANIM = { alos: 'Alos', sunrise: 'Sunrise', shema: 'Shema', tefilla: 'Tefilla', chatzos: 'Chatzos', minchag: 'Mincha gedola', plag: 'Plag', candles: 'Candles', sunset: 'Sunset', tzeis: 'Tzeis', tzeis72: 'R"T' };
+  var EN_ZMANIM = { alos: 'Alos', sunrise: 'Sunrise', shema: 'Shema', tefilla: 'Tefilla', chatzos: 'Chatzos', minchag: 'Mincha gedola', plag: 'Plag', candles: 'Candles', sunset: 'Sunset', tzeis: 'Tzeis', tzeis60: 'Tzeis 60', tzeis72: 'R"T' };
   var MAX_LIST = 15;
   function hasHebrew(s) { return /[֐-׿]/.test(s); }
   function keyword(text) {

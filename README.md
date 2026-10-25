@@ -166,7 +166,7 @@ Same address, different screens (the `#` forms also work on the claude.ai page):
 ## Calendar
 
 - The big number on a Shacharis tile is the start (ברכות) by default; a "Big number" switch in the footer lets each phone show הודו big instead (then the countdown and "next minyan" follow הודו). General → "Big number on the tiles" sets the board's default; each tefilla has a "name of the start" for the small line.
-- A second box, הזמן הבא, counts down to the next important zman of the day (default: sof zman Shema, sof zman tefilla, candle lighting, shkia; General → "Countdown box" picks the set). It turns red in the last 30 minutes and disappears when none is left. Everyone can pick their own set on their phone (the ⚙ on the box, or "Countdown zmanim" in the footer); the General-tab set is the default.
+- The zmanim list shows the board's nightfall (צאת הכוכבים, General → Nightfall), צאת (60) and ר״ת (72); General has a switch for each of the last two. A second box, הזמן הבא, counts down to the next important zman of the day (default: sof zman Shema, sof zman tefilla, candle lighting, shkia; General → "Countdown box" picks the set). It turns red in the last 30 minutes and disappears when none is left. Everyone can pick their own set on their phone (the ⚙ on the box, or "Countdown zmanim" in the footer); the General-tab set is the default.
 - Once all of today's minyanim of a tefilla are over (for Shacharis, around chatzos), that section shows tomorrow's list, headed מחר with the day's name; the lobby screen does the same.
 - The civil date next to the Hebrew date is written Month/Day/Year in US time zones (General → "Civil date" switches to Day.Month.Year or Year-Month-Day).
 

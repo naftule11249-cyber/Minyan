@@ -304,11 +304,11 @@ var Cal = (function () {
     return {
       alos: alos, sunrise: sunrise, shema: sunrise + 3 * shaah, tefilla: sunrise + 4 * shaah,
       chatzos: sunrise + 6 * shaah, minchag: sunrise + 6.5 * shaah, plag: sunrise + 10.75 * shaah,
-      candles: sunset - (loc.candles == null ? 18 : loc.candles), sunset: sunset, tzeis: tzeis, tzeis72: sunset + 72
+      candles: sunset - (loc.candles == null ? 18 : loc.candles), sunset: sunset, tzeis: tzeis, tzeis60: sunset + 60, tzeis72: sunset + 72
     };
   }
   var ZMAN_NAMES = { alos: 'עלות השחר', sunrise: 'נץ החמה', shema: 'סוף זמן ק״ש', tefilla: 'סוף זמן תפילה', chatzos: 'חצות',
-    minchag: 'מנחה גדולה', plag: 'פלג המנחה', candles: 'הדלקת נרות', sunset: 'שקיעה', tzeis: 'צאת הכוכבים', tzeis72: 'ר״ת (72)' };
+    minchag: 'מנחה גדולה', plag: 'פלג המנחה', candles: 'הדלקת נרות', sunset: 'שקיעה', tzeis: 'צאת הכוכבים', tzeis60: 'צאת (60)', tzeis72: 'ר״ת (72)' };
 
   /* ---------- Time zone helpers ---------- */
   var fmtCache = {};
