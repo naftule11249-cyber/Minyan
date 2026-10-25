@@ -18,7 +18,7 @@ const { chromium } = require('playwright');
   await page.click('.panel .bar button.primary'); await page.waitForTimeout(500);
   console.log('banner on board:', await page.locator('.banner-inner').textContent().catch(() => 'none'), '| sponsor boxes:', await page.locator('.sponsor').count());
   // undo: history has the previous version
-  await page.click('footer button:has-text("Edit")');
+  // the settings stay open after a save, on the same tab
   await page.waitForSelector('#tab-data'); await page.click('#tab-data');
   console.log('history entries:', await page.locator('button:has-text("Restore")').count());
   await page.locator('button:has-text("Restore")').first().click(); await page.waitForTimeout(300);
