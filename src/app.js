@@ -672,7 +672,9 @@
       var wrap = el('div', { class: 'editor' }), list = el('div', { class: 'rows' }), rows = [], ta = null;
       function tf() { return liveTefilla(tfIndex); }
       function sync() { store.value = rows.map(rowToLine).join('\n'); if (ta) ta.value = store.value; refreshRooms(); markTabs(); }
-      function load() { rows = []; store.value.split('\n').forEach(function (l) { var r = lineToRow(l, tf()); if (r) rows.push(r); }); }
+      /* rows are kept in time order (by today's time for zman-based ones); unreadable lines go last */
+      function sortRows() { rows.sort(function (x, y) { var a = previewOf(x), b = previewOf(y); return (isNaN(a) ? 1e9 : a) - (isNaN(b) ? 1e9 : b); }); }
+      function load() { rows = []; store.value.split('\n').forEach(function (l) { var r = lineToRow(l, tf()); if (r) rows.push(r); }); sortRows(); }
       function timesOf(r) { return expandLine(parseLine(rowToLine(r), tf()), todayRd, typeKeyFn()).map(function (x) { return x.start; }); }
       function previewOf(r) { var t = timesOf(r); return t.length ? t[0] : NaN; }
       function previewText(r) {
@@ -748,6 +750,11 @@
           row.appendChild(el('div', { class: 'mrow-l' }, room.concat([note, del])));
         }
         pv.textContent = previewText(r);
+        /* when the gabbai leaves this row, it moves to its place in time order */
+        row.addEventListener('focusout', function (ev) {
+          if (ev.relatedTarget && row.contains(ev.relatedTarget)) return;
+          setTimeout(function () { if (document.activeElement && row.contains(document.activeElement)) return; var before = rows.slice(); sortRows(); if (before.some(function (x, i) { return x !== rows[i]; })) { renderAll(); sync(); } }, 50);
+        });
         return row;
       }
       function renderAll() { list.innerHTML = ''; rows.forEach(function (r) { list.appendChild(renderRow(r)); }); }
@@ -776,8 +783,7 @@
       });
       copySel.addEventListener('focus', fillCopy); fillCopy();
       var sortBtn = el('button', { type: 'button', class: 'btn small', text: 'Sort by time', onclick: function () {
-        rows.sort(function (x, y) { var a = previewOf(x), b = previewOf(y); return (isNaN(a) ? 1e9 : a) - (isNaN(b) ? 1e9 : b); });
-        renderAll(); sync();
+        sortRows(); renderAll(); sync();
       } });
       var textBtn = el('button', { type: 'button', class: 'btn small', text: 'Edit as text', onclick: function () {
         if (ta.hidden) { ta.value = store.value; ta.hidden = false; list.hidden = true; textBtn.textContent = 'Back to the list'; }
