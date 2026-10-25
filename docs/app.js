@@ -297,6 +297,7 @@
     var st = pushState(), box = el('section', { class: 'side ltr', dir: 'ltr' }, [el('h3', { text: 'Reminders on your phone' })]);
     if (isIOS() && !isStandalone()) { box.appendChild(el('p', { class: 'hint', text: INSTALL_FIRST })); return box; }
     if (!pushSupported()) { box.appendChild(el('p', { class: 'hint', text: NO_PUSH })); return box; }
+    preparePush().catch(function () {}); /* ready before the first tap */
     var prefs = pushPrefs(), today = scheduleFor(Cal.nowInTz(Date.now(), loc().tz).rd), tfs = tefillos().filter(function (t) { return t.kind !== 'event'; });
     if (!tfs.length) return null;
     box.appendChild(el('p', { class: 'hint', text: 'A notification before the minyanim you pick, even when the app is closed. Tip: tap any minyan on the board to set a reminder for it.' }));
@@ -351,15 +352,23 @@
     box.appendChild(form);
     return box;
   }
+  /* The service-worker registration and the push key are fetched ahead of time, so that subscribing can start inside the user's tap:
+     Safari shows the notification prompt from subscribe() itself and refuses it once the tap has "expired". */
+  function preparePush() {
+    if (!pushSupported()) return Promise.reject(new Error(NO_PUSH));
+    if (!ui.pushPrep) ui.pushPrep = Promise.all([
+      navigator.serviceWorker.ready,
+      fetch(notifyBase() + '/push/key').then(function (r) { if (!r.ok) throw new Error('The reminder service did not answer (' + r.status + ')'); return r.text(); })
+    ]).then(function (x) { ui.swReg = x[0]; ui.pushKey = x[1].trim(); }, function (e) { ui.pushPrep = null; throw e; });
+    return ui.pushPrep;
+  }
   function subscribePush(prefs) {
     var base = notifyBase(), st = pushState();
-    return Notification.requestPermission().then(function (perm) {
-      if (perm !== 'granted') throw new Error('Notification permission was not granted');
-      return navigator.serviceWorker.ready;
-    }).then(function (reg) {
-      return fetch(base + '/push/key').then(function (r) { if (!r.ok) throw new Error('The reminder service did not answer (' + r.status + ')'); return r.text(); }).then(function (key) {
-        return reg.pushManager.getSubscription().then(function (sub) { return sub || reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToBytes(key.trim()) }); });
-      });
+    return preparePush().then(function () {
+      return ui.swReg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToBytes(ui.pushKey) });
+    }).catch(function (e) {
+      if (e && (e.name === 'NotAllowedError' || /denied/i.test(e.message || ''))) throw new Error('Notifications are blocked for this app. iPhone/iPad: Settings → Notifications → ' + (cfg.name || 'the app') + ' → Allow. Chrome: the lock next to the address → Notifications → Allow. Then tap again.');
+      throw e;
     }).then(function (sub) {
       return fetch(base + '/push/subscribe', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: st && st.id, subscription: sub.toJSON(), reminders: prefs.reminders, daily: prefs.daily, lang: 'he' }) })
         .then(function (r) { if (!r.ok) throw new Error('The service did not answer (' + r.status + ')'); return r.json(); });
