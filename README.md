@@ -50,7 +50,7 @@ Maariv a time like `6:45` means 6:45 PM (set per tefilla under General → Tefil
 
 1. Create a GitHub account and a new public repository, e.g. `minyan`.
 2. Push this whole project to it (or upload `docs/` on its own; `minyan-site.zip` holds those files).
-3. Repository Settings → Pages → Source: "Deploy from a branch", branch `main`, folder `/docs` (or `/ (root)` if you uploaded only the site files). The site appears at `https://USERNAME.github.io/minyan/` after a minute.
+3. Repository Settings → Pages → Source: "Deploy from a branch", branch `main`, folder `/docs` (or `/ (root)` if you uploaded only the site files). The site appears at `https://USERNAME.github.io/minyan/` after a minute. With a custom domain, keep `docs/CNAME` (it holds the domain name) and point the domain's DNS at GitHub Pages.
 4. On a phone, open that address: Android offers "Install app"; on iPhone use Share → "Add to Home Screen". The app works offline.
 
 Editing: open `https://USERNAME.github.io/minyan/admin.html` and enter the PIN (default 1234; change it under General, it is stored hashed). The public page has no edit button.
