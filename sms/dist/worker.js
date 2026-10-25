@@ -308,7 +308,7 @@ var Cal = (function () {
     };
   }
   var ZMAN_NAMES = { alos: 'עלות השחר', sunrise: 'נץ החמה', shema: 'סוף זמן ק״ש', tefilla: 'סוף זמן תפילה', chatzos: 'חצות',
-    minchag: 'מנחה גדולה', plag: 'פלג המנחה', candles: 'הדלקת נרות', sunset: 'שקיעה', tzeis: 'צאת הכוכבים', tzeis60: 'צאת (60)', tzeis72: 'ר״ת (72)' };
+    minchag: 'מנחה גדולה', plag: 'פלג המנחה', candles: 'הדלקת נרות', sunset: 'שקיעה', tzeis: 'צאת הכוכבים', tzeis60: '60 מינוט אחר השקיעה', tzeis72: 'ר״ת (72)' };
 
   /* ---------- Time zone helpers ---------- */
   var fmtCache = {};

@@ -88,7 +88,7 @@
  "overrides": [],
  "smsNumber": "",
  "remoteConfigUrl": "",
- "savedAt": 1792972193828,
+ "savedAt": 1792972449042,
  "siteUrl": "https://minyan.cascadeshul.org/",
  "logo": "",
  "rooms": "ברך משה, דברי יואל, לב אהרן, שלמה יודא, היכל אדל, היכל ביהמ״ד",
@@ -109,5 +109,6 @@
   "chatzos",
   "candles",
   "tzeis72"
- ]
+ ],
+ "showTzeis": false
 }
