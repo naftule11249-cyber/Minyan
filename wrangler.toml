@@ -4,6 +4,7 @@
 name = "cascade-zmanim-notify"
 main = "sms/dist/worker.js"
 compatibility_date = "2025-01-01"
+workers_dev = true   # the public workers.dev address the board talks to
 
 [triggers]
 crons = ["*/5 * * * *"]
