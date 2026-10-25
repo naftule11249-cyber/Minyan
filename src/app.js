@@ -781,7 +781,7 @@
     /* publish (self-hosted site / app) */
     var pp = el('div', { class: 'col' }), gh = ghSettings();
     var fRemote = inp('f-remote', d.remoteConfigUrl || '', { dir: 'ltr', placeholder: 'https://.../config.json' });
-    var gRepo = inp('gh-repo', gh.repo || '', { dir: 'ltr', placeholder: 'username/minyan', autocomplete: 'off' }), gBranch = inp('gh-branch', gh.branch || 'main', { dir: 'ltr' }),
+    var gRepo = inp('gh-repo', gh.repo || d.githubRepo || '', { dir: 'ltr', placeholder: 'username/minyan', autocomplete: 'off' }), gBranch = inp('gh-branch', gh.branch || d.githubBranch || 'main', { dir: 'ltr' }),
       gPath = inp('gh-path', gh.path || 'docs/config.json', { dir: 'ltr' }), gToken = inp('gh-token', gh.token || '', { type: 'password', dir: 'ltr', autocomplete: 'off' });
     var ghMsg = el('div', { class: 'hint' });
     function saveGh() {
