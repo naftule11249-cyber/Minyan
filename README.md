@@ -116,8 +116,8 @@ The same function works for WhatsApp through Twilio's WhatsApp sender.
 free tier), which also answers the texts. People text `REMIND MINCHA 5:45 15` (15 minutes before the 5:45 Mincha),
 `REMIND SHACHARIS` (the first Shacharis), `REMIND SHACHARIS LAST`, `REMIND SHACHARIS BEFORE CHATZOS` / `BEFORE TEFILLA` (the last one before
 sof zman tefilla) / `BEFORE SHEMA`, `REMIND MINCHA BEFORE SUNSET` / `BEFORE MAARIV` (the last Mincha before zman Maariv), `REMIND MINCHA 5:45 TODAY`
-(today only, dropped afterwards), `DAILY 6:30` (the day's schedule every morning), `REMIND LIST`, `REMIND OFF`
-(Hebrew: `תזכורת מנחה 5:45 15`, `תזכורת שחרית אחרון`, `תזכורת שחרית לפני חצות`, `תזכורת שחרית לפני סוף זמן תפילה`, `תזכורת מנחה לפני שקיעה`, `תזכורת מנחה 5:45 היום`, `יומי 6:30`, `תזכורות`, `ביטול`). The worker checks every 5 minutes what is due and sends it
+(today only, dropped afterwards), `REMIND SHKIA 20` / `REMIND SHEMA 15` / `REMIND CHATZOS 30` (before a zman of the day), `DAILY 6:30` (the day's schedule every morning), `REMIND LIST`, `REMIND OFF`
+(Hebrew: `תזכורת מנחה 5:45 15`, `תזכורת שקיעה 20`, `תזכורת סוף זמן ק״ש 15`, `תזכורת שחרית אחרון`, `תזכורת שחרית לפני חצות`, `תזכורת שחרית לפני סוף זמן תפילה`, `תזכורת מנחה לפני שקיעה`, `תזכורת מנחה 5:45 היום`, `יומי 6:30`, `תזכורות`, `ביטול`). The worker checks every 5 minutes what is due and sends it
 through Twilio. Setup, free, from the Cloudflare dashboard (no computer needed):
 
 1. Create a Cloudflare account at dash.cloudflare.com.
@@ -133,7 +133,7 @@ For texting, add the Twilio secrets under the worker's Settings → Variables an
 worker address instead of the Twilio Function. From a computer with Node the same deploy is `cd sms && npx wrangler login && npx wrangler deploy`
 (`node vapid-keys.js` + `wrangler secret put VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY` only if you prefer your own keys).
 With the address entered under General → "Notification service address":
-the website and the installed app then show a "Reminders on your phone" box (like the install button, this phone-settings box is in English; the board itself is Hebrew). Each reminder row picks a tefilla, which minyan (first, last, last before sof zman Shema / tefilla / chatzos, last before sunset / zman Maariv, or any of today's times), the minutes before, and every day or today only. Tapping any minyan on the board opens the same choice for that minyan where people pick the minyanim they want to be reminded
+the website and the installed app then show a "Reminders on your phone" box (like the install button, this phone-settings box is in English; the board itself is Hebrew). Each reminder row picks a tefilla, which minyan (first, last, last before sof zman Shema / tefilla / chatzos, last before sunset / zman Maariv, or any of today's times), the minutes before, and every day or today only. A row can also name a zman of the day (sof zman Shema, chatzos, candle lighting, shkia, tzeis…) instead of a minyan. Tapping any minyan on the board, or any zman in the zmanim list, opens the same choice for it where people pick the minyanim they want to be reminded
 of (works on Android, and on iPhone once the site is added to the home screen).
 
 WhatsApp: enable the WhatsApp sender on the Twilio number, set `WA_FROM` (`whatsapp:+1718…`); the same keywords work.

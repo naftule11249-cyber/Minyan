@@ -183,7 +183,7 @@
   }
   function zmanimPanel(info, z) {
     var keys = ['alos', 'sunrise', 'shema', 'tefilla', 'chatzos', 'minchag', 'plag', 'candles', 'sunset', 'tzeis', 'tzeis72'];
-    var ul = el('ul', { class: 'zlist' }), rd = info.rd, nowMin = Cal.nowInTz(Date.now(), loc().tz).min;
+    var ul = el('ul', { class: 'zlist' }), rd = info.rd, nowMin = Cal.nowInTz(Date.now(), loc().tz).min, canRemind = canSetReminders();
     var h = info.heb, nightFast = (h.m === 7 && h.d === 10) || (h.m === 5 && info.fast); /* Yom Kippur and Tisha B'Av begin the evening before */
     if (info.fast && !nightFast) ul.appendChild(el('li', { class: 'hi' }, [el('span', { text: 'תחילת הצום' }), el('span', { class: 'z num', text: fmtTime(z.alos) })]));
     if (info.fast || info.yomKippur) ul.appendChild(el('li', { class: 'hi' }, [el('span', { text: 'צאת הצום' }), el('span', { class: 'z num', text: fmtTime(z.tzeis) })]));
@@ -199,7 +199,9 @@
       if (k === 'tzeis72' && !cfg.showRT) return;
       if (k === 'tzeis' && (info.shabbos || info.yomtov || info.fast)) return;
       var hi = k === 'candles' || (k === 'tzeis' && (info.shabbos || info.yomtov));
-      ul.appendChild(el('li', { class: hi ? 'hi' : '' }, [el('span', { text: Cal.ZMAN_NAMES[k] }), el('span', { class: 'z num', text: fmtTime(z[k]) })]));
+      var li = el('li', { class: hi ? 'hi' : '' }, [el('span', { text: Cal.ZMAN_NAMES[k] }), el('span', { class: 'z num', text: fmtTime(z[k]) })]);
+      if (canRemind && !isNaN(z[k])) makeTappable(li, { zman: k, rd: rd, min: z[k] }); /* tap a zman to be reminded before it */
+      ul.appendChild(li);
     });
     return el('section', { class: 'side' }, [el('h3', { text: 'זמני היום' }), ul]);
   }
@@ -248,17 +250,19 @@
   /* ---------- reminders: which minyan, how long before, every day or today only ---------- */
   var PICK_LABELS = { first: 'First minyan of the day', last: 'Last minyan of the day', 'before:shema': 'Last minyan before sof zman Shema', 'before:tefilla': 'Last minyan before sof zman tefilla',
     'before:chatzos': 'Last minyan before chatzos', 'before:sunset': 'Last minyan before sunset', 'before:tzeis': 'Last minyan before zman Maariv (tzeis)' };
+  var ZMAN_KEYS = ['alos', 'sunrise', 'shema', 'tefilla', 'chatzos', 'minchag', 'plag', 'candles', 'sunset', 'tzeis', 'tzeis72'];
   function picksFor(t) { return t.period === 'pm' ? ['first', 'last', 'before:sunset', 'before:tzeis'] : ['first', 'last', 'before:shema', 'before:tefilla', 'before:chatzos']; }
   function pushPrefs() { var st = pushState(); return (st && st.prefs) || { reminders: [], daily: null }; }
   function isoOf(rd) { return MinyanEngine.isoDate(rd); }
   function canSetReminders() { return pushConfigured() && !$('#app').classList.contains('display') && !ui.roomFilter; }
   function describeReminder(r) {
+    if (r.zman) return r.lead + ' min before ' + (Cal.ZMAN_NAMES[r.zman] || r.zman) + (r.once ? ' (today only)' : '');
     var t = tefillos().filter(function (x) { return x.id === r.tefilla; })[0], name = t ? t.name : r.tefilla;
     return r.lead + ' min before ' + (r.time != null ? name + ' ' + fmtTime(r.time) : (PICK_LABELS[r.pick || 'first'] || '').replace('minyan', name)) + (r.once ? ' (today only)' : '');
   }
   /* a minyan tile on the board opens a small "remind me" box */
   function makeTappable(tile, e) {
-    tile.classList.add('tap'); tile.setAttribute('role', 'button'); tile.setAttribute('tabindex', '0'); tile.setAttribute('title', 'Set a reminder for this minyan');
+    tile.classList.add('tap'); tile.setAttribute('role', 'button'); tile.setAttribute('tabindex', '0'); tile.setAttribute('title', 'Set a reminder');
     tile.addEventListener('click', function () { openReminder(e); });
     tile.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); openReminder(e); } });
   }
@@ -266,16 +270,16 @@
     if (isIOS() && !isStandalone()) { toast(INSTALL_FIRST, 9000); return; }
     if (!pushSupported()) { toast(NO_PUSH, 7000); return; }
     var old = $('#rem-overlay'); if (old) old.remove();
-    var what = e.tefilla.name + (e.room ? ' – ' + e.room : '') + ' ' + fmtTime(e.start), dayIso = isoOf(e.rd), isToday = dayIso === isoOf(Cal.nowInTz(Date.now(), loc().tz).rd);
+    var what = e.zman ? (Cal.ZMAN_NAMES[e.zman] || e.zman) + ' ' + fmtTime(e.min) : e.tefilla.name + (e.room ? ' – ' + e.room : '') + ' ' + fmtTime(e.start), dayIso = isoOf(e.rd), isToday = dayIso === isoOf(Cal.nowInTz(Date.now(), loc().tz).rd);
     var lead = el('input', { type: 'number', min: '1', max: '180', value: '10', class: 'mins', inputmode: 'numeric', id: 'rem-lead' });
     var once = el('input', { type: 'radio', name: 'rem-when', value: 'once', id: 'rem-once' }), daily = el('input', { type: 'radio', name: 'rem-when', value: 'daily', id: 'rem-daily' });
     once.checked = true;
     var msg = el('div', { class: 'hint', id: 'rem-msg' }), ov = el('div', { class: 'overlay', id: 'rem-overlay', dir: 'ltr' });
     function close() { ov.remove(); }
     var setB = el('button', { type: 'button', class: 'btn primary', text: 'Set reminder', onclick: function () {
-      var prefs = pushPrefs(), r = { tefilla: e.tefilla.id, time: e.start, lead: Math.max(1, Math.min(180, +lead.value || 10)) };
+      var prefs = pushPrefs(), ld = Math.max(1, Math.min(180, +lead.value || 10)), r = e.zman ? { zman: e.zman, lead: ld } : { tefilla: e.tefilla.id, time: e.start, lead: ld };
       if (once.checked) r.once = dayIso;
-      prefs.reminders = (prefs.reminders || []).filter(function (x) { return !(x.tefilla === r.tefilla && x.time === r.time); }).concat([r]).slice(-10);
+      prefs.reminders = (prefs.reminders || []).filter(function (x) { return e.zman ? x.zman !== e.zman : !(x.tefilla === r.tefilla && x.time === r.time); }).concat([r]).slice(-10);
       setB.disabled = true; msg.textContent = 'Setting…';
       subscribePush(prefs).then(function () { close(); ui.remDraft = null; toast('Reminder set: ' + describeReminder(r), 6000); render(); },
         function (err) { setB.disabled = false; msg.textContent = 'Could not set the reminder: ' + (err && err.message || err); });
@@ -284,7 +288,7 @@
       el('h2', { text: 'Remind me' }),
       el('div', { class: 'rem-what', dir: 'rtl', text: what }),
       el('div', { class: 'push-row' }, [el('label', { for: 'rem-lead', class: 'push-lbl', text: 'Minutes before' }), lead]),
-      el('div', { class: 'push-row' }, [el('label', { for: 'rem-once' }, [once, isToday ? ' Today only' : ' That day only']), el('label', { for: 'rem-daily' }, [daily, ' Every day at this time'])]),
+      el('div', { class: 'push-row' }, [el('label', { for: 'rem-once' }, [once, isToday ? ' Today only' : ' That day only']), el('label', { for: 'rem-daily' }, [daily, e.zman ? ' Every day' : ' Every day at this time'])]),
       el('p', { class: 'hint', text: 'A notification on this device, even when the app is closed.' }),
       msg,
       el('div', { class: 'bar' }, [el('button', { type: 'button', class: 'btn', text: 'Cancel', onclick: close }), setB])]));
@@ -300,19 +304,21 @@
     preparePush().catch(function () {}); /* ready before the first tap */
     var prefs = pushPrefs(), today = scheduleFor(Cal.nowInTz(Date.now(), loc().tz).rd), tfs = tefillos().filter(function (t) { return t.kind !== 'event'; });
     if (!tfs.length) return null;
-    box.appendChild(el('p', { class: 'hint', text: 'A notification before the minyanim you pick, even when the app is closed. Tip: tap any minyan on the board to set a reminder for it.' }));
+    box.appendChild(el('p', { class: 'hint', text: 'A notification before the minyanim or zmanim you pick, even when the app is closed. Tip: tap any minyan on the board, or any zman in the list, to set a reminder for it.' }));
     /* the rows being edited survive the board's minute-by-minute refresh */
-    var draft = ui.remDraft || { list: prefs.reminders.map(function (r) { return { tefilla: r.tefilla, time: r.time == null ? null : +r.time, pick: r.pick || 'first', lead: +r.lead || 10, once: r.once || null }; }),
+    var draft = ui.remDraft || { list: prefs.reminders.map(function (r) { return { tefilla: r.zman ? 'z:' + r.zman : r.tefilla, time: r.time == null ? null : +r.time, pick: r.pick || 'first', lead: +r.lead || 10, once: r.once || null }; }),
       daily: prefs.daily != null, dailyAt: prefs.daily != null ? pad2(Math.floor(prefs.daily / 60)) + ':' + pad2(prefs.daily % 60) : '06:00' };
     ui.remDraft = draft;
     var list = draft.list, rows = el('div', { class: 'col rem-rows' });
     function rowEl(r) {
-      var tSel = el('select', { 'aria-label': 'Tefilla' });
+      var tSel = el('select', { 'aria-label': 'Tefilla or zman' });
       tfs.forEach(function (t) { tSel.appendChild(el('option', { value: t.id, text: t.name })); });
+      var zg = el('optgroup', { label: 'Zmanim' }); ZMAN_KEYS.forEach(function (k) { zg.appendChild(el('option', { value: 'z:' + k, text: Cal.ZMAN_NAMES[k] })); }); tSel.appendChild(zg);
       tSel.value = r.tefilla; if (tSel.selectedIndex < 0) { tSel.value = tfs[0].id; r.tefilla = tfs[0].id; }
       var wSel = el('select', { 'aria-label': 'Which minyan' });
       function fillWhich() {
         wSel.textContent = '';
+        wSel.hidden = tSel.value.indexOf('z:') === 0; if (wSel.hidden) return; /* a zman is its own target */
         var t = tfs.filter(function (x) { return x.id === tSel.value; })[0] || tfs[0];
         picksFor(t).forEach(function (p) { wSel.appendChild(el('option', { value: 'p:' + p, text: PICK_LABELS[p] })); });
         (today.byTefilla[t.id] || []).forEach(function (x) { wSel.appendChild(el('option', { value: 't:' + x.start, text: fmtTime(x.start) + (x.room ? ' ' + x.room : '') })); });
@@ -339,7 +345,7 @@
     dailyAt.addEventListener('change', function () { draft.dailyAt = dailyAt.value; });
     var msg = el('div', { class: 'hint', id: 'push-msg' });
     var saveB = el('button', { class: 'btn primary small', id: 'push-save', text: st ? 'Update reminders' : 'Turn on reminders', onclick: function () {
-      var reminders = list.map(function (r) { var o = { tefilla: r.tefilla, time: r.time, lead: r.lead }; if (r.time == null) o.pick = r.pick; if (r.once) o.once = r.once; return o; });
+      var reminders = list.map(function (r) { var o = r.tefilla.indexOf('z:') === 0 ? { zman: r.tefilla.slice(2), lead: r.lead } : { tefilla: r.tefilla, time: r.time, lead: r.lead }; if (!o.zman && r.time == null) o.pick = r.pick; if (r.once) o.once = r.once; return o; });
       var d = daily.checked ? (function () { var m = /^(\d{2}):(\d{2})$/.exec(dailyAt.value); return m ? +m[1] * 60 + +m[2] : 6 * 60; })() : null;
       if (!reminders.length && d == null) { msg.textContent = 'Add at least one reminder.'; return; }
       saveB.disabled = true; msg.textContent = 'Turning on…';

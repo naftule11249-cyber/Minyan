@@ -241,3 +241,5 @@ details.help summary { cursor: pointer; font-weight: 500; }
 .rem-row select, .rem-row input { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 5px 7px; color: inherit; max-width: 100%; }
 .rem-lead { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .ltr { direction: ltr; text-align: left; }
+.zlist li.tap { cursor: pointer; border-radius: 6px; }
+.zlist li.tap:hover, .zlist li.tap:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }

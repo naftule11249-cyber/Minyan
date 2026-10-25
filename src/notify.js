@@ -7,14 +7,19 @@ var MinyanNotify = (function () {
   'use strict';
   var T = {
     he: { set: 'תזכורת נקבעה: ', before: ' דק׳ לפני ', first: 'המנין הראשון של ', last: 'המנין האחרון של ', beforeZman: ' לפני ', at: ' של ', today: ' (היום בלבד)', daily: 'הלוח היומי יישלח כל בוקר ב-', none: 'אין תזכורות פעילות.', list: 'התזכורות שלך:', off: 'כל התזכורות בוטלו.',
-      unknown: 'לא זיהיתי את הבקשה. דוגמאות: תזכורת מנחה 5:45 15 (15 דקות לפני מנחה של 5:45) · תזכורת שחרית אחרון · תזכורת שחרית לפני חצות · תזכורת שחרית לפני סוף זמן תפילה · תזכורת מנחה לפני שקיעה · תזכורת מנחה 5:45 היום (היום בלבד) · יומי 6:30', remind: 'תזכורת', inMin: 'בעוד', min: 'דק׳', notAvail: 'תזכורות אינן זמינות במספר הזה.' },
+      unknown: 'לא זיהיתי את הבקשה. דוגמאות: תזכורת מנחה 5:45 15 (15 דקות לפני מנחה של 5:45) · תזכורת שחרית אחרון · תזכורת שחרית לפני חצות · תזכורת שחרית לפני סוף זמן תפילה · תזכורת מנחה לפני שקיעה · תזכורת מנחה 5:45 היום (היום בלבד) · תזכורת שקיעה 20 · תזכורת סוף זמן ק״ש 15 · יומי 6:30', remind: 'תזכורת', inMin: 'בעוד', min: 'דק׳', notAvail: 'תזכורות אינן זמינות במספר הזה.' },
     en: { set: 'Reminder set: ', before: ' min before ', first: 'the first ', last: 'the last ', beforeZman: ' before ', at: ' at ', today: ' (today only)', daily: 'Daily schedule every morning at ', none: 'No active reminders.', list: 'Your reminders:', off: 'All reminders cancelled.',
-      unknown: 'Not recognized. Examples: REMIND MINCHA 5:45 15 (15 min before the 5:45 Mincha) · REMIND SHACHARIS LAST · REMIND SHACHARIS BEFORE CHATZOS · REMIND SHACHARIS BEFORE TEFILLA (sof zman tefilla) · REMIND MINCHA BEFORE SUNSET · REMIND MINCHA 5:45 TODAY (today only) · DAILY 6:30', remind: 'Reminder', inMin: 'in', min: 'min', notAvail: 'Reminders are not available on this number.' }
+      unknown: 'Not recognized. Examples: REMIND MINCHA 5:45 15 (15 min before the 5:45 Mincha) · REMIND SHACHARIS LAST · REMIND SHACHARIS BEFORE CHATZOS · REMIND SHACHARIS BEFORE TEFILLA (sof zman tefilla) · REMIND MINCHA BEFORE SUNSET · REMIND MINCHA 5:45 TODAY (today only) · REMIND SHKIA 20 · REMIND SHEMA 15 (zmanim) · DAILY 6:30', remind: 'Reminder', inMin: 'in', min: 'min', notAvail: 'Reminders are not available on this number.' }
   };
   var EN_TEFILLA = { shacharis: 'Shacharis', mincha: 'Mincha', maariv: 'Maariv' };
   /* "before <zman>" words people may text; the keys are zmanim from cal.js */
   var ZMAN_WORDS = { chatzos: ['chatzos', 'chatzot', 'חצות'], tefilla: ['tefilla', 'tefila', 'tefillah', 'תפילה', 'תפלה'], shema: ['shema', 'shma', 'שמע', 'קש'],
-    sunset: ['sunset', 'shkia', 'shkiah', 'shkiya', 'שקיעה'], tzeis: ['tzeis', 'tzais', 'tzet', 'nightfall', 'maariv', 'מעריב', 'צאת'], plag: ['plag', 'פלג'], minchag: ['minchag'] };
+    sunset: ['sunset', 'shkia', 'shkiah', 'shkiya', 'שקיעה'], tzeis: ['tzeis', 'tzais', 'tzet', 'nightfall', 'maariv', 'מעריב', 'צאת'], plag: ['plag', 'פלג'], minchag: ['minchag', 'gedola', 'גדולה'],
+    alos: ['alos', 'alot', 'dawn', 'עלות'], sunrise: ['sunrise', 'netz', 'neitz', 'נץ', 'הנץ'], candles: ['candles', 'candle', 'licht', 'הדלקה', 'הדלקת'], tzeis72: ['rt', 'rabbeinu', 'רת', 'רבינו'] };
+  /* zmanim people can be reminded of directly ("REMIND SHKIA 20"), in the board's order */
+  var ZMAN_KEYS = ['alos', 'sunrise', 'shema', 'tefilla', 'chatzos', 'minchag', 'plag', 'candles', 'sunset', 'tzeis', 'tzeis72'];
+  var ZMAN_EN = { alos: 'alos hashachar', sunrise: 'netz (sunrise)', shema: 'sof zman Shema', tefilla: 'sof zman tefilla', chatzos: 'chatzos', minchag: 'mincha gedola', plag: 'plag hamincha', candles: 'candle lighting', sunset: 'shkia (sunset)', tzeis: 'tzeis (nightfall)', tzeis72: 'Rabbeinu Tam (72)' };
+  function zmanName(k, lang) { return lang === 'en' ? (ZMAN_EN[k] || k) : ((typeof Cal !== 'undefined' && Cal.ZMAN_NAMES && Cal.ZMAN_NAMES[k]) || k); }
   var ZMAN_LABEL = { he: { chatzos: 'חצות', tefilla: 'סוף זמן תפילה', shema: 'סוף זמן ק״ש', sunset: 'שקיעה', tzeis: 'זמן מעריב', plag: 'פלג המנחה', minchag: 'מנחה גדולה' },
     en: { chatzos: 'chatzos', tefilla: 'sof zman tefilla', shema: 'sof zman Shema', sunset: 'sunset', tzeis: 'zman Maariv', plag: 'plag hamincha', minchag: 'mincha gedola' } };
   function zmanWord(w) { var k; for (k in ZMAN_WORDS) if (ZMAN_WORDS[k].indexOf(w) >= 0) return k; return null; }
@@ -42,8 +47,19 @@ var MinyanNotify = (function () {
     if (w[0] === 'ביטול' || /^(off|stop|cancel|none|ביטול|בטל)$/.test(w[1] || '')) return { action: 'off', lang: lang };
     if (/^(list|רשימה|status)$/.test(w[1] || '')) return { action: 'list', lang: lang };
     if (!w[1]) return { action: 'help', lang: lang };
-    var tf = tefillaFrom(w[1], cfg); if (!tf) return { action: 'help', lang: lang };
-    var time = null, lead = 10, pick = null, once = null, i, j, z;
+    var tf = tefillaFrom(w[1], cfg), time = null, lead = 10, pick = null, once = null, i, j, z, zk = null, from = 2;
+    if (!tf) {
+      /* a zman instead of a tefilla: "remind shkia 20", "תזכורת סוף זמן קריאת שמע 15" (the zman word may be a few words in) */
+      for (j = 1; j < w.length && j <= 4 && !zk; j++) { zk = zmanWord(w[j]); if (zk) from = j + 1; }
+      if (!zk) return { action: 'help', lang: lang };
+      for (i = from; i < w.length; i++) {
+        if (/^\d{1,3}$/.test(w[i])) lead = Math.min(180, Math.max(1, +w[i]));
+        else if (/^(today|היום)$/.test(w[i])) once = todayIso(cfg, nowMs);
+      }
+      var zc = { action: 'add', zman: zk, lead: lead, lang: lang };
+      if (once) zc.once = once;
+      return zc;
+    }
     for (i = 2; i < w.length; i++) {
       if (/^\d{1,2}:\d{2}$/.test(w[i])) time = parseClock(w[i], tf.period === 'pm');
       else if (/^\d{1,3}$/.test(w[i])) { if (time == null && +w[i] <= 12 && i === 2 && w[i + 1] && /^\d{1,3}$/.test(w[i + 1])) time = parseClock(w[i], tf.period === 'pm'); else lead = Math.min(180, Math.max(1, +w[i])); }
@@ -65,13 +81,14 @@ var MinyanNotify = (function () {
   }
   function describe(cfg, r, lang) {
     var L = T[lang], name = lang === 'en' && EN_TEFILLA[r.tefilla] ? EN_TEFILLA[r.tefilla] : (cfg.tefillos.filter(function (x) { return x.id === r.tefilla; })[0] || {}).name || r.tefilla, what;
-    if (r.time != null) what = name + L.at + fmt(cfg, r.time);
+    if (r.zman) what = zmanName(r.zman, lang);
+    else if (r.time != null) what = name + L.at + fmt(cfg, r.time);
     else if (r.pick === 'last') what = L.last + name;
     else if (r.pick && r.pick.indexOf('before:') === 0) what = L.last + name + L.beforeZman + (ZMAN_LABEL[lang][r.pick.slice(7)] || r.pick.slice(7));
     else what = L.first + name;
     return r.lead + L.before + what + (r.once ? L.today : '');
   }
-  function sameTarget(a, b) { return a.tefilla === b.tefilla && (a.time == null ? b.time == null && (a.pick || 'first') === (b.pick || 'first') : a.time === b.time); }
+  function sameTarget(a, b) { if (a.zman || b.zman) return a.zman === b.zman; return a.tefilla === b.tefilla && (a.time == null ? b.time == null && (a.pick || 'first') === (b.pick || 'first') : a.time === b.time); }
   /* Apply a parsed command to a subscription object (mutated). Returns the reply text. */
   function apply(cmd, sub, cfg) {
     var L = T[cmd.lang];
@@ -84,7 +101,7 @@ var MinyanNotify = (function () {
       return lines.length ? L.list + '\n' + lines.join('\n') : L.none;
     }
     if (cmd.action === 'daily') { sub.daily = cmd.at; return L.daily + fmt(cfg, cmd.at) + '.'; }
-    var r = { tefilla: cmd.tefilla, time: cmd.time, lead: cmd.lead };
+    var r = cmd.zman ? { zman: cmd.zman, lead: cmd.lead } : { tefilla: cmd.tefilla, time: cmd.time, lead: cmd.lead };
     if (cmd.pick) r.pick = cmd.pick;
     if (cmd.once) r.once = cmd.once;
     sub.reminders = sub.reminders.filter(function (x) { return !sameTarget(x, r); });
@@ -121,6 +138,17 @@ var MinyanNotify = (function () {
     var win = (windowMin || 5) * 60000, lang = sub.lang || 'he', L = T[lang], iso = MinyanEngine.isoDate(rd);
     (sub.reminders || []).forEach(function (r) {
       if (r.once && r.once !== iso) return;
+      if (r.zman) {
+        /* a zman of the day; candle lighting only on a day that has it */
+        if (r.zman === 'candles' && !(sched.info.dow === 5 || sched.info.erevYT)) return;
+        var zm = zmanim[r.zman];
+        if (zm == null || isNaN(zm)) return;
+        var zMs = Cal.epochFromWall(rd, Math.round(zm), tz), zFire = zMs - r.lead * 60000;
+        if (zFire < nowMs || zFire >= nowMs + win) return;
+        var zMins = Math.max(1, Math.round((zMs - nowMs) / 60000)), zn = zmanName(r.zman, lang);
+        out.push({ key: 'z:' + iso + ':' + r.zman, title: L.remind + ': ' + zn, text: (lang === 'he' ? 'תזכורת: ' : 'Reminder: ') + zn + ' ' + engine.fmtTime(zm) + ', ' + L.inMin + ' ' + zMins + ' ' + L.min });
+        return;
+      }
       var target = targetFor(sched.byTefilla[r.tefilla] || [], r, zmanim);
       if (!target) return;
       var fireAt = target.ms - r.lead * 60000;
@@ -136,6 +164,6 @@ var MinyanNotify = (function () {
     }
     return out;
   }
-  return { isCommand: isCommand, parseCommand: parseCommand, apply: apply, due: due, prune: prune, targetFor: targetFor, describe: describe, T: T, ZMAN_LABEL: ZMAN_LABEL };
+  return { isCommand: isCommand, parseCommand: parseCommand, apply: apply, due: due, prune: prune, targetFor: targetFor, describe: describe, T: T, ZMAN_LABEL: ZMAN_LABEL, ZMAN_KEYS: ZMAN_KEYS, ZMAN_EN: ZMAN_EN };
 })();
 if (typeof module !== 'undefined') module.exports = MinyanNotify;

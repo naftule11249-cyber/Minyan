@@ -54,3 +54,23 @@ ok('last shacharis before sof zman tefilla starts before it', [bt.start < z21.te
 ok('…and fires 10 min before it', N.due(cfg, s3, bt.ms - 10 * 60000, 5).map(x => x.key), ['r:2026-10-21:shacharis:' + bt.start]);
 ok('before a zman with no minyan before it: nothing', N.targetFor(sched21.byTefilla.shacharis, { tefilla: 'shacharis', pick: 'before:alos', lead: 10 }, z21), null);
 console.log(fails ? fails + ' FAILURES' : 'ALL PASS (2)');
+
+/* ---- zman reminders ---- */
+ok('parse zman sunset', N.parseCommand('remind sunset 20', cfg), { action: 'add', zman: 'sunset', lead: 20, lang: 'en' });
+ok('parse he sof zman krias shema today', N.parseCommand('תזכורת סוף זמן קריאת שמע 15 היום', cfg, at(9, 0)), { action: 'add', zman: 'shema', lead: 15, lang: 'he', once: '2026-10-21' });
+ok('parse shkia default lead', N.parseCommand('תזכורת שקיעה', cfg), { action: 'add', zman: 'sunset', lead: 10, lang: 'he' });
+ok('maariv is still the tefilla, not tzeis', N.parseCommand('remind maariv 20', cfg).tefilla, 'maariv');
+const s4 = {};
+console.log('reply:', N.apply(N.parseCommand('remind sunset 20', cfg), s4, cfg));
+console.log('reply:', N.apply(N.parseCommand('תזכורת סוף זמן ק״ש 15', cfg), s4, cfg));
+console.log('reply:', N.apply(N.parseCommand('remind sunset 25', cfg), s4, cfg));
+ok('same zman replaces (2 reminders)', s4.reminders.map(r => r.zman + ':' + r.lead), ['shema:15', 'sunset:25']);
+const sunsetMs = Cal.epochFromWall(rd21, Math.round(z21.sunset), 'America/New_York'), shemaMs = Cal.epochFromWall(rd21, Math.round(z21.shema), 'America/New_York');
+const d4 = N.due(cfg, s4, sunsetMs - 25 * 60000, 5);
+ok('sunset reminder fires 25 min before', d4.map(x => x.key), ['z:2026-10-21:sunset']); console.log('text:', d4[0] && d4[0].text);
+ok('shema reminder fires 15 min before', N.due(cfg, s4, shemaMs - 15 * 60000, 5).map(x => x.key), ['z:2026-10-21:shema']);
+ok('nothing in between', N.due(cfg, s4, shemaMs + 60000, 5).length, 0);
+const s5 = {}; N.apply(N.parseCommand('remind candles 30', cfg), s5, cfg);
+const fri = Cal.rdFromGreg(2026, 10, 23), zf = eng.zmanimFor(fri);
+ok('candle-lighting reminder: silent on Wednesday, fires on Friday', [N.due(cfg, s5, Cal.epochFromWall(rd21, Math.round(z21.candles), 'America/New_York') - 30 * 60000, 5).length, N.due(cfg, s5, Cal.epochFromWall(fri, Math.round(zf.candles), 'America/New_York') - 30 * 60000, 5).map(x => x.key)], [0, ['z:2026-10-23:candles']]);
+console.log(fails ? fails + ' FAILURES' : 'ALL PASS (3)');
