@@ -39,6 +39,15 @@ const { chromium } = require('playwright');
     ok('the choice is saved on the device', await page.evaluate(() => localStorage.getItem('minyan-countdown')), '["tzeis"]');
     await ctx.close();
   }
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: 'he', timezoneId: 'America/New_York', serviceWorkers: 'block' });
+    const page = await ctx.newPage(); await page.goto('http://localhost:8790/index.html', { waitUntil: 'networkidle' }); await page.waitForTimeout(300);
+    const names = await page.locator('.zlist li span:first-child').allTextContents();
+    ok('with nightfall at 72, ר״ת (72) is merged into צאת הכוכבים', [names.indexOf('צאת הכוכבים') >= 0, names.indexOf('ר״ת (72)') < 0, names.indexOf('צאת (60)') >= 0], [true, true, true]);
+    await page.click('#zc-open');
+    ok('…and is not offered in the chooser', await page.locator('#zc-tzeis72').count(), 0);
+    await ctx.close();
+  }
   await browser.close();
   console.log(errors.length ? 'ERRORS:\n' + errors.join('\n') : 'no console errors');
   if (fails || errors.length) process.exit(1); else console.log('zcount: all good');

@@ -54,6 +54,8 @@
   function keyMs(e) { return bigIsMilestone(e.tefilla) ? e.ms + (+e.tefilla.offset || 0) * 60000 : e.ms; }
   /* the zman countdown box: the next of the chosen zmanim still ahead today */
   var COUNTDOWN_DEFAULT = ['shema', 'tefilla', 'candles', 'sunset'], COUNTDOWN_KEYS = ['shema', 'tefilla', 'chatzos', 'minchag', 'plag', 'candles', 'sunset', 'tzeis', 'tzeis60', 'tzeis72'];
+  /* ר״ת (72) is the same moment as the board's nightfall when that is set to 72 minutes: then it is left out everywhere */
+  function rtSame() { return +cfg.tzeisMinutes === 72; }
   function countdownKeysOf(c) { return Array.isArray(c.countdownZmanim) ? c.countdownZmanim : COUNTDOWN_DEFAULT; }
   /* each device may choose its own set; the board's set (General tab) is the default */
   function countdownKeys() { var v = null; try { v = JSON.parse(localStorage.getItem('minyan-countdown') || 'null'); } catch (e) {} return Array.isArray(v) ? v : countdownKeysOf(cfg); }
@@ -61,7 +63,7 @@
     var old = $('#zc-overlay'); if (old) old.remove();
     var cur = countdownKeys(), boxes = {}, ov = el('div', { class: 'overlay', id: 'zc-overlay', dir: 'ltr' });
     function close() { ov.remove(); }
-    var list = el('div', { class: 'col' }, COUNTDOWN_KEYS.filter(function (k) { return (k !== 'tzeis72' || cfg.showRT) && (k !== 'tzeis60' || cfg.show60 !== false); }).map(function (k) { var c = el('input', { type: 'checkbox', id: 'zc-' + k }); c.checked = cur.indexOf(k) >= 0; boxes[k] = c; return el('label', { for: 'zc-' + k, class: 'push-row' }, [c, ' ' + Cal.ZMAN_NAMES[k]]); }));
+    var list = el('div', { class: 'col' }, COUNTDOWN_KEYS.filter(function (k) { return (k !== 'tzeis72' || (cfg.showRT && !rtSame())) && (k !== 'tzeis60' || cfg.show60 !== false); }).map(function (k) { var c = el('input', { type: 'checkbox', id: 'zc-' + k }); c.checked = cur.indexOf(k) >= 0; boxes[k] = c; return el('label', { for: 'zc-' + k, class: 'push-row' }, [c, ' ' + Cal.ZMAN_NAMES[k]]); }));
     ov.appendChild(el('div', { class: 'panel small' }, [el('h2', { text: 'Countdown zmanim' }), el('p', { class: 'hint', text: 'The הזמן הבא box counts down to the next of these. Your choice stays on this device.' }), list,
       el('div', { class: 'bar' }, [el('button', { type: 'button', class: 'btn', text: 'Board default', onclick: function () { try { localStorage.removeItem('minyan-countdown'); } catch (e) {} close(); render(); } }), el('button', { type: 'button', class: 'btn', text: 'Cancel', onclick: close }),
         el('button', { type: 'button', class: 'btn primary', text: 'Save', onclick: function () { var sel = COUNTDOWN_KEYS.filter(function (k) { return boxes[k] && boxes[k].checked; }); try { localStorage.setItem('minyan-countdown', JSON.stringify(sel)); } catch (e) {} close(); render(); } })])]));
@@ -72,7 +74,7 @@
     var tz = loc().tz, best = null;
     countdownKeys().forEach(function (k) {
       if (k === 'candles' && !(info.dow === 5 || info.erevYT)) return;
-      if (k === 'tzeis72' && !cfg.showRT) return;
+      if (k === 'tzeis72' && (!cfg.showRT || rtSame())) return;
       if (k === 'tzeis60' && cfg.show60 === false) return;
       var v = z[k]; if (v == null || isNaN(v)) return;
       var ms = Cal.epochFromWall(rd, Math.round(v), tz);
@@ -249,7 +251,7 @@
     }
     keys.forEach(function (k) {
       if (k === 'candles' && !(info.dow === 5 || info.erevYT)) return;
-      if (k === 'tzeis72' && !cfg.showRT) return;
+      if (k === 'tzeis72' && (!cfg.showRT || rtSame())) return;
       if (k === 'tzeis60' && cfg.show60 === false) return;
       if (k === 'tzeis' && (info.shabbos || info.yomtov || info.fast)) return;
       var hi = k === 'candles' || (k === 'tzeis' && (info.shabbos || info.yomtov));
@@ -374,7 +376,7 @@
     function rowEl(r) {
       var tSel = el('select', { 'aria-label': 'Tefilla or zman' });
       tfs.forEach(function (t) { tSel.appendChild(el('option', { value: t.id, text: t.name })); });
-      var zg = el('optgroup', { label: 'Zmanim' }); ZMAN_KEYS.forEach(function (k) { zg.appendChild(el('option', { value: 'z:' + k, text: Cal.ZMAN_NAMES[k] })); }); tSel.appendChild(zg);
+      var zg = el('optgroup', { label: 'Zmanim' }); ZMAN_KEYS.forEach(function (k) { if (k === 'tzeis72' && (!cfg.showRT || rtSame())) return; if (k === 'tzeis60' && cfg.show60 === false) return; zg.appendChild(el('option', { value: 'z:' + k, text: Cal.ZMAN_NAMES[k] })); }); tSel.appendChild(zg);
       tSel.value = r.tefilla; if (tSel.selectedIndex < 0) { tSel.value = tfs[0].id; r.tefilla = tfs[0].id; }
       var wSel = el('select', { 'aria-label': 'Which minyan' });
       function fillWhich() {
