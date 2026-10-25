@@ -1020,7 +1020,10 @@
     if (inArtifact || !('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;
     var hadController = !!navigator.serviceWorker.controller, reloaded = false;
     navigator.serviceWorker.register('./sw.js').then(function (reg) {
-      setInterval(function () { reg.update().catch(function () {}); }, 60 * 60 * 1000);
+      /* look for a new version every 10 minutes and whenever the page comes back into view; a new one installs, takes over and reloads the page */
+      var check = function () { reg.update().catch(function () {}); };
+      setInterval(check, 10 * 60 * 1000);
+      document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') check(); });
     }).catch(function () {});
     navigator.serviceWorker.addEventListener('controllerchange', function () {
       if (hadController && !reloaded && !ui.adminOpen) { reloaded = true; location.reload(); }
