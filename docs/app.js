@@ -323,6 +323,7 @@
   function openReminder(e) {
     if (isIOS() && !isStandalone()) { toast(INSTALL_FIRST, 9000); return; }
     if (!pushSupported()) { toast(NO_PUSH, 7000); return; }
+    preparePush().catch(function () {}); /* ready before "Set reminder" is tapped */
     var old = $('#rem-overlay'); if (old) old.remove();
     var what = e.zman ? (Cal.ZMAN_NAMES[e.zman] || e.zman) + ' ' + fmtTime(e.min) : e.tefilla.name + (e.room ? ' – ' + e.room : '') + ' ' + fmtTime(e.start), dayIso = isoOf(e.rd), isToday = dayIso === isoOf(Cal.nowInTz(Date.now(), loc().tz).rd);
     var lead = el('input', { type: 'number', min: '1', max: '180', value: '10', class: 'mins', inputmode: 'numeric', id: 'rem-lead' });
@@ -438,11 +439,17 @@
     return ui.pushPrep;
   }
   function subscribePush(prefs) {
-    var base = notifyBase(), st = pushState();
-    return preparePush().then(function () {
-      return ui.swReg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToBytes(ui.pushKey) });
-    }).catch(function (e) {
-      if (e && (e.name === 'NotAllowedError' || /denied/i.test(e.message || ''))) throw new Error('Notifications are blocked for this app. iPhone/iPad: Settings → Notifications → ' + (cfg.name || 'the app') + ' → Allow. Chrome: the lock next to the address → Notifications → Allow. Then tap again.');
+    var base = notifyBase(), st = pushState(), p;
+    function doSubscribe() { return ui.swReg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToBytes(ui.pushKey) }); }
+    /* Safari only honours the request while the tap is being handled, so when everything is prepared the call is made right here, synchronously */
+    if (ui.swReg && ui.pushKey) { try { p = doSubscribe(); } catch (e) { p = Promise.reject(e); } }
+    else p = preparePush().then(doSubscribe);
+    return p.catch(function (e) {
+      var perm = (typeof Notification !== 'undefined' && Notification.permission) || '?', detail = ' [' + perm + '; ' + ((e && e.name) || '') + ': ' + ((e && e.message) || e) + ']';
+      if (e && (e.name === 'NotAllowedError' || /denied/i.test(e.message || ''))) {
+        if (perm === 'denied') throw new Error('Notifications are blocked for this app. iPhone/iPad: Settings → Notifications → ' + (cfg.name || 'the app') + ' → Allow Notifications. Chrome: the lock next to the address → Notifications → Allow. Then tap again.' + detail);
+        throw new Error('The device did not let the app ask for notifications. Close the app fully, open it again from its icon and tap once more.' + detail);
+      }
       throw e;
     }).then(function (sub) {
       return fetch(base + '/push/subscribe', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: st && st.id, subscription: sub.toJSON(), reminders: prefs.reminders, daily: prefs.daily, lang: 'he' }) })
