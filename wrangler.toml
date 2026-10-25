@@ -1,0 +1,19 @@
+# Cloudflare Worker (answers texts, sends reminder texts and app notifications). This copy lets Cloudflare deploy
+# from the repository root; sms/wrangler.toml is the same thing for a root directory of "sms". Keep both in step.
+# Dashboard: Workers & Pages -> Create -> Import a repository -> build command EMPTY, deploy command "npx wrangler deploy".
+name = "cascade-zmanim-notify"
+main = "sms/dist/worker.js"
+compatibility_date = "2025-01-01"
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+[[kv_namespaces]]
+binding = "SUBS"
+# No id: Wrangler creates the namespace on the first deploy. If the deploy log asks for one, create a KV namespace
+# in the dashboard (Storage & Databases -> KV), paste its ID here as  id = "..."  and deploy again.
+
+[vars]
+CONFIG_URL = "https://minyan.cascadeshul.org/config.json"
+ALLOWED_ORIGIN = "https://minyan.cascadeshul.org"
+VAPID_SUBJECT = "https://minyan.cascadeshul.org"
