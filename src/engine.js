@@ -20,9 +20,11 @@ var MinyanEngine = (function () {
   function parseSpec(tok, tefilla) {
     var m = /^(\d{1,2})[:.](\d{2})$/.exec(tok);
     if (m) {
-      var h = +m[1], mi = +m[2];
+      var h = +m[1], mi = +m[2], exact = m[1].length === 2 && m[1].charAt(0) === '0'; /* "01:00" is a 24-hour time, as the time picker writes it */
       if (h > 24 || mi > 59) return null;
-      if (tefilla.period === 'pm' && h >= 1 && h < 12) h += 12; /* 6:45 means 6:45 PM for Mincha/Maariv; 00:15 stays after midnight */
+      if (tefilla.period === 'pm' && !exact && h >= 1 && h < 12) h += 12; /* 6:45 means 6:45 PM for Mincha/Maariv */
+      /* a Maariv at 00:30 is still last night: before the night cut-off (4:00 unless the tefilla says otherwise) it sorts at the end of the day's list and happens after midnight */
+      if (tefilla.period === 'pm' && h < (tefilla.nightUntil == null || tefilla.nightUntil === '' ? 4 : +tefilla.nightUntil)) h += 24;
       return { kind: 'fixed', min: h * 60 + mi };
     }
     m = /^([^+\-~]+?)\s*(?:([+-])\s*(\d+))?\s*(?:~(\d+))?$/.exec(tok);
@@ -155,7 +157,7 @@ var MinyanEngine = (function () {
     /* All minyanim after nowMs within the next `days` days, in order. */
     function after(nowMs, nowRd, days, tefillaId) {
       var out = [], i, j, s, list;
-      for (i = 0; i < (days || 10); i++) {
+      for (i = -1; i < (days || 10); i++) { /* from yesterday: a Maariv after midnight is still ahead */
         s = scheduleFor(nowRd + i);
         list = tefillaId ? (s.byTefilla[tefillaId] || []) : s.all;
         for (j = 0; j < list.length; j++) if (list[j].ms > nowMs && (tefillaId || list[j].tefilla.kind !== 'event')) out.push({ entry: list[j], sched: s, daysAhead: i });
@@ -164,7 +166,7 @@ var MinyanEngine = (function () {
     }
     function upcoming(nowMs, nowRd) {
       var i, j, s;
-      for (i = 0; i < 10; i++) {
+      for (i = -1; i < 10; i++) { /* from yesterday: a Maariv after midnight is still ahead */
         s = scheduleFor(nowRd + i);
         for (j = 0; j < s.all.length; j++) if (s.all[j].ms > nowMs && s.all[j].tefilla.kind !== 'event') return { entry: s.all[j], sched: s, daysAhead: i };
       }

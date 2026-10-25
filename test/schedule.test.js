@@ -29,3 +29,15 @@ ok('now window setting', cfg.nowMinutes, 20);
 if (fails) { console.log(fails + ' FAILING'); process.exit(1); } else console.log('schedule: all good');
 ok('civil date in US format', eng.fmtDate(sunRd), '10/25/2026');
 ok('civil date d.m.y when asked', (E.MinyanEngine || E)(Object.assign({}, cfg, { dateFormat: 'dmy' })).fmtDate(sunRd), '25.10.2026');
+
+/* ---- after midnight: a Maariv at 00:30 is still last night ---- */
+const mkE = c => (E.MinyanEngine || E)(c), monRd = Cal.rdFromGreg(2026, 10, 26);
+const nightCfg = Object.assign({}, cfg, { schedules: { weekday: { maariv: '21:00 דברי יואל\n00:30 ברך משה\n01:15 לב אהרן\n04:00 שלמה יודא' } } });
+const ne = mkE(nightCfg), mv = ne.scheduleFor(monRd).byTefilla.maariv;
+ok('after-midnight maariv sorts last; 4:00 is morning', mv.map(e => ne.fmtTime(e.start) + ' ' + e.room), ['4:00 שלמה יודא', '9:00 דברי יואל', '12:30 ברך משה', '1:15 לב אהרן']);
+ok('its moment is after midnight of the next civil day', new Date(mv[2].ms).toISOString(), '2026-10-27T04:30:00.000Z');
+const u = ne.upcoming(Cal.epochFromWall(monRd + 1, 10, 'America/New_York'), monRd + 1);
+ok("at 00:10 the next minyan is last night's 12:30 Maariv", [ne.fmtTime(u.entry.start), u.daysAhead], ['12:30', -1]);
+ok('mincha 1:30 still means 1:30 PM', ne.fmtTime(mkE(Object.assign({}, cfg, { schedules: { weekday: { mincha: '1:30 ברך משה' } } })).scheduleFor(monRd).byTefilla.mincha[0].start), '1:30');
+ok('night cut-off per tefilla (2:00): 1:15 is night, 2:30 is morning', mkE(Object.assign({}, nightCfg, { tefillos: cfg.tefillos.map(t => t.id === 'maariv' ? Object.assign({}, t, { nightUntil: 2 }) : t), schedules: { weekday: { maariv: '01:15 לב אהרן\n02:30 שלמה יודא' } } })).scheduleFor(monRd).byTefilla.maariv.map(e => ne.fmtTime(e.start)), ['2:30', '1:15']);
+if (fails) { console.log(fails + ' FAILING'); process.exit(1); } else console.log('schedule (night): all good');

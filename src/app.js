@@ -55,7 +55,7 @@
   function upcoming(nowMs, nowRd) {
     if (!ui.roomFilter && bigMode() !== 'milestone') return engine.upcoming(nowMs, nowRd);
     var i, j, s;
-    for (i = 0; i < 10; i++) { s = scheduleFor(nowRd + i); for (j = 0; j < s.all.length; j++) if (keyMs(s.all[j]) > nowMs && s.all[j].tefilla.kind !== 'event') return { entry: s.all[j], sched: s, daysAhead: i }; }
+    for (i = -1; i < 10; i++) { s = scheduleFor(nowRd + i); /* from yesterday: a Maariv after midnight is still ahead */ for (j = 0; j < s.all.length; j++) if (keyMs(s.all[j]) > nowMs && s.all[j].tefilla.kind !== 'event') return { entry: s.all[j], sched: s, daysAhead: i }; }
     return null;
   }
   function fmtTime(min) { return engine.fmtTime(min); }
@@ -602,12 +602,12 @@
     var tRows = [];
     g.appendChild(el('div', { class: 'hint', text: 'Minyanim count for "next minyan" and reminders. A shiur or event category is listed on the board and in texts but never shown as the next minyan.' }));
     d.tefillos.forEach(function (t, i) {
-      var r = { name: inp('t-name-' + i, t.name), ms: inp('t-ms-' + i, t.milestone), off: inp('t-off-' + i, t.offset, { inputmode: 'numeric' }), start: inp('t-start-' + i, t.startLabel || ''),
+      var r = { name: inp('t-name-' + i, t.name), ms: inp('t-ms-' + i, t.milestone), off: inp('t-off-' + i, t.offset, { inputmode: 'numeric' }), start: inp('t-start-' + i, t.startLabel || ''), night: inp('t-night-' + i, t.nightUntil == null ? '' : t.nightUntil, { type: 'number', min: '0', max: '11', inputmode: 'numeric', placeholder: '4' }),
         period: el('select', { id: 't-period-' + i }, [el('option', { value: 'am', text: 'Morning: 6:45 means 6:45 AM' }), el('option', { value: 'pm', text: 'Afternoon/evening: 6:45 means 6:45 PM' })]),
         kind: el('select', { id: 't-kind-' + i }, [el('option', { value: 'minyan', text: 'Minyan' }), el('option', { value: 'event', text: 'Shiur / event' })]) };
       r.period.value = t.period || 'am'; r.kind.value = t.kind === 'event' ? 'event' : 'minyan';
       tRows.push(r);
-      var rowEl = el('div', { class: 'fields' }, [field('Name (shown on the board)', r.name), field('Type', r.kind), field('Milestone shown under the time (e.g. הודו)', r.ms), field('Milestone: minutes after the start', r.off), field('Name of the start, shown small when the milestone is the big number (e.g. ברכות)', r.start), field('How to read the hours', r.period)]);
+      var rowEl = el('div', { class: 'fields' }, [field('Name (shown on the board)', r.name), field('Type', r.kind), field('Milestone shown under the time (e.g. הודו)', r.ms), field('Milestone: minutes after the start', r.off), field('Name of the start, shown small when the milestone is the big number (e.g. ברכות)', r.start), field('How to read the hours', r.period), field('Night cut-off: a time before this hour (0–11) still belongs to the previous night, e.g. a Maariv at 12:30 AM; blank = 4', r.night)]);
       if (i >= 3) rowEl.appendChild(el('div', { class: 'field' }, [el('label', { text: ' ' }), el('button', { type: 'button', class: 'btn small danger', text: 'Remove category', onclick: function () { var c = collect(); c.tefillos.splice(i, 1); closeOverlay(); buildAdmin(c); } })]));
       g.appendChild(rowEl);
     });
@@ -615,7 +615,7 @@
       var c = collect(); c.tefillos.push({ id: 'c' + Date.now().toString(36), name: 'שיעור', milestone: '', offset: 0, period: 'pm', kind: 'event' }); closeOverlay(); buildAdmin(c);
     } })]));
     pages.general = g;
-    function liveTefilla(i) { var r = tRows[i], t = d.tefillos[i]; return { id: t.id, name: r.name.value.trim() || t.name, milestone: r.ms.value.trim(), offset: +r.off.value || 0, startLabel: r.start.value.trim(), period: r.period.value, kind: r.kind.value === 'event' ? 'event' : 'minyan' }; }
+    function liveTefilla(i) { var r = tRows[i], t = d.tefillos[i]; return { id: t.id, name: r.name.value.trim() || t.name, milestone: r.ms.value.trim(), offset: +r.off.value || 0, startLabel: r.start.value.trim(), nightUntil: r.night.value === '' ? undefined : Math.max(0, Math.min(11, +r.night.value || 0)), period: r.period.value, kind: r.kind.value === 'event' ? 'event' : 'minyan' }; }
 
     /* schedule: one row per minyan */
     var lines = {};
