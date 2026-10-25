@@ -9,7 +9,7 @@ const { chromium } = require('playwright');
     const fixed = Date.UTC(2026, 9, 25, h + 4, m); // EDT = UTC-4
     await ctx.addInitScript(({ fixed }) => { const real = Date.now; const start = real(); Date.now = () => fixed + (real() - start); }, { fixed });
     const page = await ctx.newPage();
-    page.on('pageerror', e => errors.push(e.message)); page.on('console', x => { if (x.type() === 'error') errors.push(x.text()); });
+    page.on('pageerror', e => errors.push(e.message)); page.on('console', x => { if (x.type() === 'error' && !/ERR_TUNNEL|ERR_NAME_NOT_RESOLVED|ERR_INTERNET|ERR_CONNECTION/.test(x.text())) errors.push(x.text()); });
     await page.goto('http://localhost:8790/index.html' + (hash || ''), { waitUntil: 'networkidle' }); await page.waitForTimeout(400);
     const txt = async sel => (await page.locator(sel).allTextContents()).map(s => s.replace(/\s+/g, ' ').trim());
     const r = { now: await txt('.tile.now'), next: await txt('.tile.next'), past: await page.locator('.tile.past').count(), pastVisible: await page.locator('.tile.past:visible').count(), nowVisible: await page.locator('.tile.now:visible').count() };

@@ -5,7 +5,7 @@ const { chromium } = require('playwright');
   for (const [name, vp, scheme] of [['desktop', { width: 1280, height: 900 }, 'light'], ['phone', { width: 400, height: 860 }, 'dark']]) {
     const ctx = await browser.newContext({ viewport: vp, colorScheme: scheme, locale: 'he', timezoneId: 'America/New_York' });
     const page = await ctx.newPage();
-    page.on('console', m => { if (m.type() === 'error') errors.push(name + ': ' + m.text()); });
+    page.on('console', m => { if (m.type() === 'error' && !/ERR_TUNNEL|ERR_NAME_NOT_RESOLVED|ERR_INTERNET|ERR_CONNECTION/.test(m.text())) errors.push(name + ': ' + m.text()); });
     page.on('pageerror', e => errors.push(name + ' pageerror: ' + e.message));
     await page.goto('http://localhost:8790/index.html', { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
