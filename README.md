@@ -54,6 +54,8 @@ which still belongs to that night: it sorts at the end of the list and the board
 
 ## Quick changes for today
 
+The admin page is a full page of its own: a sidebar lists its sections (Today, General, Schedule, Notices, Special dates, Publish, Backup), the header holds Save, Close and a "Saved …" / "Unsaved changes" marker, Ctrl+S (Cmd+S) saves, and the sidebar also offers "View the board" and "Lock". On a phone the sections become a scrolling strip under the header. Settings are grouped into cards (The board, Look and labels, Location and zmanim, Tefillos, Website and services, Security).
+
 The admin page opens on a **Today** tab: today's minyanim with a time box, a room picker and a Cancel button each, and an "+ Add for today" row per tefilla.
 Move, cancel or add, then "Save today's changes". It is stored as a one-date special schedule (Special dates tab), so the regular
 schedule is untouched and tomorrow is back to normal; "Back to the regular schedule for today" removes it. On a phone this is the

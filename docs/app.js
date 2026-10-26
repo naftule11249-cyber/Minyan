@@ -77,7 +77,7 @@
   function countdownKeys() { var v = null; try { v = JSON.parse(localStorage.getItem('minyan-countdown') || 'null'); } catch (e) {} return Array.isArray(v) ? v : countdownKeysOf(cfg); }
   function openCountdownChooser() {
     var old = $('#zc-overlay'); if (old) old.remove();
-    var cur = countdownKeys(), boxes = {}, ov = el('div', { class: 'overlay', id: 'zc-overlay', dir: 'ltr' });
+    var cur = countdownKeys(), boxes = {}, ov = el('div', { class: 'overlay modal', id: 'zc-overlay', dir: 'ltr' });
     function close() { ov.remove(); }
     var list = el('div', { class: 'col' }, COUNTDOWN_KEYS.filter(function (k) { return !zmanHidden(k); }).map(function (k) { var c = el('input', { type: 'checkbox', id: 'zc-' + k }); c.checked = cur.indexOf(k) >= 0; boxes[k] = c; return el('label', { for: 'zc-' + k, class: 'push-row' }, [c, ' ' + Cal.ZMAN_NAMES[k]]); }));
     ov.appendChild(el('div', { class: 'panel small' }, [el('h2', { text: 'Countdown zmanim' }), el('p', { class: 'hint', text: 'The הזמן הבא box counts down to the next of these. Your choice stays on this device.' }), list,
@@ -420,7 +420,7 @@
     var refStart = el('input', { type: 'radio', name: 'rem-ref', value: 'start', id: 'rem-ref-start' }), refMs = el('input', { type: 'radio', name: 'rem-ref', value: 'milestone', id: 'rem-ref-ms' });
     (bigMode() === 'milestone' ? refMs : refStart).checked = true;
     var refRow = (!e.zman && e.tefilla.milestone) ? el('div', { class: 'push-row' }, [el('span', { class: 'push-lbl', text: 'Before' }), el('label', { for: 'rem-ref-start' }, [refStart, ' ' + startLabel(e.tefilla) + ' ' + fmtTime(e.start)]), el('label', { for: 'rem-ref-ms' }, [refMs, ' ' + e.tefilla.milestone + ' ' + fmtTime(e.milestone)])]) : null;
-    var msg = el('div', { class: 'hint', id: 'rem-msg' }), ov = el('div', { class: 'overlay', id: 'rem-overlay', dir: 'ltr' });
+    var msg = el('div', { class: 'hint', id: 'rem-msg' }), ov = el('div', { class: 'overlay modal', id: 'rem-overlay', dir: 'ltr' });
     function close() { ov.remove(); }
     var setB = el('button', { type: 'button', class: 'btn primary', text: 'Set reminder', onclick: function () {
       var prefs = pushPrefs(), ld = Math.max(1, Math.min(180, +lead.value || 10)), r = e.zman ? { zman: e.zman, lead: ld } : { tefilla: e.tefilla.id, time: e.start, lead: ld };
@@ -629,14 +629,14 @@
     document.body.appendChild(t);
     setTimeout(function () { t.remove(); }, ms || 3500);
   }
-  function overlay(content) {
+  function overlay(content, cls) {
     var old = $('#overlay'); if (old) old.remove();
-    var o = el('div', { id: 'overlay', class: 'overlay', dir: 'ltr' }, [el('div', { class: 'panel' }, [content])]);
+    var o = el('div', { id: 'overlay', class: 'overlay ' + (cls || 'full'), dir: 'ltr' }, [el('div', { class: 'panel' }, [content])]);
     $('#app').appendChild(o);
     ui.adminOpen = true;
   }
   function closeOverlay() { ui.adminOpen = false; render(); }
-  function openAdmin() { if (mode !== 'artifact' && !pinOk) showPin(); else buildAdmin(); }
+  function openAdmin() { ui.adminDirty = false; if (mode !== 'artifact' && !pinOk) showPin(); else buildAdmin(); }
   function showPin() {
     var input = el('input', { type: 'password', id: 'pin-input', inputmode: 'numeric', autocomplete: 'off' });
     var msg = el('div', { class: 'hint' });
@@ -646,14 +646,16 @@
         if (ok) {
           pinOk = true;
           try { sessionStorage.setItem('minyan-pin', '1'); } catch (e) {}
-          closeOverlay(); buildAdmin();
+          ui.adminDirty = false; closeOverlay(); buildAdmin();
         } else { msg.textContent = 'Wrong PIN'; input.select(); }
       });
     } }, [
-      el('h2', { text: 'Edit access' }),
+      el('div', { class: 'pin-mark' }, [svgIcon('lock')]),
+      el('h2', { text: cfg.name || 'Board settings' }),
+      el('div', { class: 'hint', text: 'Enter the PIN to open the settings.' }),
       el('div', { class: 'field' }, [el('label', { for: 'pin-input', text: 'PIN' }), input]), msg,
       el('div', { class: 'bar' }, [el('button', { class: 'btn primary', type: 'submit', text: 'Enter' }), el('button', { class: 'btn', type: 'button', text: 'Cancel', onclick: closeOverlay })])]);
-    overlay(form);
+    overlay(form, 'modal');
     input.focus();
   }
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
@@ -668,26 +670,58 @@
     c.checked = !!checked;
     return el('label', { for: id }, [c, ' ' + label]);
   }
+  var ICONS = {
+    today: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><circle cx="12" cy="15.5" r="1.7" fill="currentColor" stroke="none"/>',
+    general: '<path d="M4 6h8M18 6h2M4 12h2M12 12h8M4 18h10M20 18h0"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>',
+    schedule: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    notices: '<path d="M3 10v4a1 1 0 0 0 1 1h3l6 4V5L7 9H4a1 1 0 0 0-1 1z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/>',
+    overrides: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',
+    publish: '<path d="M7 18a4 4 0 0 1-.6-7.95A6 6 0 0 1 18 8.5a4 4 0 0 1-1 7.5"/><path d="M12 12v9M8.5 15.5 12 12l3.5 3.5"/>',
+    data: '<rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/>',
+    lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+    open: '<path d="M14 4h6v6M20 4l-9 9M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/>',
+    logout: '<path d="M10 17l5-5-5-5M15 12H3M13 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/>'
+  };
+  function svgIcon(name) {
+    var sp = el('span', { class: 'ico', 'aria-hidden': 'true' });
+    sp.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + (ICONS[name] || '') + '</svg>';
+    return sp;
+  }
+  /* a titled card for the admin pages; fill card.body */
+  function card(title, desc, opts) {
+    var body = el('div', { class: 'cbody' });
+    var c = el('section', { class: 'card' + (opts && opts.cls ? ' ' + opts.cls : '') }, [
+      el('div', { class: 'chead' }, [el('div', null, [el('h3', { text: title }), desc ? el('div', { class: 'cdesc', text: desc }) : null]), opts && opts.extra ? opts.extra : null]), body]);
+    c.body = body;
+    return c;
+  }
   var uid = 0;
   function buildAdmin(draft) {
     var d = draft ? clone(draft) : clone(cfg);
     d.location = d.location || {}; d.schedules = d.schedules || {}; d.overrides = d.overrides || []; d.notices = d.notices || [];
     d.tefillos = (d.tefillos && d.tefillos.length) ? d.tefillos : clone(TEFILLA_DEFAULTS);
     var todayRd = Cal.nowInTz(Date.now(), loc().tz).rd;
-    var tabs = [['today', 'Today'], ['general', 'General'], ['schedule', 'Schedule'], ['notices', 'Notices'], ['overrides', 'Special dates']];
-    if (mode !== 'artifact') tabs.push(['publish', 'Publish']);
-    tabs.push(['data', 'Backup']);
-    var pages = {}, tabBar = el('div', { class: 'tabs', role: 'tablist' });
-    tabs.forEach(function (t) { tabBar.appendChild(el('button', { type: 'button', role: 'tab', id: 'tab-' + t[0], 'aria-selected': 'false', text: t[1], onclick: function () { selectTab(t[0]); } })); });
+    var tabs = [['today', 'Today', 'Move, cancel or add a minyan for today only.'], ['general', 'General', 'Name, rooms, location, looks and the tefillos.'], ['schedule', 'Schedule', 'The regular minyanim for each kind of day.'], ['notices', 'Notices', 'Banner, sponsors and announcements on the board.'], ['overrides', 'Special dates', 'A different schedule for one date or for a day every year.']];
+    if (mode !== 'artifact') tabs.push(['publish', 'Publish', 'Connect the website so that Save updates everyone.']);
+    tabs.push(['data', 'Backup', 'Previous versions and the settings as text.']);
+    var pages = {}, tabBar = el('div', { class: 'tabs', role: 'tablist' }), pageTitle = el('h2', { text: '' }), pageDesc = el('div', { class: 'cdesc', text: '' });
+    tabs.forEach(function (t) { tabBar.appendChild(el('button', { type: 'button', role: 'tab', id: 'tab-' + t[0], 'aria-selected': 'false', onclick: function () { selectTab(t[0]); } }, [svgIcon(t[0]), el('span', { text: t[1] })])); });
     function selectTab(id) {
       ui.adminTab = id; /* a rebuild (adding a category, restoring a backup) keeps the gabbai on the same tab */
-      tabs.forEach(function (t) { pages[t[0]].hidden = t[0] !== id; $('#tab-' + t[0], tabBar).setAttribute('aria-selected', String(t[0] === id)); });
+      tabs.forEach(function (t) { pages[t[0]].hidden = t[0] !== id; $('#tab-' + t[0], tabBar).setAttribute('aria-selected', String(t[0] === id)); if (t[0] === id) { pageTitle.textContent = t[1]; pageDesc.textContent = t[2]; } });
+      try { $('#overlay').scrollTop = 0; } catch (e) {}
       if (id === 'data') dataArea.value = JSON.stringify(collect(), null, 2);
     }
 
     var oRows = [];
     /* general */
     var g = el('div', { class: 'col' });
+    var cBoard = card('The board', 'The name on the board and the rooms the minyanim are in.'),
+      cLook = card('Look and labels', 'How the board reads. Everyone may still switch the look and the labels on their own phone.'),
+      cZman = card('Location and zmanim', 'Where the shul is, how nightfall is figured, and which zmanim the countdown box shows.'),
+      cTef = card('Tefillos', 'Minyanim count for "next minyan" and reminders. A shiur or event category is listed on the board and in texts but never shown as the next minyan.'),
+      cServices = card('Website and services', 'Addresses the app, the share preview and the reminders use.'),
+      cSec = card('Security', 'The PIN keeps strangers out of this page.');
     var fName = inp('f-name', d.name), fLocName = inp('f-locname', d.location.name), fLat = inp('f-lat', d.location.lat, { inputmode: 'decimal' }),
       fLng = inp('f-lng', d.location.lng, { inputmode: 'decimal' }), fTz = inp('f-tz', d.location.tz || 'America/New_York', { list: 'tz-list' }),
       fElev = inp('f-elev', d.location.elev || 0, { inputmode: 'numeric' }), fCandles = inp('f-candles', d.candles == null ? 18 : d.candles, { inputmode: 'numeric' }),
@@ -703,7 +737,7 @@
     var fBig = el('select', { id: 'f-bigtime' }, [el('option', { value: 'start', text: 'The start time (e.g. ברכות)' }), el('option', { value: 'milestone', text: 'The milestone (e.g. הודו)' })]);
     fBig.value = d.bigTime === 'milestone' ? 'milestone' : 'start';
     var fNowMins = inp('f-now-mins', d.nowMinutes == null || d.nowMinutes === '' ? 20 : d.nowMinutes, { type: 'number', min: '0', max: '180', inputmode: 'numeric' });
-    g.appendChild(el('div', { class: 'fields' }, [field('Shul name (shown on the board)', fName), field('Location name (shown in the footer)', fLocName), field('SMS number (once the text service is set up)', fSms)]));
+    cBoard.body.appendChild(el('div', { class: 'fields' }, [field('Shul name (shown on the board)', fName), field('Location name (shown in the footer)', fLocName)]));
     var roomSelects = [];
     function roomList() { return fRooms.value.split(',').map(function (x) { return x.trim(); }).filter(Boolean); }
     function roomsChanged() { refreshRooms(); paintRoomsEditor(); roomSelects.forEach(function (f) { try { f(); } catch (e) {} }); }
@@ -719,8 +753,9 @@
     function addRoomFromInput() { var v = roomAdd.value.trim(); if (!v) return; roomAdd.value = ''; addRoomToList(v); }
     roomAdd.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); addRoomFromInput(); } });
     fRooms.hidden = true;
-    g.appendChild(el('div', { class: 'field' }, [el('label', { for: 'f-room-add', text: 'Rooms / minyan names (the schedule rows pick from this list, so names are always spelled the same)' }), roomsChips,
-      el('div', { class: 'mrow-l' }, [roomAdd, el('button', { type: 'button', class: 'btn small', text: '+ Add room', onclick: addRoomFromInput })]), fRooms]));
+    cBoard.body.appendChild(el('div', { class: 'field' }, [el('label', { for: 'f-room-add', text: 'Rooms / minyan names' }), roomsChips,
+      el('div', { class: 'mrow-l' }, [roomAdd, el('button', { type: 'button', class: 'btn small', text: '+ Add room', onclick: addRoomFromInput })]), fRooms,
+      el('div', { class: 'hint', text: 'The schedule rows pick from this list, so a room is always spelled the same way.' })]));
     /* a dropdown of the defined rooms; "New room…" adds one to the list */
     function roomPicker(current, onPick, label) {
       var sel = el('select', { 'aria-label': label || 'Room' }), newIn = el('input', { type: 'text', dir: 'auto', placeholder: 'New room name', class: 'room', 'aria-label': 'New room name' }), okBtn = el('button', { type: 'button', class: 'btn small', text: 'Add' });
@@ -746,35 +781,35 @@
       fill(); roomSelects.push(fill);
       return [sel, newIn, okBtn];
     }
-    g.appendChild(el('div', { class: 'fields' }, [field('Website address (used for share previews and the app)', fSite), field('Logo file shown in the header (file name next to index.html)', fLogo)]));
-    g.appendChild(el('div', { class: 'fields' }, [field('Notification service address (the Cloudflare worker; enables reminders in the app)', fNotify), field('Lobby screen: seconds per sponsor box (they take turns when there is more than one)', fSponsorSecs), field('Minutes a minyan stays marked "now" after it starts (then it is dimmed, and the lobby screen hides it)', fNowMins)]));
-    g.appendChild(el('div', { class: 'fields' }, [field('Latitude', fLat), field('Longitude', fLng), field('Time zone', fTz), field('Elevation (meters)', fElev)]));
-    g.appendChild(el('datalist', { id: 'tz-list' }, ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Toronto', 'Europe/London', 'Europe/Antwerp', 'Europe/Zurich', 'Asia/Jerusalem', 'Australia/Melbourne'].map(function (z) { return el('option', { value: z }); })));
-    g.appendChild(el('div', { class: 'fields' }, [field('Candle lighting: minutes before sunset', fCandles), field('Nightfall (tzeis): minutes after sunset', fTzeisMin), field('Nightfall: degrees below the horizon (used when minutes is blank)', fTzeisDeg)]));
-    g.appendChild(el('div', { class: 'fields' }, [field('Civil date on the board and the weekly sheet', fDateFmt), field('Big number on the tiles, by default (everyone may switch it on their own phone)', fBig)]));
+    cServices.body.appendChild(el('div', { class: 'fields' }, [field('Website address (used for share previews and the app)', fSite), field('Logo file shown in the header (file name next to index.html)', fLogo)]));
+    cServices.body.appendChild(el('div', { class: 'fields' }, [field('Notification service address (the Cloudflare worker; enables reminders in the app)', fNotify), field('SMS number (once the text service is set up)', fSms)]));
+    cZman.body.appendChild(el('div', { class: 'fields' }, [field('Latitude', fLat), field('Longitude', fLng), field('Time zone', fTz), field('Elevation (meters)', fElev)]));
+    cZman.body.appendChild(el('datalist', { id: 'tz-list' }, ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Toronto', 'Europe/London', 'Europe/Antwerp', 'Europe/Zurich', 'Asia/Jerusalem', 'Australia/Melbourne'].map(function (z) { return el('option', { value: z }); })));
+    cZman.body.appendChild(el('div', { class: 'fields' }, [field('Candle lighting: minutes before sunset', fCandles), field('Nightfall (tzeis): minutes after sunset', fTzeisMin), field('Nightfall: degrees below the horizon (used when minutes is blank)', fTzeisDeg)]));
+    var lookRow2 = el('div', { class: 'fields' }, [field('Civil date on the board and the weekly sheet', fDateFmt), field('Big number on the tiles, by default (everyone may switch it on their own phone)', fBig), field('Minutes a minyan stays marked "now" after it starts (then it is dimmed, and the lobby screen hides it)', fNowMins), field('Lobby screen: seconds per sponsor box (they take turns when there is more than one)', fSponsorSecs)]);
     var fPalette = el('select', { id: 'f-palette' }, [el('option', { value: 'shul', text: 'Shul: light stone, brass, charcoal, burgundy' }), el('option', { value: 'classic', text: 'Classic: parchment and navy' }), el('option', { value: 'contrast', text: 'High contrast: black on white, larger type' })]);
     fPalette.value = lookDefault.call(null) && isLook(d.palette) ? d.palette : 'shul';
     var fLang = el('select', { id: 'f-lang' }, [el('option', { value: 'he', text: 'Hebrew (היום, מחר, מנין הבא…)' }), el('option', { value: 'yi', text: 'Yiddish (היינט, מארגן, זונטאג…)' })]); fLang.value = d.lang === 'yi' ? 'yi' : 'he';
-    g.appendChild(el('div', { class: 'fields' }, [field('Colors: the look everyone gets unless they pick another in the footer; the lobby screen and door displays always use it', fPalette), field('Board labels: the language everyone gets unless they pick another in the footer', fLang)]));
-    g.appendChild(el('div', { class: 'col' }, [el('label', { text: 'Countdown box ("הזמן הבא"): the next of these zmanim still ahead today' }), el('div', { class: 'tabs' }, COUNTDOWN_KEYS.map(function (k) { return chk('cd-' + k, countdownKeysOf(d).indexOf(k) >= 0, Cal.ZMAN_NAMES[k]); }))]));
-    g.appendChild(el('div', { class: 'col' }, [chk('f-israel', d.israel, 'Eretz Yisroel calendar (one-day Yom Tov)'), chk('f-weekly', d.weeklyEarliest, 'Weekday zman-based times use the earliest sunset of the week (Sun–Thu)'), chk('f-24', d.clock24, '24-hour clock'), chk('f-tzeis', d.showTzeis !== false, 'Show צאת הכוכבים (the board\'s nightfall) in the zmanim list'), chk('f-rt', d.showRT, 'Show Rabbeinu Tam (72 minutes after sunset) in the zmanim list; hidden by itself while nightfall is 72 and צאת הכוכבים is shown'), chk('f-60', d.show60 !== false, 'Show 60 מינוט אחר השקיעה in the zmanim list')]));
-    if (mode !== 'artifact') g.appendChild(el('div', { class: 'fields' }, [field('New PIN for the admin page', fPin, el('span', { class: 'hint', text: 'Stored scrambled (hashed), so it cannot be read from the site files. It keeps strangers out of the admin page; what everyone else sees can only be changed with the GitHub token on the Publish tab, which stays on the device that entered it.' }))]));
-    g.appendChild(el('h3', { text: 'Tefillos' }));
+    cLook.body.appendChild(el('div', { class: 'fields' }, [field('Colors: the look everyone gets unless they pick another in the footer; the lobby screen and door displays always use it', fPalette), field('Board labels: the language everyone gets unless they pick another in the footer', fLang)]));
+    cLook.body.appendChild(lookRow2);
+    cZman.body.appendChild(el('div', { class: 'field' }, [el('label', { text: 'Countdown box ("הזמן הבא"): the next of these zmanim still ahead today' }), el('div', { class: 'chips' }, COUNTDOWN_KEYS.map(function (k) { return chk('cd-' + k, countdownKeysOf(d).indexOf(k) >= 0, Cal.ZMAN_NAMES[k]); }))]));
+    cZman.body.appendChild(el('div', { class: 'checks' }, [chk('f-israel', d.israel, 'Eretz Yisroel calendar (one-day Yom Tov)'), chk('f-weekly', d.weeklyEarliest, 'Weekday zman-based times use the earliest sunset of the week (Sun–Thu)'), chk('f-24', d.clock24, '24-hour clock'), chk('f-tzeis', d.showTzeis !== false, 'Show צאת הכוכבים (the board\'s nightfall) in the zmanim list'), chk('f-rt', d.showRT, 'Show Rabbeinu Tam (72 minutes after sunset) in the zmanim list; hidden by itself while nightfall is 72 and צאת הכוכבים is shown'), chk('f-60', d.show60 !== false, 'Show 60 מינוט אחר השקיעה in the zmanim list')]));
+    if (mode !== 'artifact') cSec.body.appendChild(el('div', { class: 'fields' }, [field('New PIN for the admin page', fPin, el('span', { class: 'hint', text: 'Stored scrambled (hashed), so it cannot be read from the site files. It keeps strangers out of the admin page; what everyone else sees can only be changed with the GitHub token on the Publish tab, which stays on the device that entered it.' }))]));
     var tRows = [];
-    g.appendChild(el('div', { class: 'hint', text: 'Minyanim count for "next minyan" and reminders. A shiur or event category is listed on the board and in texts but never shown as the next minyan.' }));
     d.tefillos.forEach(function (t, i) {
       var r = { name: inp('t-name-' + i, t.name), ms: inp('t-ms-' + i, t.milestone), off: inp('t-off-' + i, t.offset, { inputmode: 'numeric' }), start: inp('t-start-' + i, t.startLabel || ''), night: inp('t-night-' + i, t.nightUntil == null ? '' : t.nightUntil, { type: 'number', min: '0', max: '11', inputmode: 'numeric', placeholder: '4' }),
         period: el('select', { id: 't-period-' + i }, [el('option', { value: 'am', text: 'Morning: 6:45 means 6:45 AM' }), el('option', { value: 'pm', text: 'Afternoon/evening: 6:45 means 6:45 PM' })]),
         kind: el('select', { id: 't-kind-' + i }, [el('option', { value: 'minyan', text: 'Minyan' }), el('option', { value: 'event', text: 'Shiur / event' })]) };
       r.period.value = t.period || 'am'; r.kind.value = t.kind === 'event' ? 'event' : 'minyan';
       tRows.push(r);
-      var rowEl = el('div', { class: 'fields' }, [field('Name (shown on the board)', r.name), field('Type', r.kind), field('Milestone shown under the time (e.g. הודו)', r.ms), field('Milestone: minutes after the start', r.off), field('Name of the start, shown small when the milestone is the big number (e.g. ברכות)', r.start), field('How to read the hours', r.period), field('Night cut-off: a time before this hour (0–11) still belongs to the previous night, e.g. a Maariv at 12:30 AM; blank = 4', r.night)]);
-      if (i >= 3) rowEl.appendChild(el('div', { class: 'field' }, [el('label', { text: ' ' }), el('button', { type: 'button', class: 'btn small danger', text: 'Remove category', onclick: function () { var c = collect(); c.tefillos.splice(i, 1); closeOverlay(); buildAdmin(c); } })]));
-      g.appendChild(rowEl);
+      var removeBtn = i >= 3 ? el('button', { type: 'button', class: 'btn small danger', text: 'Remove category', onclick: function () { var c = collect(); c.tefillos.splice(i, 1); ui.adminDirty = true; closeOverlay(); buildAdmin(c); } }) : null;
+      var rowEl = el('div', { class: 'tef' }, [el('div', { class: 'tefhead' }, [el('span', { text: t.name || 'Category ' + (i + 1) }), removeBtn]), el('div', { class: 'fields' }, [field('Name (shown on the board)', r.name), field('Type', r.kind), field('Milestone shown under the time (e.g. הודו)', r.ms), field('Milestone: minutes after the start', r.off), field('Name of the start, shown small when the milestone is the big number (e.g. ברכות)', r.start), field('How to read the hours', r.period), field('Night cut-off: a time before this hour (0–11) still belongs to the previous night, e.g. a Maariv at 12:30 AM; blank = 4', r.night)])]);
+      cTef.body.appendChild(rowEl);
     });
-    g.appendChild(el('div', null, [el('button', { type: 'button', class: 'btn', text: '+ Add category (e.g. שיעור)', onclick: function () {
-      var c = collect(); c.tefillos.push({ id: 'c' + Date.now().toString(36), name: 'שיעור', milestone: '', offset: 0, period: 'pm', kind: 'event' }); closeOverlay(); buildAdmin(c);
+    cTef.body.appendChild(el('div', null, [el('button', { type: 'button', class: 'btn', text: '+ Add category (e.g. שיעור)', onclick: function () {
+      var c = collect(); c.tefillos.push({ id: 'c' + Date.now().toString(36), name: 'שיעור', milestone: '', offset: 0, period: 'pm', kind: 'event' }); ui.adminDirty = true; closeOverlay(); buildAdmin(c);
     } })]));
+    [cBoard, cLook, cZman, cTef, cServices, mode !== 'artifact' ? cSec : null].forEach(function (c) { if (c) g.appendChild(c); });
     pages.general = g;
     function liveTefilla(i) { var r = tRows[i], t = d.tefillos[i]; return { id: t.id, name: r.name.value.trim() || t.name, milestone: r.ms.value.trim(), offset: +r.off.value || 0, startLabel: r.start.value.trim(), nightUntil: r.night.value === '' ? undefined : Math.max(0, Math.min(11, +r.night.value || 0)), period: r.period.value, kind: r.kind.value === 'event' ? 'event' : 'minyan' }; }
 
@@ -869,7 +904,7 @@
       }
       function renderRow(r) {
         var row = el('div', { class: 'mrow' + (r.series ? ' series' : '') });
-        var del = el('button', { type: 'button', class: 'btn small danger', text: '✕', title: 'Remove', 'aria-label': 'Remove', onclick: function () { rows.splice(rows.indexOf(r), 1); row.remove(); sync(); } });
+        var del = el('button', { type: 'button', class: 'btn small danger icon', text: '✕', title: 'Remove', 'aria-label': 'Remove', onclick: function () { rows.splice(rows.indexOf(r), 1); row.remove(); sync(); } });
         if (r.raw != null) {
           var rawIn = el('input', { type: 'text', dir: 'auto', value: r.raw, class: 'grow' });
           rawIn.addEventListener('input', function () { r.raw = rawIn.value; sync(); });
@@ -945,10 +980,10 @@
         copySel.value = '';
       });
       copySel.addEventListener('focus', fillCopy); fillCopy();
-      var sortBtn = el('button', { type: 'button', class: 'btn small', text: 'Sort by time', onclick: function () {
+      var sortBtn = el('button', { type: 'button', class: 'btn small', text: 'Sort by time', 'data-nodirty': '1', onclick: function () {
         sortRows(); renderAll(); sync();
       } });
-      var textBtn = el('button', { type: 'button', class: 'btn small', text: 'Edit as text', onclick: function () {
+      var textBtn = el('button', { type: 'button', class: 'btn small', text: 'Edit as text', 'data-nodirty': '1', onclick: function () {
         if (ta.hidden) { ta.value = store.value; ta.hidden = false; list.hidden = true; textBtn.textContent = 'Back to the list'; }
         else { load(); renderAll(); ta.hidden = true; list.hidden = false; textBtn.textContent = 'Edit as text'; }
       } });
@@ -967,7 +1002,7 @@
       el('p', { text: '"+ Add repeating" makes one row that stands for a whole run: every N minutes, from a time or a zman, until a time or zman, in the rooms you pick, taken in turn in the order shown. It is recalculated every day, so a run that starts at sunrise moves with sunrise. Mix repeating rows and single rows freely; the board shows them all sorted by time.' }),
       el('p', { text: '"Copy from…" starts a day type from another one. A day type with no rows uses the more general one (Rosh Chodesh empty → Weekdays; Yom Tov empty → Shabbos).' }),
       el('p', null, ['"Edit as text" shows the same rows as lines like ', el('code', { text: '6:20 ברך משה' }), ', ', el('code', { text: 'sunset-15 דברי יואל // note' }), ' or ', el('code', { text: 'every 10 from sunrise-30 to chatzos-30 rooms ברך משה, דברי יואל' }), ', handy for pasting a whole list.'])])]));
-    var typeTabs = el('div', { class: 'tabs' }), typePages = {};
+    var typeTabs = el('div', { class: 'tabs daytypes', role: 'tablist' }), typePages = {};
     sp.appendChild(typeTabs);
     var infoUpdaters = [];
     /* which day type actually supplies this tefilla for `key` when its own box is empty */
@@ -987,7 +1022,7 @@
         var store = lines[key][tf.id], fb = FALLBACK[key];
         var sources = Cal.DAY_TYPES.filter(function (o) { return o[0] !== key; }).map(function (o) { return { key: o[0], label: o[3], store: function () { return lines[o[0]][tf.id]; } }; });
         var editor = minyanEditor(store, i, function () { return key; }, sources);
-        var block = el('div', { class: 'field' }, [el('label', { text: tf.name })]);
+        var block = el('div', { class: 'field tefcard' }, [el('label', { class: 'tefname', text: tf.name })]);
         if (fb) {
           var same = el('input', { type: 'checkbox', id: 'same-' + key + '-' + tf.id }), info = el('div', { class: 'hint same-info' });
           same.checked = !store.value.trim();
@@ -1032,21 +1067,21 @@
     function addNotice(n) {
       var id = ++uid, r = { title: inp('n-title-' + id, n.title), body: el('textarea', { id: 'n-body-' + id, dir: 'auto' }), from: inp('n-from-' + id, n.from || '', { type: 'date' }), to: inp('n-to-' + id, n.to || '', { type: 'date' }) };
       r.body.value = n.body || ''; r.body.style.minHeight = '70px';
-      r.wrap = el('div', { class: 'ovr' }, [el('div', { class: 'fields' }, [field('Title', r.title), field('Text', r.body)]),
-        el('div', { class: 'fields' }, [field('Show from (blank = now)', r.from), field('Show until (blank = no end)', r.to)]),
-        el('button', { type: 'button', class: 'btn small danger', text: 'Remove', onclick: function () { nRows.splice(nRows.indexOf(r), 1); r.wrap.remove(); } })]);
+      var headT = el('span', { text: n.title || 'Notice' }); r.title.addEventListener('input', function () { headT.textContent = r.title.value.trim() || 'Notice'; });
+      r.wrap = el('div', { class: 'ovr' }, [el('div', { class: 'ohead' }, [headT, el('button', { type: 'button', class: 'btn small danger', text: 'Remove', onclick: function () { nRows.splice(nRows.indexOf(r), 1); r.wrap.remove(); } })]),
+        el('div', { class: 'fields' }, [field('Title', r.title), field('Text', r.body)]),
+        el('div', { class: 'fields' }, [field('Show from (blank = now)', r.from), field('Show until (blank = no end)', r.to)])]);
       nRows.push(r); nList.appendChild(r.wrap);
     }
     (d.notices.length ? d.notices : [{ title: 'פרנס החודש', body: '' }, { title: 'פרנס השבוע', body: '' }, { title: 'נר למאור', body: '' }]).forEach(addNotice);
     var bText = el('textarea', { id: 'banner-text', dir: 'auto', placeholder: 'e.g. אין מעריב בלב אהרן הערב' }), bUntil = inp('banner-until', (d.banner && d.banner.until) || '', { type: 'datetime-local' });
     bText.value = (d.banner && d.banner.text) || ''; bText.style.minHeight = '60px';
-    np.appendChild(el('h3', { text: 'Temporary banner' }));
-    np.appendChild(el('div', { class: 'hint', text: 'One line shown across the top of the board (and at the start of text replies) until the time you set, then it disappears by itself.' }));
-    np.appendChild(el('div', { class: 'fields' }, [field('Banner text', bText), field('Show until (shul time)', bUntil, el('button', { type: 'button', class: 'btn small', text: 'Clear banner', onclick: function () { bText.value = ''; bUntil.value = ''; } }))]));
-    np.appendChild(el('h3', { text: 'Sponsors and announcements' }));
-    np.appendChild(el('div', { class: 'hint', text: 'Sponsor panels (פרנס החודש, פרנס השבוע, נר למאור) and announcements, shown in framed boxes at the top of the board. Give each one dates and it appears and disappears by itself; several entries with the same title form a queue. A notice with empty text is not shown.' }));
-    np.appendChild(nList);
-    np.appendChild(el('div', null, [el('button', { type: 'button', class: 'btn', text: '+ Notice', onclick: function () { addNotice({ title: '', body: '' }); } })]));
+    var cBanner = card('Temporary banner', 'One line shown across the top of the board (and at the start of text replies) until the time you set, then it disappears by itself.');
+    cBanner.body.appendChild(el('div', { class: 'fields' }, [field('Banner text', bText), field('Show until (shul time)', bUntil, el('button', { type: 'button', class: 'btn small', text: 'Clear banner', onclick: function () { bText.value = ''; bUntil.value = ''; } }))]));
+    var cNotices = card('Sponsors and announcements', 'Sponsor panels (פרנס החודש, פרנס השבוע, נר למאור) and announcements, shown in framed boxes at the top of the board. Give each one dates and it appears and disappears by itself; several entries with the same title form a queue. A notice with empty text is not shown.');
+    cNotices.body.appendChild(nList);
+    cNotices.body.appendChild(el('div', null, [el('button', { type: 'button', class: 'btn', text: '+ Notice', onclick: function () { addNotice({ title: '', body: '' }); } })]));
+    np.appendChild(cBanner); np.appendChild(cNotices);
     pages.notices = np;
 
     /* today: add, move or cancel a minyan for today only, without the editor; saved as a one-date special schedule */
@@ -1063,8 +1098,10 @@
     function renderToday() {
       tp.textContent = '';
       var existing = d.overrides.filter(function (o) { return o.date === todayIso; })[0], changed = Object.keys(quick).length > 0;
-      tp.appendChild(el('div', { class: 'hint' }, [el('b', { text: 'Today, ' + engine.fmtDate(todayRd) + ' · ' + Cal.DAY_NAMES[todaySched.info.dow] + ' ' + Cal.formatHeb(todaySched.info.heb) }), ' — ',
-        existing ? 'today already has its own schedule' + (existing.label ? ' (' + existing.label + ')' : '') + '. ' : '', 'Move a time, cancel a minyan or add one. It applies to today only; the regular schedule stays as it is.']));
+      tp.appendChild(el('div', { class: 'card today-head' }, [
+        el('div', null, [el('div', { class: 'd', text: Cal.DAY_NAMES[todaySched.info.dow] + ' · ' + engine.fmtDate(todayRd) }), el('div', { class: 'cdesc', text: Cal.formatHeb(todaySched.info.heb) })]),
+        el('div', { class: 'note' }, [existing ? el('span', { class: 'status dirty', text: 'Today has its own schedule' + (existing.label ? ' (' + existing.label + ')' : '') }) : null,
+          el('span', { text: 'Move a time, cancel a minyan or add one. It applies to today only; the regular schedule stays as it is.' })])]));
       d.tefillos.filter(function (t) { return t.kind !== 'event'; }).forEach(function (tf) {
         var box = el('div', { class: 'col' }), list = todayList(tf);
         list.forEach(function (x, i) {
@@ -1078,18 +1115,18 @@
         var addT = el('input', { type: 'time', 'aria-label': 'New time' }), addRoom = '';
         var picker = roomPicker(function () { return addRoom; }, function (v) { addRoom = v; }, 'Add a room');
         var addB = el('button', { type: 'button', class: 'btn small', text: '+ Add for today', onclick: function () { var m = parseHHMM(addT.value); if (m == null) { toast('Pick a time first'); return; } touch(tf).push({ start: m, room: addRoom, note: '' }); renderToday(); } });
-        box.appendChild(el('div', { class: 'mrow-l' }, [addT].concat(picker, [addB])));
-        tp.appendChild(el('div', { class: 'field' }, [el('label', { text: tf.name }), box]));
+        box.appendChild(el('div', { class: 'mrow-l today-add' }, [addT].concat(picker, [addB])));
+        tp.appendChild(el('div', { class: 'field card tcard' }, [el('label', { text: tf.name }), box]));
       });
-      var saveT = el('button', { type: 'button', class: 'btn primary', text: 'Save today\'s changes', onclick: function () {
+      var saveT = el('button', { type: 'button', class: 'btn primary', text: 'Save today\'s changes', 'data-nodirty': '1', onclick: function () {
         if (!Object.keys(quick).length) { toast('Nothing changed yet'); return; }
         var c = collect(), ovr = c.overrides.filter(function (o) { return o.date === todayIso; })[0];
         if (!ovr) { ovr = { date: todayIso, label: 'שינוי להיום', lines: {} }; c.overrides.push(ovr); }
         d.tefillos.forEach(function (tf) { var l = quickLines(tf); if (l != null) ovr.lines[tf.id] = l; });
         saveConfig(c);
       } });
-      var row = el('div', { class: 'tabs' }, [saveT]);
-      if (existing) row.appendChild(el('button', { type: 'button', class: 'btn', text: 'Back to the regular schedule for today', onclick: function () { var c = collect(); c.overrides = c.overrides.filter(function (o) { return o.date !== todayIso; }); saveConfig(c); } }));
+      var row = el('div', { class: 'bar actions' }, [saveT]);
+      if (existing) row.appendChild(el('button', { type: 'button', class: 'btn', text: 'Back to the regular schedule for today', 'data-nodirty': '1', onclick: function () { var c = collect(); c.overrides = c.overrides.filter(function (o) { return o.date !== todayIso; }); saveConfig(c); } }));
       tp.appendChild(row);
     }
     renderToday();
@@ -1117,16 +1154,19 @@
       d.tefillos.forEach(function (tf, i) {
         r.lines[tf.id] = { value: (o.lines && o.lines[tf.id]) || '' };
         var sources = Cal.DAY_TYPES.map(function (t) { return { key: t[0], label: t[3], store: function () { return lines[t[0]][tf.id]; } }; });
-        row.appendChild(el('div', { class: 'field' }, [el('label', { text: tf.name + ' (no rows = as usual)' }), minyanEditor(r.lines[tf.id], i, typeOfDate, sources)]));
+        row.appendChild(el('div', { class: 'field tefcard' }, [el('label', { class: 'tefname', text: tf.name + ' (no rows = as usual)' }), minyanEditor(r.lines[tf.id], i, typeOfDate, sources)]));
       });
-      r.wrap = el('div', { class: 'ovr' }, [el('div', { class: 'mrow-l' }, [r.when, r.date, r.hm, r.hd, r.cal]), el('div', { class: 'fields' }, [field('Label shown on the board (e.g. yahrzeit, wedding, Chol Hamoed)', r.label)]), row,
-        el('button', { type: 'button', class: 'btn small danger', text: 'Remove', onclick: function () { oRows.splice(oRows.indexOf(r), 1); r.wrap.remove(); } })]);
+      var headO = el('span', { text: o.label || 'Special date' }); r.label.addEventListener('input', function () { headO.textContent = r.label.value.trim() || 'Special date'; });
+      r.wrap = el('div', { class: 'ovr' }, [el('div', { class: 'ohead' }, [headO, el('button', { type: 'button', class: 'btn small danger', text: 'Remove', onclick: function () { oRows.splice(oRows.indexOf(r), 1); r.wrap.remove(); } })]),
+        el('div', { class: 'mrow-l' }, [r.when, r.date, r.hm, r.hd, r.cal]), el('div', { class: 'fields' }, [field('Label shown on the board (e.g. yahrzeit, wedding, Chol Hamoed)', r.label)]), row]);
       oRows.push(r); oList.appendChild(r.wrap);
     }
     d.overrides.forEach(addOverride);
-    op.appendChild(el('div', { class: 'hint', text: 'A schedule that replaces the regular one for the tefillos you fill in: on one civil date (a yahrzeit, a wedding), on a Hebrew date every year, or on a calendar day every year (Chol Hamoed Sukkos, Purim, Tisha B\'Av, Rosh Chodesh…). A civil date wins over a Hebrew date, which wins over a calendar day.' }));
-    op.appendChild(oList);
-    op.appendChild(el('div', null, [el('button', { type: 'button', class: 'btn', text: '+ Date', onclick: function () { addOverride({ date: '', label: '', lines: {} }); } })]));
+    var cOvr = card('Dates with their own schedule', 'A schedule that replaces the regular one for the tefillos you fill in: on one civil date (a yahrzeit, a wedding), on a Hebrew date every year, or on a calendar day every year (Chol Hamoed Sukkos, Purim, Tisha B\'Av, Rosh Chodesh…). A civil date wins over a Hebrew date, which wins over a calendar day.');
+    var emptyO = el('div', { class: 'hint', text: 'No special dates yet. "+ Date" adds one.' }); emptyO.hidden = oRows.length > 0;
+    cOvr.body.appendChild(emptyO); cOvr.body.appendChild(oList);
+    cOvr.body.appendChild(el('div', null, [el('button', { type: 'button', class: 'btn', text: '+ Date', onclick: function () { emptyO.hidden = true; addOverride({ date: '', label: '', lines: {} }); } })]));
+    op.appendChild(cOvr);
     pages.overrides = op;
 
     /* publish (self-hosted site / app) */
@@ -1140,17 +1180,22 @@
       try { if (s.repo || s.token) localStorage.setItem('minyan-github', JSON.stringify(s)); else localStorage.removeItem('minyan-github'); } catch (e) {}
       return s;
     }
-    pp.appendChild(el('div', { class: 'hint' }, [
-      el('p', { text: 'The website and the app read the schedule from a file called config.json on the website. To make Save update everyone, set up automatic publishing to GitHub (the site is hosted there for free on GitHub Pages).' }),
-      el('p', null, ['1. In your GitHub repository: Settings → Pages is enabled.  2. Create a fine-grained token with "Contents: Read and write" for that repository only: ', el('a', { href: 'https://github.com/settings/personal-access-tokens/new', target: '_blank', rel: 'noopener', text: 'github.com/settings/personal-access-tokens/new' }), '.  3. Paste it here. The token stays in this browser only.'])]));
-    pp.appendChild(el('div', { class: 'fields' }, [field('Repository (owner/repo)', gRepo), field('Branch', gBranch), field('File path', gPath), field('Token', gToken)]));
-    pp.appendChild(el('div', { class: 'bar' }, [el('button', { type: 'button', class: 'btn', text: 'Test connection', onclick: function () {
+    var connected = ghConfigured(gh);
+    var cPub = card('Publishing to the website', 'The website and the app read the schedule from a file called config.json on the website. With a GitHub token here, every Save updates everyone within a few minutes.',
+      { extra: el('span', { class: 'status ' + (connected ? 'ok' : 'dirty'), text: connected ? 'Connected: ' + gh.repo : 'Not connected on this device' }) });
+    cPub.body.appendChild(el('details', { class: 'help' }, [el('summary', { text: 'How to set it up' }), el('div', { class: 'hint' }, [
+      el('p', null, ['1. In your GitHub repository: Settings → Pages is enabled.  2. Create a fine-grained token with "Contents: Read and write" for that repository only: ', el('a', { href: 'https://github.com/settings/personal-access-tokens/new', target: '_blank', rel: 'noopener', text: 'github.com/settings/personal-access-tokens/new' }), '.  3. Paste it here. The token stays in this browser only; every device that should publish needs it once.'])])]));
+    var tokenToggle = el('button', { type: 'button', class: 'btn small', text: 'Show', 'data-nodirty': '1', onclick: function () { var show = gToken.type === 'password'; gToken.type = show ? 'text' : 'password'; tokenToggle.textContent = show ? 'Hide' : 'Show'; } });
+    cPub.body.appendChild(el('div', { class: 'fields' }, [field('Repository (owner/repo)', gRepo), field('Branch', gBranch), field('File path', gPath), field('Token', gToken, tokenToggle)]));
+    cPub.body.appendChild(el('div', { class: 'bar actions' }, [el('button', { type: 'button', class: 'btn', text: 'Test connection', 'data-nodirty': '1', onclick: function () {
       var s = saveGh();
       if (!ghConfigured(s)) { ghMsg.textContent = 'Enter the repository and the token'; return; }
       ghMsg.textContent = 'Checking…';
       ghCheck(s).then(function (m) { ghMsg.textContent = m; }, function (e) { ghMsg.textContent = 'Failed: ' + e.message; });
     } }), ghMsg]));
-    pp.appendChild(el('div', { class: 'fields' }, [field('Central schedule URL (for the store app; blank = config.json on this site)', fRemote)]));
+    var cRemote = card('Store app', 'Only for a version of the app installed from an app store.');
+    cRemote.body.appendChild(el('div', { class: 'fields' }, [field('Central schedule URL (blank = config.json on this site)', fRemote)]));
+    pp.appendChild(cPub); pp.appendChild(cRemote);
     pages.publish = pp;
     function history() { try { return JSON.parse(localStorage.getItem('minyan-history') || '[]'); } catch (e) { return []; } }
 
@@ -1158,18 +1203,17 @@
     var dp = el('div', { class: 'col' }), dataArea = el('textarea', { id: 'data-json', spellcheck: 'false', dir: 'ltr' });
     dataArea.style.minHeight = '260px'; dataArea.style.fontFamily = 'monospace';
     var hist = history(), hBox = el('div', { class: 'col' });
-    dp.appendChild(el('h3', { text: 'Previous versions' }));
-    if (!hist.length) hBox.appendChild(el('div', { class: 'hint', text: 'Each Save made on this device keeps the version before it here, so a wrong save can be undone.' }));
+    var cHist = card('Previous versions', 'Each Save made on this device keeps the version before it here, so a wrong save can be undone.');
+    if (!hist.length) hBox.appendChild(el('div', { class: 'hint', text: 'No previous versions on this device yet.' }));
     hist.forEach(function (h) {
       var when = new Date(h.at);
-      hBox.appendChild(el('div', { class: 'mrow-l' }, [el('span', { text: 'Saved ' + when.toLocaleString() }), el('button', { type: 'button', class: 'btn small', text: 'Restore', onclick: function () { setCfg(h.cfg); closeOverlay(); buildAdmin(); toast('Restored into the editor. Click Save to keep it.', 6000); } })]));
+      hBox.appendChild(el('div', { class: 'vrow' }, [el('span', { text: 'Saved ' + when.toLocaleString() }), el('button', { type: 'button', class: 'btn small', text: 'Restore', onclick: function () { setCfg(h.cfg); ui.adminDirty = true; closeOverlay(); buildAdmin(); toast('Restored into the editor. Click Save to keep it.', 6000); } })]));
     });
-    dp.appendChild(hBox);
-    dp.appendChild(el('h3', { text: 'Settings as text' }));
-    dp.appendChild(el('div', { class: 'hint', text: 'All settings as text: copy it as a backup, or paste and load it into another copy of the page.' }));
-    dp.appendChild(dataArea);
-    dp.appendChild(el('div', { class: 'bar' }, [
-      el('button', { type: 'button', class: 'btn', text: 'Copy', onclick: function () {
+    cHist.body.appendChild(hBox);
+    var cText = card('Settings as text', 'All settings as text: copy it as a backup, or paste and load it into another copy of the page.');
+    cText.body.appendChild(dataArea);
+    cText.body.appendChild(el('div', { class: 'bar actions' }, [
+      el('button', { type: 'button', class: 'btn', text: 'Copy', 'data-nodirty': '1', onclick: function () {
         var done = function () { toast('Copied'); }, fail = function () { dataArea.select(); toast('Select the text and copy it manually'); };
         if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(dataArea.value).then(done, fail); else fail();
       } }),
@@ -1178,9 +1222,10 @@
         location.reload();
       } }),
       el('button', { type: 'button', class: 'btn', text: 'Load from text', onclick: function () {
-        try { var c = JSON.parse(dataArea.value); if (!c || typeof c !== 'object') throw new Error('x'); setCfg(c); closeOverlay(); buildAdmin(); toast('Loaded. Click Save to keep it.'); }
+        try { var c = JSON.parse(dataArea.value); if (!c || typeof c !== 'object') throw new Error('x'); setCfg(c); ui.adminDirty = true; closeOverlay(); buildAdmin(); toast('Loaded. Click Save to keep it.'); }
         catch (e) { toast('That text is not a valid settings file'); }
       } })]));
+    dp.appendChild(cHist); dp.appendChild(cText);
     pages.data = dp;
 
     function collect() {
@@ -1245,21 +1290,52 @@
       ready.then(function () { return persist(c); }).then(function (r) {
         setCfg(c);
         if (r.reloads) { toast('Saved. Reloading the page…', 8000); return; }
-        render(); buildAdmin(c); /* stay in the settings, on the same tab, with the board behind refreshed */
+        ui.adminDirty = false; render(); buildAdmin(c); /* stay in the settings, on the same tab, with the board behind refreshed */
         if (r.published) toast('Saved and published. Everyone gets the update within a few minutes.', 6000);
         else if (r.configured) toast('Saved on this device, but publishing to the site failed: ' + (r.error && r.error.message || ''), 8000);
         else toast(remoteUrl() ? 'Saved on this device only. Use the Publish tab to update everyone.' : 'Saved on this device', 6000);
       }, function (e) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; toast(errorText(e), 6000); });
     }
     var saveBtn = el('button', { type: 'button', class: 'btn primary', text: 'Save', onclick: function () { saveConfig(collect()); } });
-    var panel = el('div', { class: 'col' }, [
-      el('div', { class: 'bar' }, [el('h2', { text: 'Board settings' }), el('div', { class: 'tabs' }, [saveBtn, el('button', { type: 'button', class: 'btn', text: 'Cancel', onclick: closeOverlay })])]),
-      tabBar, pages.today, pages.general, pages.schedule, pages.notices, pages.overrides, mode !== 'artifact' ? pages.publish : null, pages.data,
-      el('div', { class: 'bar' }, [el('span', { class: 'hint', text: mode === 'artifact' ? 'Save publishes a new version of this page for everyone who has the link.' : 'Save keeps the settings in this browser. Use the Publish tab to update the website and app, or Backup to copy them.' }), saveBtn.cloneNode(true)])]);
+    var status = el('span', { class: 'status', text: '' });
+    function setDirty(on) {
+      ui.adminDirty = on;
+      status.textContent = on ? 'Unsaved changes' : (cfg.savedAt ? 'Saved ' + new Date(cfg.savedAt).toLocaleString([], { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '');
+      status.className = 'status' + (on ? ' dirty' : ''); saveBtn.classList.toggle('attn', on);
+    }
+    var closeBtn = el('button', { type: 'button', class: 'btn', text: 'Close', onclick: function () { if (ui.adminDirty && !confirm('Close without saving? The changes made here will be lost.')) return; ui.adminDirty = false; closeOverlay(); } });
+    var navFoot = el('div', { class: 'navfoot' }, mode === 'artifact' ? [] : [
+      el('a', { class: 'btn ghost', href: 'index.html', target: '_blank', rel: 'noopener' }, [svgIcon('open'), el('span', { text: 'View the board' })]),
+      el('button', { type: 'button', class: 'btn ghost', 'data-nodirty': '1', onclick: function () { if (ui.adminDirty && !confirm('Lock without saving? The changes made here will be lost.')) return; pinOk = false; try { sessionStorage.removeItem('minyan-pin'); } catch (e) {} ui.adminDirty = false; closeOverlay(); showPin(); } }, [svgIcon('lock'), el('span', { text: 'Lock' })])]);
+    var ghNow = mode === 'artifact' ? null : ghSettings();
+    var footHint = mode === 'artifact' ? 'Save publishes a new version of this page for everyone who has the link.' : (ghConfigured(ghNow) ? 'Save publishes to the website; everyone gets the update within a few minutes.' : 'Save keeps the settings in this browser only. Connect the website on the Publish tab so that Save updates everyone.');
+    var main = el('div', { class: 'amain' }, [el('div', { class: 'ptitle' }, [pageTitle, pageDesc]), pages.today, pages.general, pages.schedule, pages.notices, pages.overrides, mode !== 'artifact' ? pages.publish : null, pages.data,
+      el('div', { class: 'bar afoot' }, [el('span', { class: 'hint', text: footHint }), saveBtn.cloneNode(true)])]);
+    var panel = el('div', { class: 'shell' }, [
+      el('header', { class: 'abar' }, [
+        el('div', { class: 'brand' }, [el('div', { class: 'mark', text: (cfg.name || 'B').trim().charAt(0).toUpperCase() }), el('div', { class: 'bt' }, [el('h2', { text: 'Board settings' }), el('div', { class: 'sub', text: cfg.name || '' })])]),
+        el('div', { class: 'bar' }, [status, saveBtn, closeBtn])]),
+      el('div', { class: 'abody' }, [el('nav', { class: 'anav' }, [tabBar, navFoot]), main])]);
     overlay(panel);
     selectTab(draft && ui.adminTab && pages[ui.adminTab] ? ui.adminTab : 'today'); showType('weekday'); markTabs();
-    var bottomSave = panel.lastChild.lastChild;
+    setDirty(!!ui.adminDirty);
+    var bottomSave = main.lastChild.lastChild;
     bottomSave.addEventListener('click', function () { saveBtn.click(); });
+    /* anything typed or clicked in the pages marks the settings as changed until the next Save */
+    function markDirty(ev) {
+      var t = ev.target;
+      if (t && t.closest && t.closest('[data-nodirty]')) return;
+      if (ev.type === 'click' && !(t && t.closest && t.closest('button'))) return;
+      if (!ui.adminDirty) setDirty(true);
+    }
+    main.addEventListener('input', markDirty); main.addEventListener('change', markDirty); main.addEventListener('click', markDirty);
+    if (!ui.keysBound) {
+      ui.keysBound = true;
+      document.addEventListener('keydown', function (ev) {
+        if (!ui.adminOpen || !(ev.metaKey || ev.ctrlKey) || (ev.key !== 's' && ev.key !== 'S')) return;
+        ev.preventDefault(); var b = $('#overlay .abar .btn.primary'); if (b) b.click();
+      });
+    }
   }
 
   /* ---------- persistence ---------- */

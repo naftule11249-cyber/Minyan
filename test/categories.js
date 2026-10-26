@@ -30,7 +30,7 @@ const { chromium } = require('playwright');
   const cfg = await page.evaluate(() => JSON.parse(localStorage.getItem('minyan-config')));
   console.log('saved tefillos:', cfg.tefillos.map(t => t.name + '/' + (t.kind || 'minyan')).join(', '));
   console.log('saved shiur lines:', cfg.schedules.weekday[cfg.tefillos[3].id], '| override:', JSON.stringify(cfg.overrides[0]).slice(0, 120));
-  console.log('board sections:', (await page.locator('section.tefilla h3').allTextContents()).join(' | '), '| next panel:', await page.locator('.next .what').textContent());
+  console.log('board sections:', (await page.locator('section.tefilla h3').allTextContents()).join(' | '), '| next panel:', await page.locator('section.next:not(.zman) .what').textContent());
   await ctx.close(); await browser.close();
   console.log(errors.length ? 'ERRORS:\n' + errors.join('\n') : 'no console errors');
 })();
