@@ -165,7 +165,7 @@ Same address, different screens (the `#` forms also work on the claude.ai page):
 
 ## On a phone
 
-Below 640px the board shows one tefilla at a time behind tabs (the tab of the next minyan opens first), each minyan as a row, with more than two past minyanim folded behind "הצג את הקודמים (N)". Tablets, the lobby screen and door displays keep the tile grid. Under the next-minyan box, three small cards show the minyanim after it, tomorrow's first Shacharis included once the day runs out; they can be tapped for a reminder like a tile.
+Below 640px the board shows one tefilla at a time behind tabs (the tab of the next minyan opens first), each minyan as a row, with more than two past minyanim folded behind "הצג את הקודמים (N)". Tablets keep the tile grid, with the same fold for past minyanim; the lobby screen and door displays hide past minyanim outright. Under the next-minyan box, three small cards show the minyanim after it, tomorrow's first Shacharis included once the day runs out; they can be tapped for a reminder like a tile.
 
 ## Labels in Hebrew or Yiddish
 

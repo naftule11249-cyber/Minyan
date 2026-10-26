@@ -18,7 +18,7 @@ const { chromium } = require('playwright');
     await ctx.close(); return { heads, firstSh, firstTime, dayHeads };
   }
   let r = await at(9, 25);
-  ok('morning: today\'s Shacharis (Sunday list, 19 tiles)', [/מחר/.test(r.heads[0]), r.firstSh], [false, 19]);
+  ok('morning: today\'s Shacharis (Sunday list: 19 minyanim, 6 past ones folded)', [/מחר/.test(r.heads[0]), r.firstSh], [false, 13]);
   r = await at(13, 0);
   ok('after chatzos: Shacharis section is tomorrow\'s, headed מחר', [/^מניני שחרית – מחר, יום שני$/.test(r.heads[0]), r.firstSh, r.firstTime], [true, 20, '6:20']);
   ok('mincha and maariv still today\'s', r.heads.slice(1).every(h => !/מחר/.test(h)), true);

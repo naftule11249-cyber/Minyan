@@ -265,9 +265,13 @@
       sec.appendChild(el('h3', null, [sectionTitle(x)]));
       if (!list.length) { sec.appendChild(el('div', { class: 'none', text: S().none })); }
       else {
-        var grid = el('div', { class: 'grid' });
+        var grid = el('div', { class: 'grid' }), onBoard = !$('#app').classList.contains('display');
+        /* on the board, more than two past minyanim fold behind a button (the lobby screen hides them outright) */
+        var past = onBoard ? list.filter(function (e) { return entryState(e, now, up) === 'past'; }) : [], fold = onBoard && !ui.showPast && past.length > 2 && past.length < list.length;
+        if (fold) sec.appendChild(el('button', { type: 'button', class: 'btn small foldbtn', text: S().showEarlier + ' (' + past.length + ')', onclick: function () { ui.showPast = true; render(); } }));
         list.forEach(function (e) {
           var st = entryState(e, now, up), cls = 'tile' + (st ? ' ' + st : '') + (t.kind === 'event' ? ' event' : '');
+          if (fold && st === 'past') return;
           var tile = el('div', { class: cls }, [
             el('div', { class: 'room', text: e.room || t.name }),
             bigIsMilestone(t) ? el('div', { class: 'ms num pre', text: startLabel(t) + ' ' + fmtTime(e.start) }) : null, /* chronological: ברכות above, הודו big below */
