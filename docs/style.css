@@ -308,3 +308,32 @@ details.help summary { cursor: pointer; font-weight: 500; }
 }
 :root[data-palette="contrast"] .tile { box-shadow: inset 0 0 0 2px #ffffff; }
 :root[data-palette="contrast"] .side, :root[data-palette="contrast"] .next { border-width: 2px; }
+
+/* ---- phone layout: tefilla tabs and rows ---- */
+.ttabs { display: flex; gap: 6px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 4px; }
+.ttabs button { flex: 1; border: 0; background: transparent; border-radius: 9px; padding: 9px 6px; font: inherit; font-weight: 700; color: var(--muted); cursor: pointer; }
+.ttabs button[aria-selected="true"] { background: var(--panel); color: var(--accent); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.rows { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.row:last-child { border-bottom: 0; }
+.row .rtime { display: flex; flex-direction: column; min-width: 64px; }
+.row .time { font-size: 1.45rem; font-weight: 700; line-height: 1.1; }
+.row .ms { font-size: .75rem; color: var(--muted); }
+.row .room { font-weight: 700; }
+.row .note { display: block; font-size: .78rem; color: var(--muted); }
+.row.past { opacity: .45; }
+.row.now { background: color-mix(in srgb, var(--now) 12%, var(--panel)); }
+.row.next { background: color-mix(in srgb, var(--next) 14%, var(--panel)); border-inline-start: 4px solid var(--next); }
+.row .badge { font-size: .72rem; padding: 2px 8px; border-radius: 999px; color: #fff; background: var(--next-2); white-space: nowrap; }
+.row .badge.now { background: var(--now); }
+.row.tap { cursor: pointer; }
+.foldbtn { margin: 8px 12px; }
+/* the three minyanim after the next one */
+.soon-row { display: flex; gap: 8px; margin-top: 12px; justify-content: center; }
+.soon { flex: 1; max-width: 170px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 6px; text-align: center; }
+.soon .time { font-size: 1.35rem; font-weight: 700; line-height: 1.1; }
+.soon .room { font-size: .9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.soon .sub { font-size: .75rem; color: var(--muted); }
+.soon.tap { cursor: pointer; }
+.soon.tap:hover, .soon.tap:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+#app.display .soon .time { font-size: 2rem; }

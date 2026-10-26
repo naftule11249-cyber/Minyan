@@ -148,6 +148,14 @@
       if (e.tefilla.milestone && !bigMs) next.appendChild(el('div', { class: 'ms num', text: e.tefilla.milestone + ' ' + fmtTime(e.milestone) }));
       ui.countdown = el('div', { class: 'count num', text: fmtCountdown(ui.countdownMs - now) });
       next.appendChild(ui.countdown);
+      /* the three after it, as small cards: tomorrow's first Shacharis included once the day runs out */
+      var more = engine.after(now, rd, 3).filter(function (x) { return x.entry.tefilla.kind !== 'event' && !sameEntry(x.entry, e) && keyMs(x.entry) > now; }).slice(0, 3), canTapMore = canSetReminders();
+      if (more.length) next.appendChild(el('div', { class: 'soon-row' }, more.map(function (x) {
+        var en = x.entry, sub = (en.tefilla.id !== e.tefilla.id ? en.tefilla.name : '') + (x.daysAhead > up.daysAhead ? (en.tefilla.id !== e.tefilla.id ? ' · ' : '') + (x.daysAhead === 1 ? 'מחר' : Cal.DAY_NAMES[x.sched.info.dow]) : '');
+        var card = el('div', { class: 'soon' }, [el('div', { class: 'time num', text: fmtTime(bigIsMilestone(en.tefilla) ? en.milestone : en.start) }), el('div', { class: 'room', text: en.room || en.tefilla.name }), sub ? el('div', { class: 'sub', text: sub }) : null]);
+        if (canTapMore) makeTappable(card, en);
+        return card;
+      })));
       if (up.daysAhead > 0) next.appendChild(el('div', { class: 'when', text: (up.daysAhead === 1 ? 'מחר, ' : '') + Cal.DAY_NAMES[up.sched.info.dow] + ' ' + Cal.formatHeb(up.sched.info.heb) }));
       if (e.note) next.appendChild(el('div', { class: 'when', text: e.note }));
     } else {
@@ -165,8 +173,10 @@
       if (canTap) makeTappable(zb, { zman: nz.key, rd: rd, min: nz.min }); /* tap the zman to be reminded before it */
       colA.appendChild(zb);
     }
-    colA.appendChild(daySections(scheduleFor(rd), now, up, true));
-    if (up && up.daysAhead > 0 && !(up.daysAhead === 1 && ui.todayAllSwitched)) colA.appendChild(daySections(up.sched, now, up, false)); /* tomorrow is already shown section by section once today is over */
+    var sections = (view.kind === 'board' && isPhone()) ? phoneSections : daySections;
+    if (ui.lastRenderDay !== rd) ui.showPast = false;
+    colA.appendChild(sections(scheduleFor(rd), now, up, true));
+    if (up && up.daysAhead > 0 && !(up.daysAhead === 1 && ui.todayAllSwitched)) colA.appendChild(sections(up.sched, now, up, false)); /* tomorrow is already shown section by section once today is over */
     colB.appendChild(zmanimPanel(info, z));
     if (view.kind === 'board') {
       var sms = smsPanel();
@@ -215,27 +225,34 @@
   }
   /* How long a minyan that has started stays marked "now" (cfg.nowMinutes, default 20). After that it is dimmed, and the lobby screen hides it. */
   function nowWindowMs() { var m = cfg.nowMinutes; m = (m == null || m === '') ? 20 : +m; return (isNaN(m) || m < 0 ? 20 : m) * 60000; }
-  function daySections(s, now, up, isToday) {
-    var wrap = el('div', { class: 'col' }), canRemind = canSetReminders();
-    wrap.appendChild(el('div', { class: 'day-head' }, [
-      el('h2', { text: isToday ? 'היום' : Cal.DAY_NAMES[s.info.dow] + ' – ' + Cal.formatHeb(s.info.heb) }),
-      el('span', { class: 'sub', text: typeLabel(s) })]));
-    /* once all of today's minyanim of a tefilla are over (after chatzos for Shacharis), its section shows tomorrow's list, marked מחר */
-    var tomorrow = isToday ? scheduleFor(s.rd + 1) : null, allSwitched = true;
+  /* per tefilla: today's list, or tomorrow's once all of today's minyanim are over (after chatzos for Shacharis) */
+  function tefillaLists(s, now, isToday) {
+    var tomorrow = isToday ? scheduleFor(s.rd + 1) : null, out = [], allSwitched = true;
     tefillos().forEach(function (t) {
-      var list = s.byTefilla[t.id] || [], sec = el('section', { class: 'tefilla' }), fromTomorrow = false;
+      var list = s.byTefilla[t.id] || [], fromTomorrow = false;
       if (tomorrow && t.kind !== 'event' && list.every(function (e) { return now - e.ms >= nowWindowMs(); }) && (tomorrow.byTefilla[t.id] || []).length) { list = tomorrow.byTefilla[t.id]; fromTomorrow = true; }
       if (!fromTomorrow && t.kind !== 'event') allSwitched = false;
-      if ($('#app').classList.contains('display') && !fromTomorrow && list.every(function (e) { return e.ms <= now && now - e.ms >= nowWindowMs(); })) return;
-      sec.appendChild(el('h3', null, [t.kind === 'event' ? t.name : 'מניני ' + t.name + (fromTomorrow ? ' – מחר, ' + Cal.DAY_NAMES[tomorrow.info.dow] : '')]));
+      out.push({ t: t, list: list, fromTomorrow: fromTomorrow, tomorrow: tomorrow });
+    });
+    if (isToday) ui.todayAllSwitched = allSwitched;
+    return out;
+  }
+  function sectionTitle(x) { return x.t.kind === 'event' ? x.t.name : 'מניני ' + x.t.name + (x.fromTomorrow ? ' – מחר, ' + Cal.DAY_NAMES[x.tomorrow.info.dow] : ''); }
+  function entryState(e, now, up) { if (up && sameEntry(e, up.entry)) return 'next'; if (e.ms <= now) return now - e.ms < nowWindowMs() ? 'now' : 'past'; return ''; }
+  function dayHead(s, isToday) { return el('div', { class: 'day-head' }, [el('h2', { text: isToday ? 'היום' : Cal.DAY_NAMES[s.info.dow] + ' – ' + Cal.formatHeb(s.info.heb) }), el('span', { class: 'sub', text: typeLabel(s) })]); }
+  /* tablets, the lobby screen and door displays: a grid of tiles per tefilla */
+  function daySections(s, now, up, isToday) {
+    var wrap = el('div', { class: 'col' }), canRemind = canSetReminders();
+    wrap.appendChild(dayHead(s, isToday));
+    tefillaLists(s, now, isToday).forEach(function (x) {
+      var t = x.t, list = x.list, sec = el('section', { class: 'tefilla' });
+      if ($('#app').classList.contains('display') && !x.fromTomorrow && list.every(function (e) { return e.ms <= now && now - e.ms >= nowWindowMs(); })) return;
+      sec.appendChild(el('h3', null, [sectionTitle(x)]));
       if (!list.length) { sec.appendChild(el('div', { class: 'none', text: 'אין מנינים רשומים' })); }
       else {
         var grid = el('div', { class: 'grid' });
         list.forEach(function (e) {
-          var cls = 'tile';
-          if (up && sameEntry(e, up.entry)) cls += ' next';
-          else if (e.ms <= now) cls += (now - e.ms < nowWindowMs()) ? ' now' : ' past';
-          if (t.kind === 'event') cls += ' event';
+          var st = entryState(e, now, up), cls = 'tile' + (st ? ' ' + st : '') + (t.kind === 'event' ? ' event' : '');
           var tile = el('div', { class: cls }, [
             el('div', { class: 'room', text: e.room || t.name }),
             bigIsMilestone(t) ? el('div', { class: 'ms num pre', text: startLabel(t) + ' ' + fmtTime(e.start) }) : null, /* chronological: ברכות above, הודו big below */
@@ -249,7 +266,39 @@
       }
       wrap.appendChild(sec);
     });
-    if (isToday) ui.todayAllSwitched = allSwitched;
+    return wrap;
+  }
+  /* phones: one tefilla at a time behind tabs, each minyan a row, the past ones folded away */
+  function isPhone() { return !!(window.matchMedia && window.matchMedia('(max-width: 640px)').matches); }
+  function phoneSections(s, now, up, isToday) {
+    var wrap = el('div', { class: 'col phone' }), canRemind = canSetReminders();
+    var lists = tefillaLists(s, now, isToday).filter(function (x) { return x.list.length || x.t.kind !== 'event'; });
+    wrap.appendChild(dayHead(s, isToday));
+    if (!lists.length) return wrap;
+    var ids = lists.map(function (x) { return x.t.id; }), want = ui.phoneTab || (up ? up.entry.tefilla.id : null), active = ids.indexOf(want) >= 0 ? want : ids[0];
+    var tabs = el('div', { class: 'ttabs', role: 'tablist' });
+    lists.forEach(function (x) { tabs.appendChild(el('button', { type: 'button', role: 'tab', 'aria-selected': String(x.t.id === active), text: x.t.name + (x.fromTomorrow ? ' · מחר' : ''), onclick: function () { ui.phoneTab = x.t.id; render(); } })); });
+    wrap.appendChild(tabs);
+    var x = lists.filter(function (l) { return l.t.id === active; })[0], t = x.t, sec = el('section', { class: 'tefilla' });
+    sec.appendChild(el('h3', null, [sectionTitle(x)]));
+    if (!x.list.length) sec.appendChild(el('div', { class: 'none', text: 'אין מנינים רשומים' }));
+    else {
+      var rows = el('div', { class: 'rows' }), past = x.list.filter(function (e) { return entryState(e, now, up) === 'past'; });
+      var fold = !ui.showPast && past.length > 2 && past.length < x.list.length;
+      if (fold) rows.appendChild(el('button', { type: 'button', class: 'btn small foldbtn', text: 'הצג את הקודמים (' + past.length + ')', onclick: function () { ui.showPast = true; render(); } }));
+      x.list.forEach(function (e) {
+        var st = entryState(e, now, up);
+        if (fold && st === 'past') return;
+        var big = bigIsMilestone(t), row = el('div', { class: 'row' + (st ? ' ' + st : '') + (t.kind === 'event' ? ' event' : '') }, [
+          el('div', { class: 'rtime' }, [el('span', { class: 'time num', text: fmtTime(big ? e.milestone : e.start) }), t.milestone ? el('span', { class: 'ms num', text: big ? startLabel(t) + ' ' + fmtTime(e.start) : t.milestone + ' ' + fmtTime(e.milestone) }) : null]),
+          el('div', { class: 'rroom' }, [el('span', { class: 'room', text: e.room || t.name }), e.note ? el('span', { class: 'note', text: e.note }) : null]),
+          st === 'next' ? el('span', { class: 'badge next', text: 'הבא' }) : st === 'now' ? el('span', { class: 'badge now', text: 'עכשיו' }) : null]);
+        if (canRemind && t.kind !== 'event') makeTappable(row, e);
+        rows.appendChild(row);
+      });
+      sec.appendChild(rows);
+    }
+    wrap.appendChild(sec);
     return wrap;
   }
   function zmanimPanel(info, z) {
@@ -1323,6 +1372,7 @@
     }
     render();
     setInterval(tick, 1000);
+    if (window.matchMedia) { var mq = window.matchMedia('(max-width: 640px)'); (mq.addEventListener ? mq.addEventListener('change', function () { render(); }) : mq.addListener(function () { render(); })); } /* phone layout follows the width */
     window.addEventListener('hashchange', function () { refreshEditBtn(); if (isAdminPage() && canEditNow() && !ui.adminOpen) openAdmin(); });
     if (!inArtifact && isAdminPage()) openAdmin();
     if (!inArtifact) {
