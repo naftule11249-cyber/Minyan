@@ -14,7 +14,7 @@ const { chromium } = require('playwright');
     return { ctx, page };
   }
   let { ctx, page } = await open(400, 9, 22, '', 'yi');
-  ok('yiddish: day line, today, next minyan', [await page.locator('.dayline').textContent(), await page.locator('.day-head h2').first().textContent(), await page.locator('section.next:not(.zman) h2').textContent()], ['זונטאג פרשת וירא', 'היינט', 'קומענדיגער מנין']);
+  ok('yiddish: day line, today, next minyan', [await page.locator('.dayline').textContent(), await page.locator('.day-head h2').first().textContent(), await page.locator('section.next:not(.zman) h2').textContent()], ['זונטאג פרשת וירא', 'היינט', 'מנין הבא']);
   ok('yiddish: section title, fold button, now badge', [await page.locator('section.tefilla h3').first().textContent(), await page.locator('.foldbtn').textContent(), await page.locator('.row.now .badge').textContent()], ['שחרית מנינים', 'ווייז די פריערדיגע (6)', 'יעצט']);
   ok('yiddish: board type label and footer switch', [await page.locator('.day-head .sub').first().textContent(), await page.locator('#lang').inputValue()], ['לוח זונטאג', 'yi']);
   await ctx.close();
