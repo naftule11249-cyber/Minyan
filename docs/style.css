@@ -262,3 +262,49 @@ details.help summary { cursor: pointer; font-weight: 500; }
 #app.display .next .gear { display: none; }
 .next.tap { cursor: pointer; }
 .next.tap:hover, .next.tap:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* ---- looks: the classic parchment-and-navy palette above is the base; "shul" and "contrast" sit on top (General → Colors sets the default, the footer "Look" switch is per phone) ---- */
+:root[data-palette="shul"] {
+  --bg: #e8e3da; --panel: #f7f4ee; --panel-2: #eee9e0; --ink: #2b2622; --muted: #6e655b; --line: #d3c7b3;
+  --band: #3a332c; --band-2: #4a4239; --band-ink: #f3ebdc;
+  --tile: #6e1f2e; --tile-2: #551723; --tile-ink: #fbeedb; --next: #9a7b3a; --next-2: #7c6130; --now: #b5651d;
+  --accent: #7a2433; --count: #a3262f; --focus: #8a6d33; --gold: #b9975b; --gold-2: #e6d7b4;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-palette="shul"]:not([data-theme="light"]) {
+    --bg: #1d1a17; --panel: #27231f; --panel-2: #302b26; --ink: #f1eadf; --muted: #b5aa9b; --line: #473f36;
+    --band: #2a2622; --band-2: #38322c; --band-ink: #f1eadf;
+    --tile: #5e1a28; --tile-2: #47131e; --tile-ink: #fbeedb; --next: #8a6c2f; --next-2: #6c5424; --now: #d08a2e;
+    --accent: #e3a6b0; --count: #ff8a80; --focus: #d8bd82; --gold: #cfae66; --gold-2: #5a4a28;
+  }
+}
+:root[data-palette="shul"][data-theme="dark"] {
+  --bg: #1d1a17; --panel: #27231f; --panel-2: #302b26; --ink: #f1eadf; --muted: #b5aa9b; --line: #473f36;
+  --band: #2a2622; --band-2: #38322c; --band-ink: #f1eadf;
+  --tile: #5e1a28; --tile-2: #47131e; --tile-ink: #fbeedb; --next: #8a6c2f; --next-2: #6c5424; --now: #d08a2e;
+  --accent: #e3a6b0; --count: #ff8a80; --focus: #d8bd82; --gold: #cfae66; --gold-2: #5a4a28;
+}
+/* high contrast: black on white, bigger type, strong borders */
+:root[data-palette="contrast"] {
+  --bg: #ffffff; --panel: #ffffff; --panel-2: #f0f0f0; --ink: #000000; --muted: #222222; --line: #000000;
+  --band: #000000; --band-2: #222222; --band-ink: #ffffff;
+  --tile: #4a0012; --tile-2: #2e000b; --tile-ink: #ffffff; --next: #004d1a; --next-2: #003512; --now: #7a3b00;
+  --accent: #6a0018; --count: #b00000; --focus: #0000c0; --gold: #6b5200; --gold-2: #ffe08a;
+  font-size: 115%;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-palette="contrast"]:not([data-theme="light"]) {
+    --bg: #000000; --panel: #000000; --panel-2: #141414; --ink: #ffffff; --muted: #dddddd; --line: #bbbbbb;
+    --band: #000000; --band-2: #1a1a1a; --band-ink: #ffffff;
+    --tile: #6a0020; --tile-2: #4a0014; --tile-ink: #ffffff; --next: #006b25; --next-2: #004d1a; --now: #ff9a3c;
+    --accent: #ffb3c0; --count: #ff6b6b; --focus: #9ab8ff; --gold: #ffd56a; --gold-2: #5a4a00;
+  }
+}
+:root[data-palette="contrast"][data-theme="dark"] {
+  --bg: #000000; --panel: #000000; --panel-2: #141414; --ink: #ffffff; --muted: #dddddd; --line: #bbbbbb;
+  --band: #000000; --band-2: #1a1a1a; --band-ink: #ffffff;
+  --tile: #6a0020; --tile-2: #4a0014; --tile-ink: #ffffff; --next: #006b25; --next-2: #004d1a; --now: #ff9a3c;
+  --accent: #ffb3c0; --count: #ff6b6b; --focus: #9ab8ff; --gold: #ffd56a; --gold-2: #5a4a00;
+}
+:root[data-palette="contrast"] .tile { box-shadow: inset 0 0 0 2px #ffffff; }
+:root[data-palette="contrast"] .side, :root[data-palette="contrast"] .next { border-width: 2px; }

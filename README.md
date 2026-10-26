@@ -163,6 +163,10 @@ Same address, different screens (the `#` forms also work on the claude.ai page):
 | QR sign | `sign.html` | a printable sign with the site's QR code and the text number |
 | Text service page | `sms.html` | how the texting works (also the opt-in page for the carriers) |
 
+## Looks
+
+Three palettes: **Shul** (light stone and pale oak, brass, charcoal, the burgundy of the paroches), **Classic** (parchment and navy) and **High contrast** (black on white, larger type). General → Colors sets the default, which the lobby screen and door displays always use; a "Look" switch in the footer lets each phone pick its own. Dark mode follows the phone's setting with darker shades of the chosen palette. The icon and the share image use the shul palette.
+
 ## Calendar
 
 - The big number on a Shacharis tile is the start (ברכות) by default; a "Big number" switch in the footer lets each phone show הודו big instead (then the countdown and "next minyan" follow הודו). General → "Big number on the tiles" sets the board's default; each tefilla has a "name of the start" for the small line.

@@ -40,7 +40,7 @@ async function serve() {
   const page = await ctx.newPage();
   const icon = fs.readFileSync(path.resolve(__dirname, '..', 'docs', 'icon-512.png')).toString('base64');
   await page.setContent(`<!doctype html><html><head><meta charset="utf-8"><style>
-    body{margin:0;width:1024px;height:500px;background:linear-gradient(135deg,#2d4b82,#1a2f55);font-family:'DejaVu Sans',sans-serif;color:#f6f1e7;overflow:hidden}
+    body{margin:0;width:1024px;height:500px;background:linear-gradient(135deg,#4a4239,#2a2622);font-family:'DejaVu Sans',sans-serif;color:#f6f1e7;overflow:hidden}
     .ic{position:absolute;left:70px;top:90px;width:320px;height:320px}
     .t{position:absolute;left:440px;top:120px;right:60px}
     .he{font-size:72px;font-weight:700;direction:rtl;text-align:left;line-height:1.1}

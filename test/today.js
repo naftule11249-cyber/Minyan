@@ -5,6 +5,9 @@ const { chromium } = require('playwright');
   const errors = []; let fails = 0;
   const ok = (name, got, want) => { if (JSON.stringify(got) === JSON.stringify(want)) console.log('ok   ' + name); else { fails++; console.log('FAIL ' + name + ' got ' + JSON.stringify(got) + ' want ' + JSON.stringify(want)); } };
   const ctx = await browser.newContext({ viewport: { width: 1000, height: 900 }, locale: 'he', timezoneId: 'America/New_York', serviceWorkers: 'block' });
+  /* 6 AM today (New York): the board still shows today's lists, whatever the real time is */
+  const nyDay = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date()), fixed = Date.parse(nyDay + 'T06:00:00-04:00');
+  await ctx.addInitScript(({ fixed }) => { const real = Date.now; const start = real(); Date.now = () => fixed + (real() - start); }, { fixed });
   const page = await ctx.newPage(); page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error' && !/favicon|ERR_TUNNEL|ERR_NAME_NOT_RESOLVED|ERR_INTERNET|ERR_CONNECTION/.test(m.text())) errors.push(m.text()); });
   await page.goto('http://localhost:8790/admin.html', { waitUntil: 'networkidle' });

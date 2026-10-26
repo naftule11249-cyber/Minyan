@@ -3,6 +3,6 @@
   "appName": "Cascade Zmanim",
   "webDir": "www",
   "server": { "androidScheme": "https" },
-  "android": { "backgroundColor": "#223b68" },
-  "ios": { "contentInset": "automatic", "backgroundColor": "#223b68" }
+  "android": { "backgroundColor": "#3a332c" },
+  "ios": { "contentInset": "automatic", "backgroundColor": "#3a332c" }
 }

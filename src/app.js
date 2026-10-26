@@ -32,7 +32,22 @@
   var engine = null;
   var TEFILLA_DEFAULTS = MinyanEngine.TEFILLA_DEFAULTS, FALLBACK = MinyanEngine.FALLBACK, TYPE_NAME = MinyanEngine.TYPE_NAME, TYPE_EN = MinyanEngine.TYPE_NAME_EN;
   var sameEntry = MinyanEngine.sameEntry, gregStr = MinyanEngine.gregStr, parseLine = MinyanEngine.parseLine;
-  function setCfg(c) { cfg = (c && typeof c === 'object') ? c : {}; cfg.location = cfg.location || {}; engine = MinyanEngine(cfg); }
+  function setCfg(c) { cfg = (c && typeof c === 'object') ? c : {}; cfg.location = cfg.location || {}; engine = MinyanEngine(cfg); applyLook(); }
+  /* looks: the palette chosen in General is the default and what the lobby screen and door displays always use; each phone may pick its own in the footer */
+  var LOOKS = [['shul', 'Shul'], ['classic', 'Classic'], ['contrast', 'High contrast']], LOOK_BAND = { shul: '#3a332c', classic: '#223b68', contrast: '#000000' };
+  function isLook(v) { return LOOKS.some(function (l) { return l[0] === v; }); }
+  function lookDefault() { return isLook(cfg.palette) ? cfg.palette : 'shul'; }
+  function lookMode() {
+    var view = currentView(); if (view.kind === 'display' || view.kind === 'room') return lookDefault();
+    var v = null; try { v = localStorage.getItem('minyan-look'); } catch (e) {}
+    return isLook(v) ? v : lookDefault();
+  }
+  function applyLook() {
+    if (typeof document === 'undefined') return;
+    var root = document.documentElement, look = lookMode();
+    if (look === 'classic') root.removeAttribute('data-palette'); else root.setAttribute('data-palette', look);
+    var meta = document.querySelector('meta[name="theme-color"]'); if (meta) meta.setAttribute('content', LOOK_BAND[look]);
+  }
   function loc() { return engine.loc(); }
   function zmanimFor(rd) { return engine.zmanimFor(rd); }
   function resolveMin(spec, rd, type) { return engine.resolveMin(spec, rd, type); }
@@ -96,6 +111,7 @@
   /* ---------- rendering ---------- */
   function render() {
     var view = currentView();
+    applyLook();
     if (view.kind === 'week') return renderWeek();
     var now = Date.now(), tz = loc().tz, n = Cal.nowInTz(now, tz), rd = n.rd;
     var info = Cal.dayInfo(rd, !!cfg.israel), z = zmanimFor(rd);
@@ -489,6 +505,11 @@
       right.appendChild(el('label', { class: 'hint bigpick', for: 'big-time' }, ['Big number: ', bigSel]));
     }
     right.appendChild(el('button', { type: 'button', class: 'btn small', id: 'zc-open', text: 'Countdown zmanim', onclick: openCountdownChooser }));
+    /* each phone may pick its own look; the gabbai's choice in General is the default */
+    var lookSel = el('select', { id: 'look', 'aria-label': 'Look of the board' }, LOOKS.map(function (l) { return el('option', { value: l[0], text: l[1] }); }));
+    lookSel.value = lookMode();
+    lookSel.addEventListener('change', function () { try { if (lookSel.value === lookDefault()) localStorage.removeItem('minyan-look'); else localStorage.setItem('minyan-look', lookSel.value); } catch (e) {} render(); });
+    right.appendChild(el('label', { class: 'hint bigpick', for: 'look' }, ['Look: ', lookSel]));
     right.appendChild(ui.iosHint); right.appendChild(ui.installBtn); right.appendChild(ui.editBtn);
     refreshInstallBtn();
     f.appendChild(right);
@@ -657,6 +678,9 @@
     g.appendChild(el('datalist', { id: 'tz-list' }, ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Toronto', 'Europe/London', 'Europe/Antwerp', 'Europe/Zurich', 'Asia/Jerusalem', 'Australia/Melbourne'].map(function (z) { return el('option', { value: z }); })));
     g.appendChild(el('div', { class: 'fields' }, [field('Candle lighting: minutes before sunset', fCandles), field('Nightfall (tzeis): minutes after sunset', fTzeisMin), field('Nightfall: degrees below the horizon (used when minutes is blank)', fTzeisDeg)]));
     g.appendChild(el('div', { class: 'fields' }, [field('Civil date on the board and the weekly sheet', fDateFmt), field('Big number on the tiles, by default (everyone may switch it on their own phone)', fBig)]));
+    var fPalette = el('select', { id: 'f-palette' }, [el('option', { value: 'shul', text: 'Shul: light stone, brass, charcoal, burgundy' }), el('option', { value: 'classic', text: 'Classic: parchment and navy' }), el('option', { value: 'contrast', text: 'High contrast: black on white, larger type' })]);
+    fPalette.value = lookDefault.call(null) && isLook(d.palette) ? d.palette : 'shul';
+    g.appendChild(el('div', { class: 'fields' }, [field('Colors: the look everyone gets unless they pick another in the footer; the lobby screen and door displays always use it', fPalette)]));
     g.appendChild(el('div', { class: 'col' }, [el('label', { text: 'Countdown box ("הזמן הבא"): the next of these zmanim still ahead today' }), el('div', { class: 'tabs' }, COUNTDOWN_KEYS.map(function (k) { return chk('cd-' + k, countdownKeysOf(d).indexOf(k) >= 0, Cal.ZMAN_NAMES[k]); }))]));
     g.appendChild(el('div', { class: 'col' }, [chk('f-israel', d.israel, 'Eretz Yisroel calendar (one-day Yom Tov)'), chk('f-weekly', d.weeklyEarliest, 'Weekday zman-based times use the earliest sunset of the week (Sun–Thu)'), chk('f-24', d.clock24, '24-hour clock'), chk('f-tzeis', d.showTzeis !== false, 'Show צאת הכוכבים (the board\'s nightfall) in the zmanim list'), chk('f-rt', d.showRT, 'Show Rabbeinu Tam (72 minutes after sunset) in the zmanim list; hidden by itself while nightfall is 72 and צאת הכוכבים is shown'), chk('f-60', d.show60 !== false, 'Show 60 מינוט אחר השקיעה in the zmanim list')]));
     if (mode !== 'artifact') g.appendChild(el('div', { class: 'fields' }, [field('New PIN for the admin page', fPin, el('span', { class: 'hint', text: 'Stored scrambled (hashed), so it cannot be read from the site files. It keeps strangers out of the admin page; what everyone else sees can only be changed with the GitHub token on the Publish tab, which stays on the device that entered it.' }))]));
@@ -1102,6 +1126,7 @@
       out.dateFormat = fDateFmt.value;
       out.bigTime = fBig.value;
       out.countdownZmanim = COUNTDOWN_KEYS.filter(function (k) { return $('#cd-' + k).checked; });
+      out.palette = fPalette.value;
       out.logo = fLogo.value.trim();
       out.schedules = {};
       Cal.DAY_TYPES.forEach(function (t) {
