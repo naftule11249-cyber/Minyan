@@ -354,7 +354,7 @@ details.help p { margin: 6px 0; }
 .next.zman h2 { font-size: 1.1rem; }
 .next.zman .time { font-size: clamp(1.8rem, 6vw, 2.4rem); margin-top: 2px; }
 .next.zman .count { font-size: clamp(1.2rem, 4vw, 1.5rem); margin-top: 4px; }
-.next.zman.soon .count { color: #b3261e; }
+.next.zman.urgent .count { color: #b3261e; }
 #app.display .next.zman .time { font-size: 3.2rem; }
 #app.display .next.zman .count { font-size: 2rem; }
 .next.zman { position: relative; }

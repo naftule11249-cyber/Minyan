@@ -12,12 +12,12 @@ const { chromium } = require('playwright');
     page.on('console', x => { if (x.type() === 'error' && !/ERR_TUNNEL|ERR_NAME_NOT_RESOLVED|ERR_INTERNET|ERR_CONNECTION/.test(x.text())) errors.push(x.text()); });
     await page.goto('http://localhost:8790/index.html' + (hash || ''), { waitUntil: 'networkidle' }); await page.waitForTimeout(400);
     const box = page.locator('section.next.zman');
-    const r = { n: await box.count(), what: await box.locator('.what').textContent().catch(() => ''), time: await box.locator('.time').textContent().catch(() => ''), count: await box.locator('.count').textContent().catch(() => ''), soon: await box.evaluate(e => e.classList.contains('soon')).catch(() => null) };
+    const r = { n: await box.count(), what: await box.locator('.what').textContent().catch(() => ''), time: await box.locator('.time').textContent().catch(() => ''), count: await box.locator('.count').textContent().catch(() => ''), soon: await box.evaluate(e => e.classList.contains('urgent')).catch(() => null) };
     await ctx.close(); return r;
   }
   const DEF = ['shema', 'tefilla', 'candles', 'sunset']; /* the test's own set, so the gabbai's choice in General does not move the expectations */
   let r = await at(2026, 10, 25, 9, 30, '', DEF);
-  ok('9:30: counts down to sof zman Shema 9:59, red (under 30 min)', [r.what, r.time, /^00:2[89]:/.test(r.count), r.soon], ['סוף זמן ק״ש', '9:59', true, true]);
+  ok('9:30: counts down to sof zman Shema 9:59, red (under 30 min), still full width', [r.what, r.time, /^00:2[89]:/.test(r.count), r.soon, (await page.locator('section.next.zman').boundingBox()).width > 400], ['סוף זמן ק״ש', '9:59', true, true, true]);
   r = await at(2026, 10, 25, 10, 5, '', DEF);
   ok('10:05: sof zman tefilla 10:52, not red yet', [r.what, r.time, r.soon], ['סוף זמן תפילה', '10:52', false]);
   r = await at(2026, 10, 25, 13, 0, '', DEF);

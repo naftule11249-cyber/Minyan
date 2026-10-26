@@ -183,7 +183,7 @@
     var nz = nextZman(info, z, rd, now);
     if (nz) {
       ui.zcountMs = nz.ms; ui.zcount = el('div', { class: 'count num', text: fmtCountdown(nz.ms - now) });
-      var zb = el('section', { class: 'next zman' + (nz.ms - now < 30 * 60000 ? ' soon' : ''), 'aria-live': 'polite' }, [el('h2', { text: S().nextZman }), el('div', { class: 'what', text: Cal.ZMAN_NAMES[nz.key] }), el('div', { class: 'time num', text: fmtTime(nz.min) }), ui.zcount,
+      var zb = el('section', { class: 'next zman' + (nz.ms - now < 30 * 60000 ? ' urgent' : ''), /* 'urgent', not 'soon': .soon is the next-three strip's box */ 'aria-live': 'polite' }, [el('h2', { text: S().nextZman }), el('div', { class: 'what', text: Cal.ZMAN_NAMES[nz.key] }), el('div', { class: 'time num', text: fmtTime(nz.min) }), ui.zcount,
         el('button', { type: 'button', class: 'gear', 'aria-label': 'Choose the countdown zmanim', title: 'Choose zmanim', text: '⚙', onclick: function (ev) { ev.stopPropagation(); openCountdownChooser(); } })]);
       if (canTap) makeTappable(zb, { zman: nz.key, rd: rd, min: nz.min }); /* tap the zman to be reminded before it */
       colA.appendChild(zb);
