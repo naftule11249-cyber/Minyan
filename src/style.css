@@ -97,8 +97,8 @@ main { max-width: 1120px; margin: 0 auto; padding-block: 20px 40px; padding-left
 .tile.past { opacity: .42; filter: saturate(.4); }
 .tile.next { background: linear-gradient(180deg, var(--next), var(--next-2)); box-shadow: 0 0 0 3px var(--panel), 0 0 0 5px var(--next); }
 .tile.event { background: linear-gradient(180deg, var(--band-2), var(--band)); }
-.tile.next::after { content: "הבא"; position: absolute; top: -9px; inset-inline-start: 8px; background: var(--next-2); color: #fff; font-size: .68rem; padding: 1px 7px; border-radius: 999px; border: 1px solid rgba(255,255,255,.4); }
-.tile.now::after { content: "עכשיו"; position: absolute; top: -9px; inset-inline-start: 8px; background: var(--now); color: #fff; font-size: .68rem; padding: 1px 7px; border-radius: 999px; }
+.tile.next::after { content: var(--badge-next, "הבא"); position: absolute; top: -9px; inset-inline-start: 8px; background: var(--next-2); color: #fff; font-size: .68rem; padding: 1px 7px; border-radius: 999px; border: 1px solid rgba(255,255,255,.4); }
+.tile.now::after { content: var(--badge-now, "עכשיו"); position: absolute; top: -9px; inset-inline-start: 8px; background: var(--now); color: #fff; font-size: .68rem; padding: 1px 7px; border-radius: 999px; }
 .none { color: var(--muted); text-align: center; padding: 8px; font-size: .95rem; }
 
 /* Sidebar */
@@ -337,3 +337,6 @@ details.help summary { cursor: pointer; font-weight: 500; }
 .soon.tap { cursor: pointer; }
 .soon.tap:hover, .soon.tap:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 #app.display .soon .time { font-size: 2rem; }
+.zlist li.past { opacity: .5; }
+.zlist li.tomorrow .z { color: var(--muted); }
+.zlist .tag { font-size: .7rem; color: var(--muted); margin-inline-start: 6px; background: var(--panel-2); border: 1px solid var(--line); padding: 0 6px; border-radius: 999px; vertical-align: middle; }

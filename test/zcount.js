@@ -44,7 +44,7 @@ const { chromium } = require('playwright');
   {
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: 'he', timezoneId: 'America/New_York', serviceWorkers: 'block' });
     const page = await ctx.newPage(); await page.goto('http://localhost:8790/index.html', { waitUntil: 'networkidle' }); await page.waitForTimeout(300);
-    const names = await page.locator('.zlist li span:first-child').allTextContents();
+    const names = (await page.locator('.zlist li span:first-child').allTextContents()).map(n => n.replace(/(מחר|מארגן)$/, ''));
     ok('this shul: no צאת הכוכבים line, ר״ת (72) and the 60-minute line shown', [names.indexOf('צאת הכוכבים') < 0, names.indexOf('ר״ת (72)') >= 0, names.indexOf('60 מינוט אחר השקיעה') >= 0], [true, true, true]);
     await page.click('#zc-open');
     ok('…and the chooser matches', [await page.locator('#zc-tzeis').count(), await page.locator('#zc-tzeis72').count()], [0, 1]);

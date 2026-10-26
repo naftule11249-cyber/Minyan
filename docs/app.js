@@ -105,13 +105,28 @@
   }
   function fmtTime(min) { return engine.fmtTime(min); }
   function fmtCountdown(ms) { return engine.fmtCountdown(ms); }
-  function dayLine(info, rd) { return engine.dayLine(info, rd); }
-  function typeLabel(s) { return engine.typeLabel(s); }
+  /* the board's labels in Hebrew or Yiddish: General -> Board labels sets the default (the lobby screen and door displays always use it); each phone may pick its own */
+  var STR = {
+    he: { today: 'היום', tomorrow: 'מחר', tonight: 'בערב', nextMinyan: 'מנין הבא', nextZman: 'הזמן הבא', zmanim: 'זמני היום', none: 'אין מנינים רשומים', showEarlier: 'הצג את הקודמים', badgeNext: 'הבא', badgeNow: 'עכשיו', board: 'לוח ', special: 'לוח מיוחד', noMinyanim: 'לא רשומים מנינים לימים הקרובים.', fastStart: 'תחילת הצום', fastEnd: 'צאת הצום', motzaeiShabbos: 'מוצאי שבת', motzaeiYT: 'מוצאי יום טוב', omerTonight: 'הלילה סופרים', omer: 'ספירת העומר', laomer: ' לעומר', clock: 'השעה', timesBy: 'הזמנים לפי ', chul: 'לוח חוץ לארץ', eretz: 'לוח ארץ ישראל', parsha: ' פרשת ',
+      days: Cal.DAY_NAMES, types: {}, minyanim: function (name) { return 'מניני ' + name; } },
+    yi: { today: 'היינט', tomorrow: 'מארגן', tonight: 'ביינאכט', nextMinyan: 'קומענדיגער מנין', nextZman: 'קומענדיגער זמן', zmanim: 'היינטיגע זמנים', none: 'קיין מנינים נישט איינגעשריבן', showEarlier: 'ווייז די פריערדיגע', badgeNext: 'הבא', badgeNow: 'יעצט', board: 'לוח ', special: 'ספעציעלער לוח', noMinyanim: 'קיין מנינים נישט איינגעשריבן פאר די קומענדיגע טעג.', fastStart: 'אנהייב תענית', fastEnd: 'סוף תענית', motzaeiShabbos: 'מוצאי שבת', motzaeiYT: 'מוצאי יום טוב', omerTonight: 'היינט ביינאכט ציילט מען', omer: 'ספירת העומר', laomer: ' לעומר', clock: 'די שעה', timesBy: 'די זמנים לויט ', chul: 'לוח חוץ לארץ', eretz: 'לוח ארץ ישראל', parsha: ' פרשת ',
+      days: ['זונטאג', 'מאנטאג', 'דינסטאג', 'מיטוואך', 'דאנערשטאג', 'פרייטאג', 'שבת קודש'], types: { weekday: 'וואכן טעג', sunday: 'זונטאג', friday: 'ערב שבת', shabbos: 'שבת', yomtov: 'יום טוב', erev_yomtov: 'ערב יום טוב', chol_hamoed: 'חול המועד', rosh_chodesh: 'ראש חודש', fast: 'תענית', chanukah: 'חנוכה', purim: 'פורים', yomkippur: 'יום כיפור' }, minyanim: function (name) { return name + ' מנינים'; } }
+  };
+  function langDefault() { return cfg.lang === 'yi' ? 'yi' : 'he'; }
+  function langMode() {
+    var view = currentView(); if (view.kind === 'display' || view.kind === 'room') return langDefault();
+    var v = null; try { v = localStorage.getItem('minyan-lang'); } catch (e) {}
+    return v === 'yi' || v === 'he' ? v : langDefault();
+  }
+  function S() { return STR[langMode()]; }
+  function applyLang() { if (typeof document === 'undefined') return; var st = document.documentElement.style, L = S(); st.setProperty('--badge-next', '"' + L.badgeNext + '"'); st.setProperty('--badge-now', '"' + L.badgeNow + '"'); }
+  function dayLine(info, rd) { var p = Cal.parshaOfWeek(rd, !!cfg.israel); return S().days[info.dow] + (p ? S().parsha + p : ''); }
+  function typeLabel(s) { if (s.override) return S().special + (s.override.label ? ': ' + s.override.label : ''); return S().board + (S().types[s.type] || TYPE_NAME[s.type] || s.type); }
 
   /* ---------- rendering ---------- */
   function render() {
     var view = currentView();
-    applyLook();
+    applyLook(); applyLang();
     if (view.kind === 'week') return renderWeek();
     var now = Date.now(), tz = loc().tz, n = Cal.nowInTz(now, tz), rd = n.rd;
     var info = Cal.dayInfo(rd, !!cfg.israel), z = zmanimFor(rd);
@@ -120,14 +135,14 @@
     root.className = view.kind === 'display' ? 'display' : view.kind === 'room' ? 'display room' : '';
     ui.roomFilter = view.kind === 'room' ? view.room : null;
     var hebLine = Cal.formatHeb(info.heb);
-    if (!isNaN(z.sunset) && n.min >= z.sunset) hebLine += ' · בערב: ' + Cal.formatHeb(Cal.hebFromRD(rd + 1));
+    if (!isNaN(z.sunset) && n.min >= z.sunset) hebLine += ' · ' + S().tonight + ': ' + Cal.formatHeb(Cal.hebFromRD(rd + 1));
     var chips = info.labels.map(function (l) { return el('span', { class: 'chip', text: l }); });
     root.appendChild(el('header', { class: 'top' }, [el('div', { class: 'inner' }, [
       el('div', { class: 'shul' }, [cfg.logo ? el('img', { class: 'logo', src: cfg.logo, alt: '' }) : null, el('span', { text: (cfg.name || 'לוח המנינים') + (ui.roomFilter ? ' · ' + ui.roomFilter : '') })]),
       el('h1', { class: 'dayline', text: dayLine(info, rd) }),
       el('div', { class: 'dates' }, [el('span', { text: hebLine }), el('span', { class: 'num', text: engine.fmtDate(rd) })]),
       chips.length ? el('div', { class: 'chips' }, chips) : null,
-      view.kind !== 'board' ? (ui.clock = el('div', { class: 'clock num', 'aria-label': 'השעה' }, [el('span', { class: 'hm' }), el('span', { class: 'ss' })])) : null])]));
+      view.kind !== 'board' ? (ui.clock = el('div', { class: 'clock num', 'aria-label': S().clock }, [el('span', { class: 'hm' }), el('span', { class: 'ss' })])) : null])]));
     if (view.kind === 'board') ui.clock = null;
     updateClock(now);
 
@@ -137,7 +152,7 @@
     if (strip) root.appendChild(strip);
     var up = upcoming(now, rd);
     var main = el('main'), colA = el('div', { class: 'col' }), colB = el('div', { class: 'col' });
-    var next = el('section', { class: 'next', 'aria-live': 'polite' }, [el('h2', { text: 'מנין הבא' })]);
+    var next = el('section', { class: 'next', 'aria-live': 'polite' }, [el('h2', { text: S().nextMinyan })]);
     ui.countdown = null; ui.countdownMs = 0;
     if (up) {
       var e = up.entry, bigMs = bigIsMilestone(e.tefilla);
@@ -151,15 +166,15 @@
       /* the three after it, as small cards: tomorrow's first Shacharis included once the day runs out */
       var more = engine.after(now, rd, 3).filter(function (x) { return x.entry.tefilla.kind !== 'event' && !sameEntry(x.entry, e) && keyMs(x.entry) > now; }).slice(0, 3), canTapMore = canSetReminders();
       if (more.length) next.appendChild(el('div', { class: 'soon-row' }, more.map(function (x) {
-        var en = x.entry, sub = (en.tefilla.id !== e.tefilla.id ? en.tefilla.name : '') + (x.daysAhead > up.daysAhead ? (en.tefilla.id !== e.tefilla.id ? ' · ' : '') + (x.daysAhead === 1 ? 'מחר' : Cal.DAY_NAMES[x.sched.info.dow]) : '');
+        var en = x.entry, sub = (en.tefilla.id !== e.tefilla.id ? en.tefilla.name : '') + (x.daysAhead > up.daysAhead ? (en.tefilla.id !== e.tefilla.id ? ' · ' : '') + (x.daysAhead === 1 ? S().tomorrow : S().days[x.sched.info.dow]) : '');
         var card = el('div', { class: 'soon' }, [el('div', { class: 'time num', text: fmtTime(bigIsMilestone(en.tefilla) ? en.milestone : en.start) }), el('div', { class: 'room', text: en.room || en.tefilla.name }), sub ? el('div', { class: 'sub', text: sub }) : null]);
         if (canTapMore) makeTappable(card, en);
         return card;
       })));
-      if (up.daysAhead > 0) next.appendChild(el('div', { class: 'when', text: (up.daysAhead === 1 ? 'מחר, ' : '') + Cal.DAY_NAMES[up.sched.info.dow] + ' ' + Cal.formatHeb(up.sched.info.heb) }));
+      if (up.daysAhead > 0) next.appendChild(el('div', { class: 'when', text: (up.daysAhead === 1 ? S().tomorrow + ', ' : '') + S().days[up.sched.info.dow] + ' ' + Cal.formatHeb(up.sched.info.heb) }));
       if (e.note) next.appendChild(el('div', { class: 'when', text: e.note }));
     } else {
-      next.appendChild(el('div', { class: 'empty', text: 'לא רשומים מנינים לימים הקרובים. בכפתור Edit למטה אפשר להוסיף.' }));
+      next.appendChild(el('div', { class: 'empty', text: S().noMinyanim }));
     }
     var canTap = canSetReminders();
     if (up && canTap && up.entry.tefilla.kind !== 'event') makeTappable(next, up.entry); /* tap the next minyan to be reminded of it */
@@ -168,7 +183,7 @@
     var nz = nextZman(info, z, rd, now);
     if (nz) {
       ui.zcountMs = nz.ms; ui.zcount = el('div', { class: 'count num', text: fmtCountdown(nz.ms - now) });
-      var zb = el('section', { class: 'next zman' + (nz.ms - now < 30 * 60000 ? ' soon' : ''), 'aria-live': 'polite' }, [el('h2', { text: 'הזמן הבא' }), el('div', { class: 'what', text: Cal.ZMAN_NAMES[nz.key] }), el('div', { class: 'time num', text: fmtTime(nz.min) }), ui.zcount,
+      var zb = el('section', { class: 'next zman' + (nz.ms - now < 30 * 60000 ? ' soon' : ''), 'aria-live': 'polite' }, [el('h2', { text: S().nextZman }), el('div', { class: 'what', text: Cal.ZMAN_NAMES[nz.key] }), el('div', { class: 'time num', text: fmtTime(nz.min) }), ui.zcount,
         el('button', { type: 'button', class: 'gear', 'aria-label': 'Choose the countdown zmanim', title: 'Choose zmanim', text: '⚙', onclick: function (ev) { ev.stopPropagation(); openCountdownChooser(); } })]);
       if (canTap) makeTappable(zb, { zman: nz.key, rd: rd, min: nz.min }); /* tap the zman to be reminded before it */
       colA.appendChild(zb);
@@ -237,9 +252,9 @@
     if (isToday) ui.todayAllSwitched = allSwitched;
     return out;
   }
-  function sectionTitle(x) { return x.t.kind === 'event' ? x.t.name : 'מניני ' + x.t.name + (x.fromTomorrow ? ' – מחר, ' + Cal.DAY_NAMES[x.tomorrow.info.dow] : ''); }
+  function sectionTitle(x) { return x.t.kind === 'event' ? x.t.name : S().minyanim(x.t.name) + (x.fromTomorrow ? ' – ' + S().tomorrow + ', ' + S().days[x.tomorrow.info.dow] : ''); }
   function entryState(e, now, up) { if (up && sameEntry(e, up.entry)) return 'next'; if (e.ms <= now) return now - e.ms < nowWindowMs() ? 'now' : 'past'; return ''; }
-  function dayHead(s, isToday) { return el('div', { class: 'day-head' }, [el('h2', { text: isToday ? 'היום' : Cal.DAY_NAMES[s.info.dow] + ' – ' + Cal.formatHeb(s.info.heb) }), el('span', { class: 'sub', text: typeLabel(s) })]); }
+  function dayHead(s, isToday) { return el('div', { class: 'day-head' }, [el('h2', { text: isToday ? S().today : S().days[s.info.dow] + ' – ' + Cal.formatHeb(s.info.heb) }), el('span', { class: 'sub', text: typeLabel(s) })]); }
   /* tablets, the lobby screen and door displays: a grid of tiles per tefilla */
   function daySections(s, now, up, isToday) {
     var wrap = el('div', { class: 'col' }), canRemind = canSetReminders();
@@ -248,7 +263,7 @@
       var t = x.t, list = x.list, sec = el('section', { class: 'tefilla' });
       if ($('#app').classList.contains('display') && !x.fromTomorrow && list.every(function (e) { return e.ms <= now && now - e.ms >= nowWindowMs(); })) return;
       sec.appendChild(el('h3', null, [sectionTitle(x)]));
-      if (!list.length) { sec.appendChild(el('div', { class: 'none', text: 'אין מנינים רשומים' })); }
+      if (!list.length) { sec.appendChild(el('div', { class: 'none', text: S().none })); }
       else {
         var grid = el('div', { class: 'grid' });
         list.forEach(function (e) {
@@ -277,22 +292,22 @@
     if (!lists.length) return wrap;
     var ids = lists.map(function (x) { return x.t.id; }), want = ui.phoneTab || (up ? up.entry.tefilla.id : null), active = ids.indexOf(want) >= 0 ? want : ids[0];
     var tabs = el('div', { class: 'ttabs', role: 'tablist' });
-    lists.forEach(function (x) { tabs.appendChild(el('button', { type: 'button', role: 'tab', 'aria-selected': String(x.t.id === active), text: x.t.name + (x.fromTomorrow ? ' · מחר' : ''), onclick: function () { ui.phoneTab = x.t.id; render(); } })); });
+    lists.forEach(function (x) { tabs.appendChild(el('button', { type: 'button', role: 'tab', 'aria-selected': String(x.t.id === active), text: x.t.name + (x.fromTomorrow ? ' · ' + S().tomorrow : ''), onclick: function () { ui.phoneTab = x.t.id; render(); } })); });
     wrap.appendChild(tabs);
     var x = lists.filter(function (l) { return l.t.id === active; })[0], t = x.t, sec = el('section', { class: 'tefilla' });
     sec.appendChild(el('h3', null, [sectionTitle(x)]));
-    if (!x.list.length) sec.appendChild(el('div', { class: 'none', text: 'אין מנינים רשומים' }));
+    if (!x.list.length) sec.appendChild(el('div', { class: 'none', text: S().none }));
     else {
       var rows = el('div', { class: 'rows' }), past = x.list.filter(function (e) { return entryState(e, now, up) === 'past'; });
       var fold = !ui.showPast && past.length > 2 && past.length < x.list.length;
-      if (fold) rows.appendChild(el('button', { type: 'button', class: 'btn small foldbtn', text: 'הצג את הקודמים (' + past.length + ')', onclick: function () { ui.showPast = true; render(); } }));
+      if (fold) rows.appendChild(el('button', { type: 'button', class: 'btn small foldbtn', text: S().showEarlier + ' (' + past.length + ')', onclick: function () { ui.showPast = true; render(); } }));
       x.list.forEach(function (e) {
         var st = entryState(e, now, up);
         if (fold && st === 'past') return;
         var big = bigIsMilestone(t), row = el('div', { class: 'row' + (st ? ' ' + st : '') + (t.kind === 'event' ? ' event' : '') }, [
           el('div', { class: 'rtime' }, [el('span', { class: 'time num', text: fmtTime(big ? e.milestone : e.start) }), t.milestone ? el('span', { class: 'ms num', text: big ? startLabel(t) + ' ' + fmtTime(e.start) : t.milestone + ' ' + fmtTime(e.milestone) }) : null]),
           el('div', { class: 'rroom' }, [el('span', { class: 'room', text: e.room || t.name }), e.note ? el('span', { class: 'note', text: e.note }) : null]),
-          st === 'next' ? el('span', { class: 'badge next', text: 'הבא' }) : st === 'now' ? el('span', { class: 'badge now', text: 'עכשיו' }) : null]);
+          st === 'next' ? el('span', { class: 'badge next', text: S().badgeNext }) : st === 'now' ? el('span', { class: 'badge now', text: S().badgeNow }) : null]);
         if (canRemind && t.kind !== 'event') makeTappable(row, e);
         rows.appendChild(row);
       });
@@ -303,27 +318,29 @@
   }
   function zmanimPanel(info, z) {
     var keys = ['alos', 'sunrise', 'shema', 'tefilla', 'chatzos', 'minchag', 'plag', 'candles', 'sunset', 'tzeis', 'tzeis60', 'tzeis72'];
-    var ul = el('ul', { class: 'zlist' }), rd = info.rd, nowMin = Cal.nowInTz(Date.now(), loc().tz).min, canRemind = canSetReminders();
+    var ul = el('ul', { class: 'zlist' }), rd = info.rd, nowMin = Cal.nowInTz(Date.now(), loc().tz).min, canRemind = canSetReminders(), nowMs = Date.now(), tz = loc().tz, zt = zmanimFor(rd + 1), L = S();
     var h = info.heb, nightFast = (h.m === 7 && h.d === 10) || (h.m === 5 && info.fast); /* Yom Kippur and Tisha B'Av begin the evening before */
-    if (info.fast && !nightFast) ul.appendChild(el('li', { class: 'hi' }, [el('span', { text: 'תחילת הצום' }), el('span', { class: 'z num', text: fmtTime(z.alos) })]));
-    if (info.fast || info.yomKippur) ul.appendChild(el('li', { class: 'hi' }, [el('span', { text: 'צאת הצום' }), el('span', { class: 'z num', text: fmtTime(z.tzeis) })]));
-    if (info.shabbos || info.yomtov) ul.appendChild(el('li', { class: 'hi' }, [el('span', { text: info.shabbos ? 'מוצאי שבת' : 'מוצאי יום טוב' }), el('span', { class: 'z num', text: fmtTime(z.tzeis) })]));
+    if (info.fast && !nightFast) ul.appendChild(el('li', { class: 'hi' }, [el('span', { text: L.fastStart }), el('span', { class: 'z num', text: fmtTime(z.alos) })]));
+    if (info.fast || info.yomKippur) ul.appendChild(el('li', { class: 'hi' }, [el('span', { text: L.fastEnd }), el('span', { class: 'z num', text: fmtTime(z.tzeis) })]));
+    if (info.shabbos || info.yomtov) ul.appendChild(el('li', { class: 'hi' }, [el('span', { text: info.shabbos ? L.motzaeiShabbos : L.motzaeiYT }), el('span', { class: 'z num', text: fmtTime(z.tzeis) })]));
     var omer = rd - Cal.rdFromHeb(h.m <= 6 ? h.y : h.y + 1, 1, 15); /* days since 15 Nisan of this spring */
     if (omer >= 0 && omer <= 49) {
       var tonight = omer + 1, today = omer;
-      if (!isNaN(z.sunset) && nowMin >= z.sunset && tonight <= 49) ul.appendChild(el('li', { class: 'hi' }, [el('span', { text: 'הלילה סופרים' }), el('span', { class: 'z num', text: tonight + ' לעומר' })]));
-      else if (today >= 1) ul.appendChild(el('li', { class: 'hi' }, [el('span', { text: 'ספירת העומר' }), el('span', { class: 'z num', text: today + ' לעומר' })]));
+      if (!isNaN(z.sunset) && nowMin >= z.sunset && tonight <= 49) ul.appendChild(el('li', { class: 'hi' }, [el('span', { text: L.omerTonight }), el('span', { class: 'z num', text: tonight + L.laomer })]));
+      else if (today >= 1) ul.appendChild(el('li', { class: 'hi' }, [el('span', { text: L.omer }), el('span', { class: 'z num', text: today + L.laomer })]));
     }
     keys.forEach(function (k) {
       if (k === 'candles' && !(info.dow === 5 || info.erevYT)) return;
       if (zmanHidden(k)) return;
       if (k === 'tzeis' && (info.shabbos || info.yomtov || info.fast)) return;
-      var hi = k === 'candles' || (k === 'tzeis' && (info.shabbos || info.yomtov));
-      var li = el('li', { class: hi ? 'hi' : '' }, [el('span', { text: Cal.ZMAN_NAMES[k] }), el('span', { class: 'z num', text: fmtTime(z[k]) })]);
-      if (canRemind && !isNaN(z[k])) makeTappable(li, { zman: k, rd: rd, min: z[k] }); /* tap a zman to be reminded before it */
+      var hi = k === 'candles' || (k === 'tzeis' && (info.shabbos || info.yomtov)), v = z[k];
+      /* once a zman has passed, the line shows tomorrow's, marked מחר (candle lighting stays today's) */
+      var passed = !isNaN(v) && nowMs >= Cal.epochFromWall(rd, Math.round(v), tz) + 60000, showT = passed && k !== 'candles' && !isNaN(zt[k]), val = showT ? zt[k] : v;
+      var li = el('li', { class: (hi ? 'hi' : '') + (showT ? ' tomorrow' : passed ? ' past' : '') }, [el('span', null, [Cal.ZMAN_NAMES[k], showT ? el('span', { class: 'tag', text: L.tomorrow }) : null]), el('span', { class: 'z num', text: fmtTime(val) })]);
+      if (canRemind && !isNaN(val)) makeTappable(li, { zman: k, rd: showT ? rd + 1 : rd, min: val }); /* tap a zman to be reminded before it */
       ul.appendChild(li);
     });
-    return el('section', { class: 'side' }, [el('h3', { text: 'זמני היום' }), ul]);
+    return el('section', { class: 'side' }, [el('h3', { text: L.zmanim }), ul]);
   }
   /* Sponsor boxes (פרנס החודש and friends) in a framed strip under the header */
   function sponsorsStrip(rd) {
@@ -535,7 +552,7 @@
   }
   function footer() {
     var L = cfg.location || {};
-    var f = el('footer', null, [el('span', { text: 'הזמנים לפי ' + (L.name || (L.lat + ', ' + L.lng)) + ' · ' + (cfg.israel ? 'לוח ארץ ישראל' : 'לוח חוץ לארץ') })]);
+    var f = el('footer', null, [el('span', { text: S().timesBy + (L.name || (L.lat + ', ' + L.lng)) + ' · ' + (cfg.israel ? S().eretz : S().chul) })]);
     var right = el('div', { class: 'tabs ltr', dir: 'ltr' });
     ui.iosHint = el('span', { class: 'hint', text: 'To install on iPhone: Share, then "Add to Home Screen"' });
     ui.installBtn = el('button', { class: 'btn small primary', text: 'Install the app', onclick: function () {
@@ -559,6 +576,10 @@
     lookSel.value = lookMode();
     lookSel.addEventListener('change', function () { try { if (lookSel.value === lookDefault()) localStorage.removeItem('minyan-look'); else localStorage.setItem('minyan-look', lookSel.value); } catch (e) {} render(); });
     right.appendChild(el('label', { class: 'hint bigpick', for: 'look' }, ['Look: ', lookSel]));
+    var langSel = el('select', { id: 'lang', 'aria-label': 'Language of the labels' }, [el('option', { value: 'he', text: 'עברית' }), el('option', { value: 'yi', text: 'יידיש' })]);
+    langSel.value = langMode();
+    langSel.addEventListener('change', function () { try { if (langSel.value === langDefault()) localStorage.removeItem('minyan-lang'); else localStorage.setItem('minyan-lang', langSel.value); } catch (e) {} render(); });
+    right.appendChild(el('label', { class: 'hint bigpick', for: 'lang' }, ['Labels: ', langSel]));
     right.appendChild(ui.iosHint); right.appendChild(ui.installBtn); right.appendChild(ui.editBtn);
     refreshInstallBtn();
     f.appendChild(right);
@@ -729,7 +750,8 @@
     g.appendChild(el('div', { class: 'fields' }, [field('Civil date on the board and the weekly sheet', fDateFmt), field('Big number on the tiles, by default (everyone may switch it on their own phone)', fBig)]));
     var fPalette = el('select', { id: 'f-palette' }, [el('option', { value: 'shul', text: 'Shul: light stone, brass, charcoal, burgundy' }), el('option', { value: 'classic', text: 'Classic: parchment and navy' }), el('option', { value: 'contrast', text: 'High contrast: black on white, larger type' })]);
     fPalette.value = lookDefault.call(null) && isLook(d.palette) ? d.palette : 'shul';
-    g.appendChild(el('div', { class: 'fields' }, [field('Colors: the look everyone gets unless they pick another in the footer; the lobby screen and door displays always use it', fPalette)]));
+    var fLang = el('select', { id: 'f-lang' }, [el('option', { value: 'he', text: 'Hebrew (היום, מחר, מנין הבא…)' }), el('option', { value: 'yi', text: 'Yiddish (היינט, מארגן, קומענדיגער מנין…)' })]); fLang.value = d.lang === 'yi' ? 'yi' : 'he';
+    g.appendChild(el('div', { class: 'fields' }, [field('Colors: the look everyone gets unless they pick another in the footer; the lobby screen and door displays always use it', fPalette), field('Board labels: the language everyone gets unless they pick another in the footer', fLang)]));
     g.appendChild(el('div', { class: 'col' }, [el('label', { text: 'Countdown box ("הזמן הבא"): the next of these zmanim still ahead today' }), el('div', { class: 'tabs' }, COUNTDOWN_KEYS.map(function (k) { return chk('cd-' + k, countdownKeysOf(d).indexOf(k) >= 0, Cal.ZMAN_NAMES[k]); }))]));
     g.appendChild(el('div', { class: 'col' }, [chk('f-israel', d.israel, 'Eretz Yisroel calendar (one-day Yom Tov)'), chk('f-weekly', d.weeklyEarliest, 'Weekday zman-based times use the earliest sunset of the week (Sun–Thu)'), chk('f-24', d.clock24, '24-hour clock'), chk('f-tzeis', d.showTzeis !== false, 'Show צאת הכוכבים (the board\'s nightfall) in the zmanim list'), chk('f-rt', d.showRT, 'Show Rabbeinu Tam (72 minutes after sunset) in the zmanim list; hidden by itself while nightfall is 72 and צאת הכוכבים is shown'), chk('f-60', d.show60 !== false, 'Show 60 מינוט אחר השקיעה in the zmanim list')]));
     if (mode !== 'artifact') g.appendChild(el('div', { class: 'fields' }, [field('New PIN for the admin page', fPin, el('span', { class: 'hint', text: 'Stored scrambled (hashed), so it cannot be read from the site files. It keeps strangers out of the admin page; what everyone else sees can only be changed with the GitHub token on the Publish tab, which stays on the device that entered it.' }))]));
@@ -1176,6 +1198,7 @@
       out.bigTime = fBig.value;
       out.countdownZmanim = COUNTDOWN_KEYS.filter(function (k) { return $('#cd-' + k).checked; });
       out.palette = fPalette.value;
+      out.lang = fLang.value;
       out.logo = fLogo.value.trim();
       out.schedules = {};
       Cal.DAY_TYPES.forEach(function (t) {

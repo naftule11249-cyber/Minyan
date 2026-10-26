@@ -167,6 +167,12 @@ Same address, different screens (the `#` forms also work on the claude.ai page):
 
 Below 640px the board shows one tefilla at a time behind tabs (the tab of the next minyan opens first), each minyan as a row, with more than two past minyanim folded behind "הצג את הקודמים (N)". Tablets, the lobby screen and door displays keep the tile grid. Under the next-minyan box, three small cards show the minyanim after it, tomorrow's first Shacharis included once the day runs out; they can be tapped for a reminder like a tile.
 
+## Labels in Hebrew or Yiddish
+
+General → "Board labels" picks Hebrew (היום, מחר, מנין הבא, יום ראשון…) or Yiddish (היינט, מארגן, קומענדיגער מנין, זונטאג…) for the board's own words; room names, tefillos and zmanim stay as entered. The lobby screen and door displays always use that choice; a "Labels" switch in the footer lets each phone pick its own.
+
+In the zmanim list, a zman that has passed shows tomorrow's time with a מחר tag (candle lighting stays today's).
+
 ## Looks
 
 Three palettes: **Shul** (light stone and pale oak, brass, charcoal, the burgundy of the paroches), **Classic** (parchment and navy) and **High contrast** (black on white, larger type). General → Colors sets the default, which the lobby screen and door displays always use; a "Look" switch in the footer lets each phone pick its own. Dark mode follows the phone's setting with darker shades of the chosen palette. The icon and the share image use the shul palette.
