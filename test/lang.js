@@ -28,7 +28,7 @@ const { chromium } = require('playwright');
   ({ ctx, page } = await open(1280, 13, 0));
   const rows = await page.locator('.zlist li').evaluateAll(els => els.map(e => ({ name: e.querySelector('span').childNodes[0].textContent, tag: (e.querySelector('.tag') || {}).textContent || '', time: e.querySelector('.z').textContent, cls: e.className })));
   const shema = rows.find(r => r.name === 'סוף זמן ק״ש'), sunset = rows.find(r => r.name === 'שקיעה');
-  ok('13:00: sof zman Shema has passed, shows tomorrow\'s with a מחר tag', [shema.tag, shema.cls.indexOf('tomorrow') >= 0, /^\d{1,2}:\d{2}$/.test(shema.time)], ['מחר', true, true]);
+  ok('13:00: sof zman Shema has passed, keeps today\'s time, dimmed and untagged', [shema.tag, shema.cls.indexOf('past') >= 0, shema.cls.indexOf('tomorrow') >= 0, /^\d{1,2}:\d{2}$/.test(shema.time)], ['', true, false, true]);
   ok('13:00: shkia still today\'s, untagged', [sunset.tag, sunset.time], ['', '6:01']);
   await ctx.close(); await browser.close();
   console.log(errors.length ? 'ERRORS:\n' + errors.join('\n') : 'no console errors');

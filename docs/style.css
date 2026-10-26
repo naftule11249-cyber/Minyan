@@ -338,5 +338,3 @@ details.help summary { cursor: pointer; font-weight: 500; }
 .soon.tap:hover, .soon.tap:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 #app.display .soon .time { font-size: 2rem; }
 .zlist li.past { opacity: .5; }
-.zlist li.tomorrow .z { color: var(--muted); }
-.zlist .tag { font-size: .7rem; color: var(--muted); margin-inline-start: 6px; background: var(--panel-2); border: 1px solid var(--line); padding: 0 6px; border-radius: 999px; vertical-align: middle; }

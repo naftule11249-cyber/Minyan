@@ -338,10 +338,10 @@
       if (zmanHidden(k)) return;
       if (k === 'tzeis' && (info.shabbos || info.yomtov || info.fast)) return;
       var hi = k === 'candles' || (k === 'tzeis' && (info.shabbos || info.yomtov)), v = z[k];
-      /* once a zman has passed, the line shows tomorrow's, marked מחר (candle lighting stays today's) */
-      var passed = !isNaN(v) && nowMs >= Cal.epochFromWall(rd, Math.round(v), tz) + 60000, showT = passed && k !== 'candles' && !isNaN(zt[k]), val = showT ? zt[k] : v;
-      var li = el('li', { class: (hi ? 'hi' : '') + (showT ? ' tomorrow' : passed ? ' past' : '') }, [el('span', null, [Cal.ZMAN_NAMES[k], showT ? el('span', { class: 'tag', text: L.tomorrow }) : null]), el('span', { class: 'z num', text: fmtTime(val) })]);
-      if (canRemind && !isNaN(val)) makeTappable(li, { zman: k, rd: showT ? rd + 1 : rd, min: val }); /* tap a zman to be reminded before it */
+      /* a zman that has passed keeps today's time, dimmed; tapping it then sets a reminder for tomorrow's */
+      var passed = !isNaN(v) && nowMs >= Cal.epochFromWall(rd, Math.round(v), tz) + 60000, nextDay = passed && !isNaN(zt[k]);
+      var li = el('li', { class: (hi ? 'hi' : '') + (passed ? ' past' : '') }, [el('span', { text: Cal.ZMAN_NAMES[k] }), el('span', { class: 'z num', text: fmtTime(v) })]);
+      if (canRemind && (nextDay || (!passed && !isNaN(v)))) makeTappable(li, nextDay ? { zman: k, rd: rd + 1, min: zt[k] } : { zman: k, rd: rd, min: v }); /* tap a zman to be reminded before it */
       ul.appendChild(li);
     });
     return el('section', { class: 'side' }, [el('h3', { text: L.zmanim }), ul]);
