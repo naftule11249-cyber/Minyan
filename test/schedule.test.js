@@ -40,6 +40,7 @@ ok('"after minchag": a 1:00 PM Mincha is listed only once mincha gedola is earli
 ok('Hebrew keyword עד works the same', withLines({ shacharis: '10:45 ברך משה עד tefilla' }).scheduleFor(junRd).byTefilla.shacharis.length, 0);
 ok('the condition survives the parse (room and note intact)', (() => { const p = E.parseLine('10:45 ברך משה until tefilla-10 // late', { period: 'am' }); return [p.room, p.note, p.cond.op, p.cond.spec.zman, p.cond.spec.offset]; })(), ['ברך משה', 'late', 'until', 'tefilla', -10]);
 ok('condLimit gives the zman the line is measured against', eng.fmtTime(withLines({ shacharis: '10:45 ברך משה until tefilla' }).condLimit(E.parseLine('10:45 x until tefilla', { period: 'am' }), octRd, 'weekday')), eng.fmtTime(Math.round(zOct.tefilla)));
+ok('a switched-off line (#off …) is ignored by the board', withLines({ shacharis: '#off 6:20 ברך משה\n7:00 דברי יואל' }).scheduleFor(octRd).byTefilla.shacharis.map(e => eng.fmtTime(e.start)), ['7:00']);
 /* rooms in the gabbai's order break ties at the same time */
 const tie = withLines({ maariv: '7:00 לב אהרן\n7:00 ברך משה\n7:00 דברי יואל' }).scheduleFor(octRd).byTefilla.maariv.map(e => e.room);
 ok('same time: rooms in the order of the rooms list', tie, ['ברך משה', 'דברי יואל', 'לב אהרן']);

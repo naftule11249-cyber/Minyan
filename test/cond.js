@@ -27,6 +27,16 @@ const { chromium } = require('playwright');
   await sh.locator('button:has-text("Back to the list")').click(); await page.waitForTimeout(150);
   row = sh.locator('.mrow').filter({ has: page.locator('input[type=time][value="10:45"]') }).first();
   ok('back in the list the rule is still there', [await row.locator('select[aria-label="Show only"]').inputValue(), await row.locator('input[aria-label="Condition minutes"]').inputValue()], ['until', '90']);
+  // the On/Off switch keeps the row but takes it off the board
+  await row.locator('.switch input').uncheck(); await page.waitForTimeout(150);
+  ok('switched off: dimmed, preview says off', [await row.evaluate(e => e.classList.contains('off')), /^off · /.test(await row.locator('.pv').textContent())], [true, true]);
+  await sh.locator('button:has-text("Edit as text")').click();
+  ok('the text keeps the line with #off in front', /^#off 10:45 .*until tefilla-90$/m.test(await sh.locator('textarea').inputValue()), true);
+  await sh.locator('button:has-text("Back to the list")').click(); await page.waitForTimeout(150);
+  row = sh.locator('.mrow').filter({ has: page.locator('input[type=time][value="10:45"]') }).first();
+  ok('still off after the list is rebuilt', await row.locator('.switch input').isChecked(), false);
+  await row.locator('.switch input').check(); await page.waitForTimeout(150);
+  ok('switched on again (the −90 rule still hides it today)', [await row.evaluate(e => e.classList.contains('off')), /^not today: only before/.test(await row.locator('.pv').textContent())], [false, true]);
   await row.locator('select[aria-label="Show only"]').selectOption('after'); await page.waitForTimeout(150);
   ok('after: listed today (10:45 is after sof zman tefilla minus 90)', /^today 10:45 · only from סוף זמן תפילה −90 min/.test(await row.locator('.pv').textContent()), true);
   // save: the change is counted, listed on the Publish tab, and nothing is published by Save itself
@@ -34,7 +44,7 @@ const { chromium } = require('playwright');
   ok('the publish bar counts the change', await page.locator('.pubbar .pubmsg').textContent(), '1 change not yet published');
   await page.click('#tab-publish'); await page.waitForTimeout(200);
   const listed = await page.locator('.changes li').allTextContents();
-  ok('the Publish tab lists it', listed.some(t => /^Weekdays · שחרית: added 10:45 .*after tefilla-90$/.test(t)), true);
+  ok('the Publish tab lists it', listed.filter(t => /^Weekdays/.test(t)), ['Weekdays · שחרית: added 10:45 ברך משה after tefilla-90']);
   ok('the saved copy is on the device, the website copy untouched', await page.evaluate(() => [/after tefilla-90/.test(localStorage.getItem('minyan-config') || ''), /after tefilla-90/.test(localStorage.getItem('minyan-remote') || '')]), [true, false]);
   await ctx.close(); await browser.close();
   console.log(errors.length ? 'ERRORS:\n' + errors.join('\n') : 'no console errors');

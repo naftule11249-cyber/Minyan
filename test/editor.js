@@ -21,10 +21,14 @@ const { chromium } = require('playwright');
   console.log('after edit preview:', await r0.locator('.pv').textContent());
   // add a minyan
   await mi.locator('button:has-text("+ Add minyan")').click();
+  /* rows move to their place in time order when focus leaves them, so settle before picking a row */
+  const settle = async () => { await page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); }); await page.waitForTimeout(250); };
+  const rowWithTime = async (v) => { const i = await mi.locator('.mrow').evaluateAll((els, v) => els.findIndex(e => { const x = e.querySelector('input[type=time]'); return x && !x.hidden && x.value === v; }), v); return mi.locator('.mrow').nth(i); };
+  await settle();
   console.log('mincha rows after add:', await mi.locator('.mrow').count(), '| new row preview:', await mi.locator('.mrow').last().locator('.pv').textContent());
-  await mi.locator('.mrow').last().locator('select').first().selectOption('fixed');
-  await mi.locator('.mrow').last().locator('input[type=time]').fill('17:45');
-  await mi.locator('.mrow').last().locator('select[aria-label="Room"]').selectOption('לב אהרן');
+  await mi.locator('.mrow').last().locator('select').first().selectOption('fixed'); await settle();
+  await (await rowWithTime('07:00')).locator('input[type=time]').fill('17:45'); await settle();
+  await (await rowWithTime('17:45')).locator('select[aria-label="Room"]').selectOption('לב אהרן');
   // repeating row on sunday shacharis
   await page.click('#dt-sunday');
   const sun = page.locator('#dtp-sunday').locator('.fields.three > .field').nth(0);

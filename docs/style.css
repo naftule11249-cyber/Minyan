@@ -343,6 +343,8 @@ footer { max-width: 1120px; margin: 0 auto; padding-block: 0 30px; padding-left:
 .chead { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 18px 20px 8px; }
 .chead > div { min-width: 0; flex: 1 1 auto; }
 .chead > .status { flex: none; }
+.chev { display: none; width: 30px; height: 30px; border-radius: 50%; background: var(--a-soft); color: var(--a-navy); place-items: center; transition: transform .2s; flex: none; }
+.card.fold.open .chev { transform: rotate(180deg); }
 .chead h3 { font-size: 1.3rem; }
 .cdesc { font-size: .88rem; color: var(--a-muted); margin-top: 3px; line-height: 1.45; }
 .cbody { padding: 8px 20px 20px; display: grid; gap: 16px; }
@@ -404,8 +406,20 @@ footer { max-width: 1120px; margin: 0 auto; padding-block: 0 30px; padding-left:
 .field label.same input { width: 20px; height: 20px; accent-color: var(--a-navy); }
 .same-info { margin-top: -2px; }
 .editor .rows { background: transparent; border: 0; border-radius: 0; overflow: visible; display: grid; gap: 10px; }
-.mrow { position: relative; border: 1px solid var(--a-line); border-radius: 16px; padding: 12px 40px 12px 14px; display: grid; gap: 8px; background: var(--a-field); }
-.mrow .btn.icon { position: absolute; top: 10px; right: 8px; }
+.mrow { border: 1px solid var(--a-line); border-radius: 16px; padding: 10px 14px 12px; display: grid; gap: 8px; background: var(--a-field); }
+.mrow-h { display: flex; align-items: center; gap: 10px; min-height: 30px; }
+.mrow-h .sp { flex: 1; }
+.mrow.off { background: #f1efe8; border-style: dashed; }
+.mrow.off .mrow-l, .mrow.off .tag { opacity: .55; }
+.mrow.off .pv { background: #e6e2d8; color: var(--a-muted); }
+.mrow.note-line { background: #f4f2ec; border-style: dotted; }
+.switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: .78rem; font-weight: 700; color: var(--a-muted); }
+.switch input { appearance: none; -webkit-appearance: none; width: 44px; height: 26px; border-radius: 999px; background: #c6c0b2; position: relative; margin: 0; cursor: pointer; border: 0; transition: background .2s; flex: none; }
+.switch input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .2s; }
+.switch input:checked { background: var(--a-ok); }
+.switch input:checked::after { transform: translateX(18px); }
+.switch input:checked ~ .swl { color: var(--a-ok); }
+.switch input:focus-visible { outline: 2px solid var(--a-navy-2); outline-offset: 2px; }
 .mrow-l { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .mrow input, .mrow select { background: #fff; }
 .mrow select { width: auto; flex: 1 1 auto; max-width: 100%; }
@@ -414,7 +428,7 @@ footer { max-width: 1120px; margin: 0 auto; padding-block: 0 30px; padding-left:
 .mrow .room { flex: 1 1 140px; }
 .mrow .grow, .series .grow { flex: 1 1 160px; }
 .mrow .small { font-size: .85rem; color: var(--a-muted); display: inline-flex; align-items: center; gap: 6px; }
-.mrow .pv { font-size: .8rem; color: var(--a-navy); margin-inline-start: auto; background: var(--a-soft); border-radius: 999px; padding: 4px 11px; white-space: nowrap; font-weight: 600; }
+.mrow .pv { font-size: .8rem; color: var(--a-navy); background: var(--a-soft); border-radius: 999px; padding: 4px 11px; white-space: nowrap; font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .mrow .pv:empty { display: none; }
 .mrow .bad { color: var(--a-danger); font-size: .85rem; }
 .mrow.series { background: #fdf8ea; border-color: #ecd9a0; }
@@ -483,6 +497,15 @@ details.help p { margin: 6px 0; }
 .srow select { background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; padding: 7px 10px; max-width: 62%; }
 .sheet .side.inset { border: 0; border-radius: 0; border-bottom: 1px solid var(--line); padding: 14px 20px; }
 .sheet > .bar { padding: 14px 20px 0; justify-content: flex-end; }
+.guide { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.guide li { display: flex; align-items: flex-start; gap: 10px; font-size: .95rem; line-height: 1.4; }
+.guide .stepn { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--band-2); color: var(--band-ink); font-weight: 700; font-size: .85rem; display: inline-grid; place-items: center; }
+.guide .ico { margin-top: 2px; color: var(--accent); }
+.guide .ico svg { width: 20px; height: 20px; }
+.installed { display: flex; align-items: center; gap: 10px; font-size: .95rem; }
+.installed .okmark { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--next); color: #fff; font-weight: 700; display: inline-grid; place-items: center; }
+.copyrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.copyrow code { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font-size: .85rem; direction: ltr; overflow-wrap: anywhere; }
 @media (max-width: 640px) {
   .overlay.modal:has(> .panel.sheet) { padding: 0; align-items: stretch; }
   .overlay.modal .panel.sheet { width: 100%; max-height: none; min-height: 100%; border-radius: 0; border: 0; }
@@ -518,4 +541,26 @@ details.help p { margin: 6px 0; }
   .tabs.daytypes { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
   .tabs.daytypes button { white-space: nowrap; }
   .overlay.full .btn.primary, .overlay.full .btn.gold { min-height: 48px; }
+  /* full-width boxes you can hit with a thumb */
+  .card.fold .chead { cursor: pointer; min-height: 68px; flex-direction: row; align-items: center; justify-content: space-between; padding: 14px 16px; }
+  .card.fold .chead > div { flex: 1 1 auto; }
+  .card.fold .chead > .status { display: none; }
+  .card.fold .chev { display: inline-grid; }
+  .card.fold:not(.open) .cbody { display: none; }
+  .card.fold:not(.open) .chead .cdesc { display: none; }
+  .overlay.full .btn.small { min-height: 44px; }
+  .editor-bar { display: grid; grid-template-columns: 1fr 1fr; }
+  .editor-bar .btn, .editor-bar select { width: 100%; min-height: 48px; }
+  .bar.actions .btn { flex: 1 1 auto; min-height: 48px; }
+  .cbody > div > .btn, .tcard .today-add .btn, .tef .fields .btn { width: 100%; min-height: 48px; }
+}
+
+/* the board's footer buttons: bigger, and full width on a phone (after the footer rule, so this wins) */
+footer .tabs .btn { min-height: 42px; border-radius: 12px; padding: 8px 16px; font-weight: 600; }
+.sheet .sset .btn { width: 100%; min-height: 50px; border-radius: 14px; font-size: 1rem; font-weight: 600; }
+@media (max-width: 640px) {
+  footer { display: grid; gap: 12px; justify-items: stretch; }
+  footer .tabs { display: grid; grid-template-columns: 1fr; gap: 8px; }
+  footer .tabs .btn { width: 100%; min-height: 52px; font-size: 1rem; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; }
+  footer .tabs .btn.primary { background: var(--band-2); color: var(--band-ink); border-color: var(--band-2); }
 }

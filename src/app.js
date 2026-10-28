@@ -556,7 +556,40 @@
   }
   /* ---------- Settings sheet: everything a person can set for themselves, in one place ---------- */
   function installApp() { if (!deferredInstall) return; var ev = deferredInstall; deferredInstall = null; ev.prompt(); ev.userChoice.then(refreshInstallBtn, refreshInstallBtn); }
-  function openSettings() {
+  /* step by step: how to put the board on the home screen of this device */
+  function installGuide(closeSheet) {
+    var ua = navigator.userAgent || '', ios = isIOS(), android = /Android/i.test(ua), safari = ios && !/CriOS|FxiOS|EdgiOS|OPiOS|OPT\//.test(ua), out = [];
+    function step(k, text, icon) { return el('li', null, [el('span', { class: 'stepn', text: String(k) }), icon ? svgIcon(icon) : null, el('span', { text: text })]); }
+    function copyRow() {
+      var url = location.href.split('#')[0].replace(/admin\.html$/, '');
+      return el('div', { class: 'copyrow' }, [el('code', { text: url }), el('button', { type: 'button', class: 'btn small', text: 'Copy the address', onclick: function () {
+        (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(url) : Promise.reject()).then(function () { toast('Copied. Paste it in Safari.'); }, function () { toast(url, 8000); });
+      } })]);
+    }
+    if (inArtifact) return out;
+    if (isStandalone()) { out.push(el('div', { class: 'installed' }, [el('span', { class: 'okmark', text: '✓' }), el('span', { text: 'Installed. You are using the app, so reminders can reach this device.' })])); return out; }
+    if (deferredInstall) {
+      out.push(el('p', { class: 'hint', text: 'One tap puts the board on this device as an app, with its own icon, and lets reminders through.' }));
+      out.push(el('button', { type: 'button', class: 'btn primary', text: 'Install the app', onclick: function () { installApp(); closeSheet(); } }));
+      return out;
+    }
+    if (ios && safari) {
+      out.push(el('p', { class: 'hint', text: 'On iPhone and iPad the app is added from Safari. Reminders work only from the installed app.' }));
+      out.push(el('ol', { class: 'guide' }, [step(1, 'Tap the Share button, the square with an arrow, at the bottom of Safari.', 'share'), step(2, 'Scroll down and tap "Add to Home Screen".', 'plus'), step(3, 'Tap Add, then open the board from its new icon.', 'home')]));
+    } else if (ios) {
+      out.push(el('p', { class: 'hint', text: 'On iPhone and iPad only Safari can add the app. Open this address in Safari first:' }));
+      out.push(copyRow());
+      out.push(el('ol', { class: 'guide' }, [step(1, 'Paste the address in Safari and open it.', 'link'), step(2, 'Tap Share, then "Add to Home Screen", then Add.', 'share')]));
+    } else if (android) {
+      out.push(el('p', { class: 'hint', text: 'On Android, in Chrome:' }));
+      out.push(el('ol', { class: 'guide' }, [step(1, 'Tap the ⋮ menu at the top right.', 'menu'), step(2, 'Tap "Add to Home screen" or "Install app".', 'plus'), step(3, 'Tap Install. The board gets its own icon.', 'home')]));
+    } else {
+      out.push(el('p', { class: 'hint', text: 'On a computer, in Chrome or Edge:' }));
+      out.push(el('ol', { class: 'guide' }, [step(1, 'Click the install icon at the right end of the address bar, a screen with an arrow, or open the ⋮ menu.', 'install'), step(2, 'Choose "Install ' + (cfg.name || 'the board') + '".', 'plus')]));
+    }
+    return out;
+  }
+  function openSettings(goto) {
     var old = $('#set-overlay'); if (old) old.remove();
     var ov = el('div', { class: 'overlay modal', id: 'set-overlay', dir: 'ltr' });
     function close() { ov.remove(); }
@@ -583,24 +616,24 @@
       section('Display', 'Your choices stay on this device; the screens in the shul keep the gabbai\'s.', disp),
       section('Countdown box (הזמן הבא)', 'Which zmanim it counts down to.', [el('button', { type: 'button', class: 'btn small', id: 'zc-open', text: 'Choose the zmanim…', onclick: openCountdownChooser })])]);
     var pp = pushPanel(); if (pp) { pp.classList.add('inset'); sheet.appendChild(pp); }
-    var app = [];
-    if (deferredInstall) app.push(el('button', { type: 'button', class: 'btn small primary', text: 'Install the app', onclick: function () { installApp(); close(); } }));
-    if (!inArtifact && isIOS() && !isStandalone() && !deferredInstall) app.push(el('p', { class: 'hint', text: 'To install on iPhone or iPad: in Safari tap Share, then "Add to Home Screen". Reminders work from the installed app only.' }));
+    var app = installGuide(close);
     app.push(el('button', { type: 'button', class: 'btn small', text: 'Check for updates', onclick: function () {
       var p = ('serviceWorker' in navigator) ? navigator.serviceWorker.getRegistration().then(function (r) { return r ? r.update() : null; }) : Promise.resolve();
       p.then(function () { return loadRemote(); }).then(function () { toast('Up to date. A newer version reloads by itself when it arrives.'); }, function () { toast('Could not check right now.'); });
     } }));
-    sheet.appendChild(section('App', '', app));
+    var appSec = section('Install as an app', '', app); appSec.id = 'sset-app';
+    sheet.appendChild(appSec);
     sheet.appendChild(el('div', { class: 'bar' }, [el('button', { type: 'button', class: 'btn primary', text: 'Done', onclick: close })]));
     ov.appendChild(sheet);
     ov.addEventListener('click', function (ev) { if (ev.target === ov) close(); });
     document.body.appendChild(ov);
+    if (goto === 'app') appSec.scrollIntoView({ block: 'start' });
   }
   function footer() {
     var L = cfg.location || {};
     var f = el('footer', null, [el('span', { text: S().timesBy + (L.name || (L.lat + ', ' + L.lng)) + ' · ' + (cfg.israel ? S().eretz : S().chul) })]);
     var right = el('div', { class: 'tabs ltr', dir: 'ltr' });
-    ui.iosHint = el('span', { class: 'hint', text: 'To install on iPhone: Share, then "Add to Home Screen"' });
+    ui.iosHint = el('button', { type: 'button', class: 'btn small', id: 'install-guide', text: 'Install the app', onclick: function () { openSettings('app'); } });
     ui.installBtn = el('button', { class: 'btn small primary', text: 'Install the app', onclick: installApp });
     ui.editBtn = el('button', { class: 'btn small', text: 'Edit', onclick: openAdmin });
     ui.editBtn.hidden = !canEditNow();
@@ -701,6 +734,13 @@
     data: '<rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/>',
     send: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/>',
     x: '<path d="M18 6 6 18M6 6l12 12"/>',
+    share: '<path d="M12 3v12M8 7l4-4 4 4"/><path d="M5 11v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9"/>',
+    plus: '<rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/>',
+    home: '<path d="M3 11 12 3l9 8"/><path d="M5 10v10h14V10"/>',
+    menu: '<circle cx="12" cy="5" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.7" fill="currentColor" stroke="none"/>',
+    link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1.5 1.5"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.5-1.5"/>',
+    install: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M12 8v5M9.5 10.5 12 13l2.5-2.5M8 20h8"/>',
+    chev: '<path d="M6 9l6 6 6-6"/>',
     lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
     open: '<path d="M14 4h6v6M20 4l-9 9M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/>',
     logout: '<path d="M10 17l5-5-5-5M15 12H3M13 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/>'
@@ -720,9 +760,11 @@
   }
   /* a titled card for the admin pages; fill card.body */
   function card(title, desc, opts) {
-    var body = el('div', { class: 'cbody' });
-    var c = el('section', { class: 'card' + (opts && opts.cls ? ' ' + opts.cls : '') }, [
-      el('div', { class: 'chead' }, [el('div', null, [el('h3', { text: title }), desc ? el('div', { class: 'cdesc', text: desc }) : null]), opts && opts.extra ? opts.extra : null]), body]);
+    var body = el('div', { class: 'cbody' }), fold = !!(opts && opts.fold);
+    var head = el('div', { class: 'chead' }, [el('div', null, [el('h3', { text: title }), desc ? el('div', { class: 'cdesc', text: desc }) : null]), opts && opts.extra ? opts.extra : null, fold ? el('span', { class: 'chev' }, [svgIcon('chev')]) : null]);
+    var c = el('section', { class: 'card' + (fold ? ' fold' : '') + (opts && opts.cls ? ' ' + opts.cls : '') }, [head, body]);
+    /* on a phone a folding card is a full-width box that opens on tap; on a wide screen it is always open */
+    if (fold) head.addEventListener('click', function (ev) { if (ev.target.closest('button, a, input, select')) return; c.classList.toggle('open'); });
     c.body = body;
     return c;
   }
@@ -748,12 +790,13 @@
     var oRows = [];
     /* general */
     var g = el('div', { class: 'col' });
-    var cBoard = card('The board', 'The name on the board and the rooms the minyanim are in.'),
-      cLook = card('Look and labels', 'How the board reads. Everyone may still switch the look and the labels on their own phone.'),
-      cZman = card('Location and zmanim', 'Where the shul is, how nightfall is figured, and which zmanim the countdown box shows.'),
-      cTef = card('Tefillos', 'Minyanim count for "next minyan" and reminders. A shiur or event category is listed on the board and in texts but never shown as the next minyan.'),
-      cServices = card('Website and services', 'Addresses the app, the share preview and the reminders use.'),
-      cSec = card('Security', 'The PIN keeps strangers out of this page.');
+    var F = { fold: true };
+    var cBoard = card('The board', 'The name on the board and the rooms the minyanim are in.', F),
+      cLook = card('Look and labels', 'How the board reads. Everyone may still switch the look and the labels on their own phone.', F),
+      cZman = card('Location and zmanim', 'Where the shul is, how nightfall is figured, and which zmanim the countdown box shows.', F),
+      cTef = card('Tefillos', 'Minyanim count for "next minyan" and reminders. A shiur or event category is listed on the board and in texts but never shown as the next minyan.', F),
+      cServices = card('Website and services', 'Addresses the app, the share preview and the reminders use.', F),
+      cSec = card('Security', 'The PIN keeps strangers out of this page.', F);
     var fName = inp('f-name', d.name), fLocName = inp('f-locname', d.location.name), fLat = inp('f-lat', d.location.lat, { inputmode: 'decimal' }),
       fLng = inp('f-lng', d.location.lng, { inputmode: 'decimal' }), fTz = inp('f-tz', d.location.tz || 'America/New_York', { list: 'tz-list' }),
       fElev = inp('f-elev', d.location.elev || 0, { inputmode: 'numeric' }), fCandles = inp('f-candles', d.candles == null ? 18 : d.candles, { inputmode: 'numeric' }),
@@ -859,9 +902,11 @@
     function hhmm(min) { min = Math.round(min); return pad2(Math.floor(min / 60) % 24) + ':' + pad2(min % 60); }
     function specToRow(spec) { return spec.kind === 'fixed' ? { kind: 'fixed', time: hhmm(spec.min), off: 0, round: false } : { kind: spec.zman, time: '', off: spec.offset || 0, round: !!spec.round }; }
     function lineToRow(line, tf) {
+      var off = false, m0 = /^#\s*off\s+(\S.*)$/i.exec(line.trim());
+      if (m0) { off = true; line = m0[1]; } /* a switched-off row: kept in the text, ignored by the board */
       var p = parseLine(line, tf);
-      if (!p) return null;
-      if (!p.spec) return { raw: line.trim() };
+      if (!p) return /^\s*#/.test(line) ? { raw: line.trim(), comment: true } : null;
+      if (!p.spec) return { raw: line.trim(), disabled: off };
       if (p.series) {
         var st = specToRow(p.spec.start), en;
         if (p.spec.end) en = specToRow(p.spec.end);
@@ -869,19 +914,21 @@
           var span = p.spec.every * Math.max(0, (p.spec.count || 1) - 1);
           en = st.kind === 'fixed' ? { kind: 'fixed', time: hhmm(p.spec.start.min + span), off: 0, round: false } : { kind: st.kind, time: '', off: st.off + span, round: false };
         }
-        return { series: true, every: p.spec.every, start: st, endMode: 'to', end: en, rooms: p.rooms.join(', '), note: p.note, cond: condOf(p) };
+        return { series: true, every: p.spec.every, start: st, endMode: 'to', end: en, rooms: p.rooms.join(', '), note: p.note, cond: condOf(p), disabled: off };
       }
-      var r = specToRow(p.spec); r.room = p.room; r.note = p.note; r.cond = condOf(p);
+      var r = specToRow(p.spec); r.room = p.room; r.note = p.note; r.cond = condOf(p); r.disabled = off;
       return r;
     }
     /* the row's "show only" condition: {op: 'until'|'after', zman, off} or null */
     function condOf(p) { return p.cond ? { op: p.cond.op, zman: p.cond.spec.zman, off: p.cond.spec.offset || 0 } : null; }
     function condTok(r) { return r.cond && r.cond.op ? ' ' + r.cond.op + ' ' + (ZWORD[r.cond.zman] || r.cond.zman) + (r.cond.off ? (r.cond.off < 0 ? '-' : '+') + Math.abs(r.cond.off) : '') : ''; }
     function tokOf(w) { return w.kind === 'fixed' ? (w.time || '07:00') : (ZWORD[w.kind] + (w.off ? (w.off < 0 ? '-' : '+') + Math.abs(w.off) : '') + (w.round ? '~5' : '')); }
-    function rowToLine(r) {
-      if (r.raw != null) return r.raw;
-      if (r.series) return 'every ' + (r.every || 10) + ' from ' + tokOf(r.start) + ' to ' + tokOf(r.end) + (r.rooms ? ' rooms ' + r.rooms : '') + condTok(r) + (r.note ? ' // ' + r.note : '');
-      return tokOf(r) + (r.room ? ' ' + r.room : '') + condTok(r) + (r.note ? ' // ' + r.note : '');
+    /* clean = without the "#off" marker (for previews and sorting) */
+    function rowToLine(r, clean) {
+      var pre = r.disabled && !clean ? '#off ' : '';
+      if (r.raw != null) return r.comment ? r.raw : pre + r.raw;
+      if (r.series) return pre + 'every ' + (r.every || 10) + ' from ' + tokOf(r.start) + ' to ' + tokOf(r.end) + (r.rooms ? ' rooms ' + r.rooms : '') + condTok(r) + (r.note ? ' // ' + r.note : '');
+      return pre + tokOf(r) + (r.room ? ' ' + r.room : '') + condTok(r) + (r.note ? ' // ' + r.note : '');
     }
     var roomsList = el('datalist', { id: 'rooms-list' }), knownRooms = [];
     function refreshRooms() {
@@ -910,18 +957,19 @@
     function minyanEditor(store, tfIndex, typeKeyFn, copyFrom) {
       var wrap = el('div', { class: 'editor' }), list = el('div', { class: 'rows' }), rows = [], ta = null;
       function tf() { return liveTefilla(tfIndex); }
-      function sync() { store.value = rows.map(rowToLine).join('\n'); if (ta) ta.value = store.value; refreshRooms(); markTabs(); }
+      function sync() { store.value = rows.map(function (r) { return rowToLine(r); }).join('\n'); if (ta) ta.value = store.value; refreshRooms(); markTabs(); }
       /* rows are kept in time order (by today's time for zman-based ones); unreadable lines go last */
       function sortRows() { rows.sort(function (x, y) { var a = previewOf(x), b = previewOf(y); return (isNaN(a) ? 1e9 : a) - (isNaN(b) ? 1e9 : b); }); }
       function load() { rows = []; store.value.split('\n').forEach(function (l) { var r = lineToRow(l, tf()); if (r) rows.push(r); }); sortRows(); }
-      function timesOf(r) { return expandLine(parseLine(rowToLine(r), tf()), todayRd, typeKeyFn()).map(function (x) { return x.start; }); }
+      function timesOf(r) { return expandLine(parseLine(rowToLine(r, true), tf()), todayRd, typeKeyFn()).map(function (x) { return x.start; }); }
       function previewOf(r) { var t = timesOf(r); return t.length ? t[0] : NaN; }
       function condText(r) {
         if (!r.cond || !r.cond.op) return '';
-        var lim = engine.condLimit(parseLine(rowToLine(r), tf()), todayRd, typeKeyFn()), name = Cal.ZMAN_NAMES[r.cond.zman] || r.cond.zman;
+        var lim = engine.condLimit(parseLine(rowToLine(r, true), tf()), todayRd, typeKeyFn()), name = Cal.ZMAN_NAMES[r.cond.zman] || r.cond.zman;
         return (r.cond.op === 'until' ? 'before ' : 'from ') + name + (r.cond.off ? (r.cond.off < 0 ? ' −' : ' +') + Math.abs(r.cond.off) + ' min' : '') + (isNaN(lim) ? '' : ', today ' + fmtTime(lim));
       }
-      function previewText(r) {
+      function previewText(r) { var b = previewBase(r); return r.disabled ? 'off' + (b ? ' · ' + b : '') : b; }
+      function previewBase(r) {
         var t = timesOf(r), c = condText(r);
         if (!t.length) return c ? 'not today: only ' + c : (r.series ? 'no minyanim today (check the times)' : '');
         if (!r.series) return 'today ' + fmtTime(t[0]) + (c ? ' · only ' + c : '');
@@ -971,16 +1019,22 @@
         return el('div', { class: 'mrow-l cond' }, [el('span', { class: 'k', text: 'Show:' }), op, zman, minsW, sign]);
       }
       function renderRow(r) {
-        var row = el('div', { class: 'mrow' + (r.series ? ' series' : '') });
+        var row = el('div', { class: 'mrow' + (r.series ? ' series' : '') + (r.disabled ? ' off' : '') + (r.comment ? ' note-line' : '') });
         var del = el('button', { type: 'button', class: 'btn small danger icon', text: '✕', title: 'Remove', 'aria-label': 'Remove', onclick: function () { rows.splice(rows.indexOf(r), 1); row.remove(); sync(); } });
+        var pv = el('span', { class: 'pv num' });
+        function changed() { sync(); pv.textContent = previewText(r); }
+        /* On/Off: an Off row stays here, with its times and rooms, but is not on the board, in the texts or in Today */
+        var onIn = el('input', { type: 'checkbox', 'aria-label': 'On' }), swl = el('span', { class: 'swl', text: r.disabled ? 'Off' : 'On' });
+        onIn.checked = !r.disabled;
+        var sw = el('label', { class: 'switch', title: 'Off keeps the row but takes the minyan off the board' }, [onIn, swl]);
+        onIn.addEventListener('change', function () { r.disabled = !onIn.checked; row.classList.toggle('off', r.disabled); swl.textContent = r.disabled ? 'Off' : 'On'; changed(); });
+        row.appendChild(el('div', { class: 'mrow-h' }, [pv, el('span', { class: 'sp' }), r.comment ? null : sw, del]));
         if (r.raw != null) {
           var rawIn = el('input', { type: 'text', dir: 'auto', value: r.raw, class: 'grow' });
           rawIn.addEventListener('input', function () { r.raw = rawIn.value; sync(); });
-          row.appendChild(el('div', { class: 'mrow-l' }, [el('span', { class: 'bad', text: 'Cannot read this line:' }), rawIn, del]));
+          row.appendChild(el('div', { class: 'mrow-l' }, [el('span', { class: r.comment ? 'k' : 'bad', text: r.comment ? 'Note line (not a minyan):' : 'Cannot read this line:' }), rawIn]));
           return row;
         }
-        var pv = el('span', { class: 'pv num' });
-        function changed() { sync(); pv.textContent = previewText(r); }
         var note = el('input', { type: 'text', dir: 'auto', placeholder: 'Note (optional)', value: r.note || '', class: 'grow' });
         note.addEventListener('input', function () { r.note = note.value; sync(); });
         if (r.series) {
@@ -1009,12 +1063,12 @@
           row.appendChild(el('div', { class: 'mrow-l' }, [el('span', { class: 'k', text: 'to' })].concat(endW)));
           row.appendChild(el('div', { class: 'mrow-l' }, [el('span', { class: 'k', text: 'rooms, in this order (1st minyan, 2nd, …, then again from 1):' }), chips]));
           row.appendChild(el('div', { class: 'mrow-l' }, picker));
-          row.appendChild(el('div', { class: 'mrow-l' }, [note, pv, del]));
+          row.appendChild(el('div', { class: 'mrow-l' }, [note]));
           row.appendChild(condWidget(r, changed));
         } else {
           var room = roomPicker(function () { return r.room; }, function (v) { r.room = v; sync(); }, 'Room');
-          row.appendChild(el('div', { class: 'mrow-l' }, timeWidget(r, changed).concat([pv])));
-          row.appendChild(el('div', { class: 'mrow-l' }, room.concat([note, del])));
+          row.appendChild(el('div', { class: 'mrow-l' }, timeWidget(r, changed)));
+          row.appendChild(el('div', { class: 'mrow-l' }, room.concat([note])));
           row.appendChild(condWidget(r, changed));
         }
         pv.textContent = previewText(r);
@@ -1530,7 +1584,7 @@
     (a.tefillos || []).concat(b.tefillos || []).forEach(function (t) { tfById[t.id] = t; });
     /* a line in its parsed form, so "6:20" and "06:20" (how the editor writes it) are the same line */
     function canonLine(line, id) { var p = MinyanEngine.parseLine(line, tfById[id] || { period: 'am' }); if (!p) return null; return JSON.stringify({ s: p.spec, r: p.room || p.rooms, n: p.note, c: p.cond }); }
-    function lineMap(text, id) { var m = {}; lines(text).forEach(function (l) { var k = canonLine(l, id) || l; if (!m[k]) m[k] = l; }); return m; }
+    function lineMap(text, id) { var m = {}; lines(text).forEach(function (l) { var off = /^#\s*off\s+/i.test(l), body = off ? l.replace(/^#\s*off\s+/i, '') : l, k = canonLine(body, id) || body; if (!m[k]) m[k] = { text: body, off: off }; }); return m; }
     /* blank, missing, false and 0 count as the same; key order does not matter */
     function canon(v) {
       if (v == null || v === '' || v === false || v === 0) return null;
@@ -1555,9 +1609,11 @@
       var k = t[0], sa = (a.schedules || {})[k] || {}, sb = (b.schedules || {})[k] || {}, ids = {};
       Object.keys(sa).concat(Object.keys(sb)).forEach(function (id) { ids[id] = 1; });
       Object.keys(ids).forEach(function (id) {
-        var ma = lineMap(sa[id], id), mb = lineMap(sb[id], id), added = Object.keys(mb).filter(function (k) { return !ma[k]; }).map(function (k) { return mb[k]; }), removed = Object.keys(ma).filter(function (k) { return !mb[k]; }).map(function (k) { return ma[k]; });
-        if (!added.length && !removed.length) return;
-        out.push(t[3] + ' · ' + (names[id] || id) + ': ' + [added.length ? 'added ' + few(added) : '', removed.length ? 'removed ' + few(removed) : ''].filter(Boolean).join('; '));
+        var ma = lineMap(sa[id], id), mb = lineMap(sb[id], id), added = [], removed = [], on = [], offs = [];
+        Object.keys(mb).forEach(function (k) { if (!ma[k]) added.push(mb[k].text + (mb[k].off ? ' (off)' : '')); else if (ma[k].off !== mb[k].off) (mb[k].off ? offs : on).push(mb[k].text); });
+        Object.keys(ma).forEach(function (k) { if (!mb[k]) removed.push(ma[k].text); });
+        if (!added.length && !removed.length && !on.length && !offs.length) return;
+        out.push(t[3] + ' · ' + (names[id] || id) + ': ' + [added.length ? 'added ' + few(added) : '', offs.length ? 'switched off ' + few(offs) : '', on.length ? 'switched on ' + few(on) : '', removed.length ? 'removed ' + few(removed) : ''].filter(Boolean).join('; '));
       });
     });
     function okey(o) { return o.date ? o.date : o.hm != null ? 'hebrew ' + o.hm + '/' + o.hd : 'calendar ' + o.calLabel; }
@@ -1659,7 +1715,7 @@
   function isIOS() { return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
   function refreshInstallBtn() {
     if (ui.installBtn) ui.installBtn.hidden = !deferredInstall;
-    if (ui.iosHint) ui.iosHint.hidden = !(!inArtifact && isIOS() && !isStandalone() && !deferredInstall);
+    if (ui.iosHint) ui.iosHint.hidden = !(!inArtifact && !isStandalone() && !deferredInstall);
   }
   function registerSW() {
     if (inArtifact || !('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;

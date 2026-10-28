@@ -46,7 +46,7 @@ candles, tzeis, plag, chatzos, alos, shema). The last weekday Shacharis is writt
 so it moves with chatzos every day (change `-30` if your board uses a different gap).
 A repeating run: `every 10 from sunrise-30~5 to chatzos-30 rooms ברך משה, דברי יואל` (every 10 minutes, rooms in turn; `~5` rounds every minyan to 5 minutes). The admin page builds these rows for you.
 
-A rule at the end of a line, `until <zman>` or `after <zman>` (עד / אחרי work too, with an offset like `tefilla-10`), keeps the minyan only while it starts before (or from) that zman on that day: `10:45 ברך משה until tefilla` is listed in winter and drops away by itself in summer, and a repeating run with `… rooms A, B until tefilla-5` shortens by itself. In the editor every row has "Show: only while it starts before…", and its preview says "not today" when the rule hides it.
+A rule at the end of a line, `until <zman>` or `after <zman>` (עד / אחרי work too, with an offset like `tefilla-10`), keeps the minyan only while it starts before (or from) that zman on that day: `10:45 ברך משה until tefilla` is listed in winter and drops away by itself in summer, and a repeating run with `… rooms A, B until tefilla-5` shortens by itself. In the editor every row has "Show: only while it starts before…", and its preview says "not today" when the rule hides it. Every row also has an On/Off switch: Off keeps the row, with its times and rooms, but takes the minyan off the board, the texts and the Today tab (in the text form the line gets `#off` in front); the Publish list reports it as "switched off".
 A zman-based time starts from the zman as the zmanim list shows it (to the minute), so with chatzos at 12:40 `חצות-30` is 12:10.
 Fixed and repeating rows mix freely; the Sunday Shacharis list is `7:30 לב אהרן`, then `every 15 from 8:00 to 11:15 rooms דברי יואל, ברך משה, שלמה יודא, לב אהרן`, then `11:30 היכל אדל`, `11:45 לב אהרן`, `12:00 דברי יואל` and `חצות-30 ברך משה`.
 Day types fall back to a more general one when
@@ -175,7 +175,7 @@ Same address, different screens (the `#` forms also work on the claude.ai page):
 
 ## On a phone
 
-The ⚙ in the header and the "Settings" button in the footer open one sheet with everything a person sets for themselves: the big number, the look, the labels, the countdown zmanim, reminders, installing the app and "Check for updates".
+The ⚙ in the header and the "Settings" button in the footer open one sheet with everything a person sets for themselves: the big number, the look, the labels, the countdown zmanim, reminders, "Check for updates" and an install guide with the steps for the device at hand (Safari on iPhone and iPad, Chrome on Android, a computer), or a one-tap Install button where the browser offers it; the footer's "Install the app" opens the same guide.
 
 Below 640px the board shows one tefilla at a time behind tabs (the tab of the next minyan opens first), each minyan as a row, with more than two past minyanim folded behind "הצג את הקודמים (N)". Tablets keep the tile grid, with the same fold for past minyanim; the lobby screen and door displays hide past minyanim outright. Under the next-minyan box, three small cards show the minyanim after it, tomorrow's first Shacharis included once the day runs out; they can be tapped for a reminder like a tile.
 
