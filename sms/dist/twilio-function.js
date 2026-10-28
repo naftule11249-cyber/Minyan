@@ -362,7 +362,7 @@ var MinyanEngine = (function () {
   Cal.DAY_TYPES.forEach(function (t) { FALLBACK[t[0]] = t[2]; TYPE_NAME[t[0]] = t[1]; TYPE_NAME_EN[t[0]] = t[3]; });
   var ZMAN_ALIAS = { 'שקיעה': 'sunset', 'sunset': 'sunset', 'נץ': 'sunrise', 'sunrise': 'sunrise', 'הדלקה': 'candles', 'candles': 'candles',
     'צאת': 'tzeis', 'tzeis': 'tzeis', 'פלג': 'plag', 'plag': 'plag', 'חצות': 'chatzos', 'chatzos': 'chatzos', 'עלות': 'alos', 'alos': 'alos',
-    'ר״ת': 'tzeis72', 'ר"ת': 'tzeis72', 'rt': 'tzeis72', 'tzeis60': 'tzeis60', 'צאת60': 'tzeis60', 'minchag': 'minchag', 'מנחה־גדולה': 'minchag', 'שמע': 'shema', 'shema': 'shema' };
+    'ר״ת': 'tzeis72', 'ר"ת': 'tzeis72', 'rt': 'tzeis72', 'tzeis60': 'tzeis60', 'צאת60': 'tzeis60', 'minchag': 'minchag', 'מנחה־גדולה': 'minchag', 'שמע': 'shema', 'shema': 'shema', 'tefilla': 'tefilla', 'תפילה': 'tefilla' };
   var WEEKLY_TYPES = { weekday: 1, sunday: 1, rosh_chodesh: 1, fast: 1, chanukah: 1, purim: 1, chol_hamoed: 1 };
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
   function isoDate(rd) { var g = Cal.gregFromRD(rd); return g.y + '-' + pad2(g.m) + '-' + pad2(g.d); }
@@ -385,21 +385,24 @@ var MinyanEngine = (function () {
     if (!z) return null;
     return { kind: 'zman', zman: z, offset: m[2] ? (+m[3]) * (m[2] === '-' ? -1 : 1) : 0, round: m[4] ? +m[4] : 0 };
   }
-  /* "6:20 ברך משה // הערה" -> {spec, room, note} */
+  /* "6:20 ברך משה // הערה" -> {spec, room, note}. A trailing "until <zman>" / "after <zman>" (עד / אחרי) is a condition:
+     the minyan is listed only while it starts before (or from) that zman on that day, so a late Shacharis drops away in summer by itself. */
   function parseLine(line, tefilla) {
     var s = line.trim();
     if (!s || s.charAt(0) === '#') return null;
     var note = '', i = s.indexOf('//');
     if (i >= 0) { note = s.slice(i + 2).trim(); s = s.slice(0, i).trim(); }
+    var cond = null, cm = /^(.*?)\s+(until|after|עד|אחרי)\s+(\S+)$/i.exec(s);
+    if (cm) { var cs = parseSpec(cm[3], tefilla); if (cs && cs.kind === 'zman') { cond = { op: /^(until|עד)$/i.test(cm[2]) ? 'until' : 'after', spec: cs }; s = cm[1].trim(); } }
     var m = /^every\s+(\d+)\s+from\s+(\S+)\s+(?:to\s+(\S+)|count\s+(\d+))(?:\s+rooms\s+(.*))?$/i.exec(s);
     if (m) {
       var start = parseSpec(m[2], tefilla), end = m[3] ? parseSpec(m[3], tefilla) : null;
       var rooms = (m[5] || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean);
       var ok = !!start && +m[1] > 0 && (m[3] ? !!end : +m[4] > 0);
-      return { raw: line, tok: s, series: true, spec: ok ? { kind: 'series', every: +m[1], start: start, end: end, count: m[4] ? +m[4] : 0 } : null, room: '', rooms: rooms, note: note };
+      return { raw: line, tok: s, series: true, spec: ok ? { kind: 'series', every: +m[1], start: start, end: end, count: m[4] ? +m[4] : 0 } : null, room: '', rooms: rooms, note: note, cond: cond };
     }
     var parts = s.split(/\s*\|\s*|\s+/), tok = parts.shift();
-    return { raw: line, tok: tok, spec: parseSpec(tok, tefilla), room: parts.join(' '), note: note };
+    return { raw: line, tok: tok, spec: parseSpec(tok, tefilla), room: parts.join(' '), note: note, cond: cond };
   }
 
   function create(cfg) {
@@ -424,8 +427,17 @@ var MinyanEngine = (function () {
       var v = Math.round(base) + spec.offset; /* start from the zman as the zmanim list shows it (to the minute), then add the offset */
       return spec.round ? Math.floor(v / spec.round) * spec.round : v;
     }
+    /* the zman a line's "until"/"after" condition resolves to on day rd (NaN when the line has none) */
+    function condLimit(p, rd, type) { return p && p.cond ? resolveMin(p.cond.spec, rd, type) : NaN; }
+    function applyCond(p, list, rd, type) {
+      if (!p || !p.cond || !list.length) return list;
+      var lim = condLimit(p, rd, type);
+      if (isNaN(lim)) return list;
+      return list.filter(function (e) { return p.cond.op === 'until' ? e.start < lim : e.start >= lim; });
+    }
     /* A parsed line -> the minyanim it produces on day rd: [{start, room, note}] (a repeating line gives many). */
-    function expand(p, rd, type) {
+    function expand(p, rd, type) { return applyCond(p, expandAll(p, rd, type), rd, type); }
+    function expandAll(p, rd, type) {
       if (!p || !p.spec) return [];
       if (p.spec.kind !== 'series') { var st = resolveMin(p.spec, rd, type); return isNaN(st) ? [] : [{ start: st, room: p.room, note: p.note }]; }
       var out = [], start = resolveMin(p.spec.start, rd, type);
@@ -490,8 +502,12 @@ var MinyanEngine = (function () {
       });
       return out;
     }
+    function roomRank() {
+      var m = {}; (cfg.rooms || '').split(',').forEach(function (x, i) { x = x.trim(); if (x && m[x] == null) m[x] = i; });
+      return function (room) { return m[room] == null ? 1e6 : m[room]; };
+    }
     function scheduleFor(rd) {
-      var info = Cal.dayInfo(rd, !!cfg.israel), dt = dayTexts(rd, info), tz = loc().tz, byT = {}, all = [];
+      var info = Cal.dayInfo(rd, !!cfg.israel), dt = dayTexts(rd, info), tz = loc().tz, byT = {}, all = [], rank = roomRank();
       tefillos().forEach(function (t) {
         var list = [];
         var offset = (t.offset == null || t.offset === '') ? 0 : +t.offset;
@@ -500,10 +516,10 @@ var MinyanEngine = (function () {
             list.push({ tefilla: t, room: x.room, note: x.note, start: x.start, ms: Cal.epochFromWall(rd, x.start, tz), milestone: x.start + offset, rd: rd });
           });
         });
-        list.sort(function (a, b) { return a.start - b.start; });
+        list.sort(function (a, b) { return a.start - b.start || rank(a.room) - rank(b.room); });
         byT[t.id] = list; all = all.concat(list);
       });
-      all.sort(function (a, b) { return a.start - b.start; });
+      all.sort(function (a, b) { return a.start - b.start || rank(a.room) - rank(b.room); });
       return { rd: rd, info: info, type: dt.type, override: dt.override, byTefilla: byT, all: all };
     }
     /* All minyanim after nowMs within the next `days` days, in order. */
@@ -549,7 +565,7 @@ var MinyanEngine = (function () {
       if (s.override) return 'לוח מיוחד' + (s.override.label ? ': ' + s.override.label : '');
       return 'לוח ' + (TYPE_NAME[s.type] || s.type);
     }
-    return { cfg: cfg, loc: loc, zmanimFor: zmanimFor, resolveMin: resolveMin, expand: expand, tefillos: tefillos, activeNotices: activeNotices, activeBanner: activeBanner, dayTexts: dayTexts, scheduleFor: scheduleFor, fmtDate: fmtDate,
+    return { cfg: cfg, loc: loc, zmanimFor: zmanimFor, resolveMin: resolveMin, expand: expand, condLimit: condLimit, tefillos: tefillos, activeNotices: activeNotices, activeBanner: activeBanner, dayTexts: dayTexts, scheduleFor: scheduleFor, fmtDate: fmtDate,
       after: after, upcoming: upcoming, fmtTime: fmtTime, fmtCountdown: fmtCountdown, dayLine: dayLine, typeLabel: typeLabel, parseLine: parseLine };
   }
   create.parseLine = parseLine; create.parseSpec = parseSpec; create.sameEntry = sameEntry; create.gregStr = gregStr; create.isoDate = isoDate;

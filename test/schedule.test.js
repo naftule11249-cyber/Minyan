@@ -26,6 +26,23 @@ ok('chatzos-30 = shown chatzos minus 30', eng.fmtTime(sun.byTefilla.shacharis[18
 ok('~5 still rounds down to 5 minutes', eng.fmtTime((E.MinyanEngine || E)(Object.assign({}, cfg, { schedules: { weekday: { shacharis: 'chatzos-30~5 ברך משה' } } })).scheduleFor(sunRd).byTefilla.shacharis[0].start), '12:10');
 ok('new room is in the room list', cfg.rooms.split(',').map(s => s.trim()).indexOf('היכל אדל') >= 0, true);
 ok('now window setting', cfg.nowMinutes, 20);
+/* "until <zman>": a minyan is listed only while it starts before that zman on that day; "after <zman>": only from that zman on */
+function withLines(lines) { return (E.MinyanEngine || E)(Object.assign({}, cfg, { schedules: { weekday: lines } })); }
+const octRd = Cal.rdFromGreg(2026, 10, 26), junRd = Cal.rdFromGreg(2026, 6, 22); /* Monday in late October, Monday in June */
+const zOct = Cal.zmanim(octRd, cfg.location), zJun = Cal.zmanim(junRd, cfg.location);
+ok('sof zman tefilla is later in October than in June', [Math.round(zOct.tefilla) > 645, Math.round(zJun.tefilla) < 645], [true, true]);
+const lateSh = withLines({ shacharis: '10:45 ברך משה until tefilla' });
+ok('10:45 until tefilla: shown in October, gone in June', [lateSh.scheduleFor(octRd).byTefilla.shacharis.length, lateSh.scheduleFor(junRd).byTefilla.shacharis.length], [1, 0]);
+const run = withLines({ shacharis: 'every 15 from 9:00 to 11:00 rooms ברך משה, דברי יואל until tefilla-5' });
+const runOct = run.scheduleFor(octRd).byTefilla.shacharis.map(e => e.start), runJun = run.scheduleFor(junRd).byTefilla.shacharis.map(e => e.start);
+ok('a run shortens by itself: every start is before sof zman tefilla minus 5', [runOct.every(m => m < Math.round(zOct.tefilla) - 5), runJun.every(m => m < Math.round(zJun.tefilla) - 5), runOct.length > runJun.length, runOct[0]], [true, true, true, 540]);
+ok('"after minchag": a 1:00 PM Mincha is listed only once mincha gedola is earlier than that', withLines({ mincha: '1:00 ברך משה after minchag' }).scheduleFor(octRd).byTefilla.mincha.length, 13 * 60 >= Math.round(zOct.minchag) ? 1 : 0);
+ok('Hebrew keyword עד works the same', withLines({ shacharis: '10:45 ברך משה עד tefilla' }).scheduleFor(junRd).byTefilla.shacharis.length, 0);
+ok('the condition survives the parse (room and note intact)', (() => { const p = E.parseLine('10:45 ברך משה until tefilla-10 // late', { period: 'am' }); return [p.room, p.note, p.cond.op, p.cond.spec.zman, p.cond.spec.offset]; })(), ['ברך משה', 'late', 'until', 'tefilla', -10]);
+ok('condLimit gives the zman the line is measured against', eng.fmtTime(withLines({ shacharis: '10:45 ברך משה until tefilla' }).condLimit(E.parseLine('10:45 x until tefilla', { period: 'am' }), octRd, 'weekday')), eng.fmtTime(Math.round(zOct.tefilla)));
+/* rooms in the gabbai's order break ties at the same time */
+const tie = withLines({ maariv: '7:00 לב אהרן\n7:00 ברך משה\n7:00 דברי יואל' }).scheduleFor(octRd).byTefilla.maariv.map(e => e.room);
+ok('same time: rooms in the order of the rooms list', tie, ['ברך משה', 'דברי יואל', 'לב אהרן']);
 if (fails) { console.log(fails + ' FAILING'); process.exit(1); } else console.log('schedule: all good');
 ok('civil date in US format', eng.fmtDate(sunRd), '10/25/2026');
 ok('civil date d.m.y when asked', (E.MinyanEngine || E)(Object.assign({}, cfg, { dateFormat: 'dmy' })).fmtDate(sunRd), '25.10.2026');

@@ -1,9 +1,11 @@
 
 /* ---- Cloudflare Worker: text/WhatsApp responder, reminder texts, daily schedule texts and app notifications.
    Bindings: KV namespace SUBS. Variables: CONFIG_URL (required), ALLOWED_ORIGIN (the website address), VAPID_SUBJECT (mailto:…).
+   Optional secret BROADCAST_KEY: a second way to authorise the admin page's "Send a notification", besides the admin PIN.
    Secrets (wrangler secret put): TWILIO_AUTH_TOKEN (also verifies Twilio's signature), TWILIO_ACCOUNT_SID, TWILIO_FROM (+1718…),
    WA_FROM (whatsapp:+1718…, optional), WA_CONTENT_SID (optional WhatsApp template), VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY.
    Cron trigger every 5 minutes (wrangler.toml) sends what is due. ---- */
+async function sha256Hex(str) { var b = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str))), s = '', i; for (i = 0; i < b.length; i++) s += ('0' + b[i].toString(16)).slice(-2); return s; }
 function escapeXml(s) { return s.replace(/[<>&'"]/g, function (c) { return { '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]; }); }
 async function twilioSignatureOk(request, params, token) {
   var data = request.url;
@@ -65,6 +67,31 @@ export default {
       var b2 = await request.json().catch(function () { return {}; });
       if (b2.id && /^[a-z0-9]{8,32}$/.test(b2.id)) await env.SUBS.delete('push:' + b2.id);
       return json(env, { ok: true });
+    }
+    /* The gabbai sends a notification to every device that turned reminders on. Authorised by the admin PIN (the site's config carries its hash)
+       or the BROADCAST_KEY secret; ten wrong tries lock that address out for an hour. {test: id} sends to that one device only. */
+    if (path === '/push/broadcast' && request.method === 'POST') {
+      var bb = await request.json().catch(function () { return null; });
+      if (!bb) return json(env, { error: 'bad request' }, 400);
+      var ip = request.headers.get('cf-connecting-ip') || 'unknown', failKey = 'bcfail:' + ip, fails = +(await env.SUBS.get(failKey)) || 0;
+      if (fails >= 10) return json(env, { error: 'too many wrong tries; try again in an hour' }, 429);
+      var bcfg = await loadConfig(env), hasPin = !!(bcfg.pinHash || bcfg.pin);
+      var okKey = !!env.BROADCAST_KEY && bb.key === env.BROADCAST_KEY;
+      var okPin = hasPin && typeof bb.pin === 'string' && bb.pin !== '' && (bcfg.pinHash ? (await sha256Hex(bb.pin)) === bcfg.pinHash : bb.pin === String(bcfg.pin));
+      if (!okKey && !okPin) { await env.SUBS.put(failKey, String(fails + 1), { expirationTtl: 3600 }); return json(env, { error: hasPin ? 'wrong PIN' : 'set an admin PIN first' }, 403); }
+      var title = String(bb.title || bcfg.name || '').trim().slice(0, 80), text = String(bb.body || '').trim().slice(0, 300);
+      if (!text) return json(env, { error: 'empty message' }, 400);
+      var names = await allSubscriptions(env), payload = JSON.stringify({ title: title, body: text, tag: 'gabbai-' + Date.now() }), penv = await pushEnv(env), sent = 0, failed = 0, gone = 0, k;
+      if (bb.test) names = names.filter(function (nm) { return nm === 'push:' + bb.test; });
+      for (k = 0; k < names.length; k++) {
+        var ps = await env.SUBS.get(names[k], 'json');
+        if (!ps || ps.channel !== 'push') continue;
+        try {
+          var pr = await WebPush.send(ps.push, payload, penv);
+          if (pr.status === 404 || pr.status === 410) { await env.SUBS.delete(names[k]); gone++; } else if (pr.status < 300) sent++; else failed++;
+        } catch (e) { failed++; }
+      }
+      return json(env, { sent: sent, failed: failed, gone: gone });
     }
     /* Twilio webhook (SMS or WhatsApp): POST form. GET ?q=text[&from=+1…] answers in plain text for testing. */
     var isPost = request.method === 'POST', text = '', params = {}, from = '';

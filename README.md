@@ -45,6 +45,8 @@ Zman words: `שקיעה` `נץ` `הדלקה` `צאת` `פלג` `חצות` `על�
 candles, tzeis, plag, chatzos, alos, shema). The last weekday Shacharis is written `חצות-30 ברך משה`,
 so it moves with chatzos every day (change `-30` if your board uses a different gap).
 A repeating run: `every 10 from sunrise-30~5 to chatzos-30 rooms ברך משה, דברי יואל` (every 10 minutes, rooms in turn; `~5` rounds every minyan to 5 minutes). The admin page builds these rows for you.
+
+A rule at the end of a line, `until <zman>` or `after <zman>` (עד / אחרי work too, with an offset like `tefilla-10`), keeps the minyan only while it starts before (or from) that zman on that day: `10:45 ברך משה until tefilla` is listed in winter and drops away by itself in summer, and a repeating run with `… rooms A, B until tefilla-5` shortens by itself. In the editor every row has "Show: only while it starts before…", and its preview says "not today" when the rule hides it.
 A zman-based time starts from the zman as the zmanim list shows it (to the minute), so with chatzos at 12:40 `חצות-30` is 12:10.
 Fixed and repeating rows mix freely; the Sunday Shacharis list is `7:30 לב אהרן`, then `every 15 from 8:00 to 11:15 rooms דברי יואל, ברך משה, שלמה יודא, לב אהרן`, then `11:30 היכל אדל`, `11:45 לב אהרן`, `12:00 דברי יואל` and `חצות-30 ברך משה`.
 Day types fall back to a more general one when
@@ -74,7 +76,7 @@ Letting the gabbai update everyone from the page: in GitHub create a fine-graine
 access token (Settings → Developer settings → Fine-grained tokens) limited to that one
 repository with "Contents: Read and write". On `admin.html`: Publish tab → fill in
 `USERNAME/minyan`, branch `main`, path `docs/config.json` (or `config.json` for a root upload), paste the token, "Test connection". From then
-on every Save commits `config.json`; the site and the apps pick it up within a few minutes.
+on, Save keeps changes on the device and the Publish tab lists what differs from the website (schedule lines added or removed per day type, notices, special dates, settings); "Publish now", or the bar at the bottom of the admin, commits `config.json`, and the site and the apps pick it up within a few minutes. "Discard" goes back to the published version.
 The token stays in that browser only. Without a token, Save only changes that device, and
 the Backup tab gives you the JSON to upload as `config.json` by hand.
 
@@ -153,6 +155,12 @@ Messages the shul starts (reminders, the daily schedule) need an approved WhatsA
 `sms/server.js` runs the plain responder on any Node host (`CONFIG_URL=... node sms/server.js`). The worker and the server
 both answer `GET ?q=mincha` with plain text, handy for testing in a browser.
 
+## Sending a notification
+
+The admin page's Send tab sends a notification right now to every device that turned reminders on (title, up to 300 characters, with a preview and a "Test on this device" button). The notification service checks the admin PIN against the hash in `config.json` (ten wrong tries lock the address out for an hour); the optional `BROADCAST_KEY` secret on the worker is a second way in. Pick a longer PIN than four digits for this.
+
+Rooms in General can be put in order with ◀ ▶: that order is used in the pickers and on the board when two minyanim start at the same time.
+
 ## Views
 
 Same address, different screens (the `#` forms also work on the claude.ai page):
@@ -166,6 +174,8 @@ Same address, different screens (the `#` forms also work on the claude.ai page):
 | Text service page | `sms.html` | how the texting works (also the opt-in page for the carriers) |
 
 ## On a phone
+
+The ⚙ in the header and the "Settings" button in the footer open one sheet with everything a person sets for themselves: the big number, the look, the labels, the countdown zmanim, reminders, installing the app and "Check for updates".
 
 Below 640px the board shows one tefilla at a time behind tabs (the tab of the next minyan opens first), each minyan as a row, with more than two past minyanim folded behind "הצג את הקודמים (N)". Tablets keep the tile grid, with the same fold for past minyanim; the lobby screen and door displays hide past minyanim outright. Under the next-minyan box, three small cards show the minyanim after it, tomorrow's first Shacharis included once the day runs out; they can be tapped for a reminder like a tile.
 
@@ -181,7 +191,7 @@ Three palettes: **Shul** (light stone and pale oak, brass, charcoal, the burgund
 
 ## Calendar
 
-- The big number on a Shacharis tile is the start (ברכות) by default; a "Big number" switch in the footer lets each phone show הודו big instead (then the countdown and "next minyan" follow הודו). General → "Big number on the tiles" sets the board's default; each tefilla has a "name of the start" for the small line.
+- The big number on a Shacharis tile is the start (ברכות) by default; the "Big number" switch in Settings lets each phone show הודו big instead (then the countdown and "next minyan" follow הודו). General → "Big number on the tiles" sets the board's default; each tefilla has a "name of the start" for the small line.
 - The zmanim list can show the board's nightfall (צאת הכוכבים, General → Nightfall), 60 מינוט אחר השקיעה and ר״ת (72); General has a switch for each. ר״ת (72) is left out automatically while nightfall itself is 72 minutes and צאת הכוכבים is shown. A second box, הזמן הבא, counts down to the next important zman of the day (default: sof zman Shema, sof zman tefilla, candle lighting, shkia; General → "Countdown box" picks the set). It turns red in the last 30 minutes and disappears when none is left. Everyone can pick their own set on their phone (the ⚙ on the box, or "Countdown zmanim" in the footer); the General-tab set is the default.
 - Once all of today's minyanim of a tefilla are over (for Shacharis, around chatzos), that section shows tomorrow's list, headed מחר with the day's name; the lobby screen does the same.
 - The civil date next to the Hebrew date is written Month/Day/Year in US time zones (General → "Civil date" switches to Day.Month.Year or Year-Month-Day).

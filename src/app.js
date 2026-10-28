@@ -138,7 +138,7 @@
     if (!isNaN(z.sunset) && n.min >= z.sunset) hebLine += ' · ' + S().tonight + ': ' + Cal.formatHeb(Cal.hebFromRD(rd + 1));
     var chips = info.labels.map(function (l) { return el('span', { class: 'chip', text: l }); });
     root.appendChild(el('header', { class: 'top' }, [el('div', { class: 'inner' }, [
-      el('div', { class: 'shul' }, [cfg.logo ? el('img', { class: 'logo', src: cfg.logo, alt: '' }) : null, el('span', { text: (cfg.name || 'לוח המנינים') + (ui.roomFilter ? ' · ' + ui.roomFilter : '') })]),
+      el('div', { class: 'shul' }, [view.kind === 'board' ? el('button', { type: 'button', class: 'gear-top', 'aria-label': 'Settings', title: 'Settings', text: '⚙', onclick: openSettings }) : null, cfg.logo ? el('img', { class: 'logo', src: cfg.logo, alt: '' }) : null, el('span', { text: (cfg.name || 'לוח המנינים') + (ui.roomFilter ? ' · ' + ui.roomFilter : '') })]),
       el('h1', { class: 'dayline', text: dayLine(info, rd) }),
       el('div', { class: 'dates' }, [el('span', { text: hebLine }), el('span', { class: 'num', text: engine.fmtDate(rd) })]),
       chips.length ? el('div', { class: 'chips' }, chips) : null,
@@ -554,36 +554,57 @@
     return Promise.resolve(st && st.id ? fetch(base + '/push/unsubscribe', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: st.id }) }).catch(function () {}) : null)
       .then(function () { return navigator.serviceWorker.ready; }).then(function (reg) { return reg.pushManager.getSubscription(); }).then(function (sub) { if (sub) return sub.unsubscribe(); }).catch(function () {});
   }
+  /* ---------- Settings sheet: everything a person can set for themselves, in one place ---------- */
+  function installApp() { if (!deferredInstall) return; var ev = deferredInstall; deferredInstall = null; ev.prompt(); ev.userChoice.then(refreshInstallBtn, refreshInstallBtn); }
+  function openSettings() {
+    var old = $('#set-overlay'); if (old) old.remove();
+    var ov = el('div', { class: 'overlay modal', id: 'set-overlay', dir: 'ltr' });
+    function close() { ov.remove(); }
+    function section(title, desc, kids) { return el('section', { class: 'sset' }, [el('h3', { text: title }), desc ? el('p', { class: 'hint', text: desc }) : null].concat(kids)); }
+    function srow(label, ctl, forId) { return el('label', { class: 'srow', for: forId }, [el('span', { text: label }), ctl]); }
+    function keep(key, value, def) { try { if (value === def) localStorage.removeItem(key); else localStorage.setItem(key, value); } catch (e) {} render(); }
+    var disp = [], msT = tefillos().filter(function (t) { return t.milestone && t.kind !== 'event'; })[0];
+    if (msT) { /* the milestone (הודו) as the big number instead of the start */
+      var bigSel = el('select', { id: 'big-time', 'aria-label': 'Which time is the big number' }, [el('option', { value: 'start', text: startLabel(msT) + ' (start)' }), el('option', { value: 'milestone', text: msT.milestone })]);
+      bigSel.value = bigMode();
+      bigSel.addEventListener('change', function () { try { localStorage.setItem('minyan-big', bigSel.value); } catch (e) {} render(); });
+      disp.push(srow('Big number on the tiles', bigSel, 'big-time'));
+    }
+    var lookSel = el('select', { id: 'look', 'aria-label': 'Look of the board' }, LOOKS.map(function (l) { return el('option', { value: l[0], text: l[1] }); }));
+    lookSel.value = lookMode();
+    lookSel.addEventListener('change', function () { keep('minyan-look', lookSel.value, lookDefault()); });
+    disp.push(srow('Look', lookSel, 'look'));
+    var langSel = el('select', { id: 'lang', 'aria-label': 'Language of the labels' }, [el('option', { value: 'he', text: 'עברית' }), el('option', { value: 'yi', text: 'יידיש' })]);
+    langSel.value = langMode();
+    langSel.addEventListener('change', function () { keep('minyan-lang', langSel.value, langDefault()); });
+    disp.push(srow('Labels', langSel, 'lang'));
+    var sheet = el('div', { class: 'panel sheet' }, [
+      el('div', { class: 'sheet-head' }, [el('h2', { text: 'Settings' }), el('button', { type: 'button', class: 'btn icon', text: '✕', 'aria-label': 'Close', onclick: close })]),
+      section('Display', 'Your choices stay on this device; the screens in the shul keep the gabbai\'s.', disp),
+      section('Countdown box (הזמן הבא)', 'Which zmanim it counts down to.', [el('button', { type: 'button', class: 'btn small', id: 'zc-open', text: 'Choose the zmanim…', onclick: openCountdownChooser })])]);
+    var pp = pushPanel(); if (pp) { pp.classList.add('inset'); sheet.appendChild(pp); }
+    var app = [];
+    if (deferredInstall) app.push(el('button', { type: 'button', class: 'btn small primary', text: 'Install the app', onclick: function () { installApp(); close(); } }));
+    if (!inArtifact && isIOS() && !isStandalone() && !deferredInstall) app.push(el('p', { class: 'hint', text: 'To install on iPhone or iPad: in Safari tap Share, then "Add to Home Screen". Reminders work from the installed app only.' }));
+    app.push(el('button', { type: 'button', class: 'btn small', text: 'Check for updates', onclick: function () {
+      var p = ('serviceWorker' in navigator) ? navigator.serviceWorker.getRegistration().then(function (r) { return r ? r.update() : null; }) : Promise.resolve();
+      p.then(function () { return loadRemote(); }).then(function () { toast('Up to date. A newer version reloads by itself when it arrives.'); }, function () { toast('Could not check right now.'); });
+    } }));
+    sheet.appendChild(section('App', '', app));
+    sheet.appendChild(el('div', { class: 'bar' }, [el('button', { type: 'button', class: 'btn primary', text: 'Done', onclick: close })]));
+    ov.appendChild(sheet);
+    ov.addEventListener('click', function (ev) { if (ev.target === ov) close(); });
+    document.body.appendChild(ov);
+  }
   function footer() {
     var L = cfg.location || {};
     var f = el('footer', null, [el('span', { text: S().timesBy + (L.name || (L.lat + ', ' + L.lng)) + ' · ' + (cfg.israel ? S().eretz : S().chul) })]);
     var right = el('div', { class: 'tabs ltr', dir: 'ltr' });
     ui.iosHint = el('span', { class: 'hint', text: 'To install on iPhone: Share, then "Add to Home Screen"' });
-    ui.installBtn = el('button', { class: 'btn small primary', text: 'Install the app', onclick: function () {
-      if (!deferredInstall) return;
-      var ev = deferredInstall; deferredInstall = null;
-      ev.prompt(); ev.userChoice.then(refreshInstallBtn, refreshInstallBtn);
-    } });
+    ui.installBtn = el('button', { class: 'btn small primary', text: 'Install the app', onclick: installApp });
     ui.editBtn = el('button', { class: 'btn small', text: 'Edit', onclick: openAdmin });
     ui.editBtn.hidden = !canEditNow();
-    /* each phone may show the milestone (הודו) as the big number instead of the start */
-    var msT = tefillos().filter(function (t) { return t.milestone && t.kind !== 'event'; })[0];
-    if (msT) {
-      var bigSel = el('select', { id: 'big-time', 'aria-label': 'Which time is the big number' }, [el('option', { value: 'start', text: startLabel(msT) + ' (start)' }), el('option', { value: 'milestone', text: msT.milestone })]);
-      bigSel.value = bigMode();
-      bigSel.addEventListener('change', function () { try { localStorage.setItem('minyan-big', bigSel.value); } catch (e) {} render(); });
-      right.appendChild(el('label', { class: 'hint bigpick', for: 'big-time' }, ['Big number: ', bigSel]));
-    }
-    right.appendChild(el('button', { type: 'button', class: 'btn small', id: 'zc-open', text: 'Countdown zmanim', onclick: openCountdownChooser }));
-    /* each phone may pick its own look; the gabbai's choice in General is the default */
-    var lookSel = el('select', { id: 'look', 'aria-label': 'Look of the board' }, LOOKS.map(function (l) { return el('option', { value: l[0], text: l[1] }); }));
-    lookSel.value = lookMode();
-    lookSel.addEventListener('change', function () { try { if (lookSel.value === lookDefault()) localStorage.removeItem('minyan-look'); else localStorage.setItem('minyan-look', lookSel.value); } catch (e) {} render(); });
-    right.appendChild(el('label', { class: 'hint bigpick', for: 'look' }, ['Look: ', lookSel]));
-    var langSel = el('select', { id: 'lang', 'aria-label': 'Language of the labels' }, [el('option', { value: 'he', text: 'עברית' }), el('option', { value: 'yi', text: 'יידיש' })]);
-    langSel.value = langMode();
-    langSel.addEventListener('change', function () { try { if (langSel.value === langDefault()) localStorage.removeItem('minyan-lang'); else localStorage.setItem('minyan-lang', langSel.value); } catch (e) {} render(); });
-    right.appendChild(el('label', { class: 'hint bigpick', for: 'lang' }, ['Labels: ', langSel]));
+    right.appendChild(el('button', { type: 'button', class: 'btn small', id: 'settings-open', text: '⚙ Settings', onclick: openSettings }));
     right.appendChild(ui.iosHint); right.appendChild(ui.installBtn); right.appendChild(ui.editBtn);
     refreshInstallBtn();
     f.appendChild(right);
@@ -646,7 +667,7 @@
         if (ok) {
           pinOk = true;
           try { sessionStorage.setItem('minyan-pin', '1'); } catch (e) {}
-          ui.adminDirty = false; closeOverlay(); buildAdmin();
+          ui.pinValue = input.value; ui.adminDirty = false; closeOverlay(); buildAdmin();
         } else { msg.textContent = 'Wrong PIN'; input.select(); }
       });
     } }, [
@@ -678,6 +699,7 @@
     overrides: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',
     publish: '<path d="M7 18a4 4 0 0 1-.6-7.95A6 6 0 0 1 18 8.5a4 4 0 0 1-1 7.5"/><path d="M12 12v9M8.5 15.5 12 12l3.5 3.5"/>',
     data: '<rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/>',
+    send: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/>',
     lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
     open: '<path d="M14 4h6v6M20 4l-9 9M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/>',
     logout: '<path d="M10 17l5-5-5-5M15 12H3M13 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/>'
@@ -702,7 +724,8 @@
     d.tefillos = (d.tefillos && d.tefillos.length) ? d.tefillos : clone(TEFILLA_DEFAULTS);
     var todayRd = Cal.nowInTz(Date.now(), loc().tz).rd;
     var tabs = [['today', 'Today', 'Move, cancel or add a minyan for today only.'], ['general', 'General', 'Name, rooms, location, looks and the tefillos.'], ['schedule', 'Schedule', 'The regular minyanim for each kind of day.'], ['notices', 'Notices', 'Banner, sponsors and announcements on the board.'], ['overrides', 'Special dates', 'A different schedule for one date or for a day every year.']];
-    if (mode !== 'artifact') tabs.push(['publish', 'Publish', 'Connect the website so that Save updates everyone.']);
+    if (mode !== 'artifact') tabs.push(['publish', 'Publish', 'What is waiting to go out, and the connection to the website.']);
+    if (mode !== 'artifact') tabs.push(['send', 'Send', 'A notification, right now, to everyone who turned reminders on.']);
     tabs.push(['data', 'Backup', 'Previous versions and the settings as text.']);
     var pages = {}, tabBar = el('div', { class: 'tabs', role: 'tablist' }), pageTitle = el('h2', { text: '' }), pageDesc = el('div', { class: 'cdesc', text: '' });
     tabs.forEach(function (t) { tabBar.appendChild(el('button', { type: 'button', role: 'tab', id: 'tab-' + t[0], 'aria-selected': 'false', onclick: function () { selectTab(t[0]); } }, [svgIcon(t[0]), el('span', { text: t[1] })])); });
@@ -745,8 +768,13 @@
     var roomsChips = el('div', { class: 'chips-row' }), roomAdd = el('input', { id: 'f-room-add', type: 'text', dir: 'auto', placeholder: 'Room / minyan name', class: 'room', autocomplete: 'off' });
     function paintRoomsEditor() {
       roomsChips.innerHTML = '';
-      roomList().forEach(function (name, idx) {
-        roomsChips.appendChild(el('span', { class: 'rchip' }, [el('span', { text: name }), el('button', { type: 'button', class: 'x', text: '✕', 'aria-label': 'Remove ' + name, onclick: function () { var l = roomList(); l.splice(idx, 1); fRooms.value = l.join(', '); roomsChanged(); } })]));
+      var all = roomList();
+      all.forEach(function (name, idx) {
+        function move(dir) { var l = roomList(), j = idx + dir; if (j < 0 || j >= l.length) return; l.splice(idx, 1); l.splice(j, 0, name); fRooms.value = l.join(', '); roomsChanged(); }
+        roomsChips.appendChild(el('span', { class: 'rchip' }, [el('span', { class: 'n', text: (idx + 1) + '.' }), el('span', { text: name }),
+          all.length > 1 ? el('button', { type: 'button', class: 'x', text: '◀', title: 'Earlier', 'aria-label': 'Move ' + name + ' earlier', onclick: function () { move(-1); } }) : null,
+          all.length > 1 ? el('button', { type: 'button', class: 'x', text: '▶', title: 'Later', 'aria-label': 'Move ' + name + ' later', onclick: function () { move(1); } }) : null,
+          el('button', { type: 'button', class: 'x', text: '✕', 'aria-label': 'Remove ' + name, onclick: function () { var l = roomList(); l.splice(idx, 1); fRooms.value = l.join(', '); roomsChanged(); } })]));
       });
       if (!roomList().length) roomsChips.appendChild(el('span', { class: 'hint', text: 'No rooms yet. Add the rooms or minyan names here; the schedule rows pick from this list.' }));
     }
@@ -755,7 +783,7 @@
     fRooms.hidden = true;
     cBoard.body.appendChild(el('div', { class: 'field' }, [el('label', { for: 'f-room-add', text: 'Rooms / minyan names' }), roomsChips,
       el('div', { class: 'mrow-l' }, [roomAdd, el('button', { type: 'button', class: 'btn small', text: '+ Add room', onclick: addRoomFromInput })]), fRooms,
-      el('div', { class: 'hint', text: 'The schedule rows pick from this list, so a room is always spelled the same way.' })]));
+      el('div', { class: 'hint', text: 'The schedule rows pick from this list, so a room is always spelled the same way. The order here is the order in the pickers and on the board when two minyanim start at the same time (◀ ▶ to move).' })]));
     /* a dropdown of the defined rooms; "New room…" adds one to the list */
     function roomPicker(current, onPick, label) {
       var sel = el('select', { 'aria-label': label || 'Room' }), newIn = el('input', { type: 'text', dir: 'auto', placeholder: 'New room name', class: 'room', 'aria-label': 'New room name' }), okBtn = el('button', { type: 'button', class: 'btn small', text: 'Add' });
@@ -792,7 +820,7 @@
     var fLang = el('select', { id: 'f-lang' }, [el('option', { value: 'he', text: 'Hebrew (היום, מחר, מנין הבא…)' }), el('option', { value: 'yi', text: 'Yiddish (היינט, מארגן, זונטאג…)' })]); fLang.value = d.lang === 'yi' ? 'yi' : 'he';
     cLook.body.appendChild(el('div', { class: 'fields' }, [field('Colors: the look everyone gets unless they pick another in the footer; the lobby screen and door displays always use it', fPalette), field('Board labels: the language everyone gets unless they pick another in the footer', fLang)]));
     cLook.body.appendChild(lookRow2);
-    cZman.body.appendChild(el('div', { class: 'field' }, [el('label', { text: 'Countdown box ("הזמן הבא"): the next of these zmanim still ahead today' }), el('div', { class: 'chips' }, COUNTDOWN_KEYS.map(function (k) { return chk('cd-' + k, countdownKeysOf(d).indexOf(k) >= 0, Cal.ZMAN_NAMES[k]); }))]));
+    cZman.body.appendChild(el('div', { class: 'field' }, [el('label', { text: 'Countdown box ("הזמן הבא"): the next of these zmanim still ahead today' }), el('div', { class: 'chipset' }, COUNTDOWN_KEYS.map(function (k) { return chk('cd-' + k, countdownKeysOf(d).indexOf(k) >= 0, Cal.ZMAN_NAMES[k]); }))]));
     cZman.body.appendChild(el('div', { class: 'checks' }, [chk('f-israel', d.israel, 'Eretz Yisroel calendar (one-day Yom Tov)'), chk('f-weekly', d.weeklyEarliest, 'Weekday zman-based times use the earliest sunset of the week (Sun–Thu)'), chk('f-24', d.clock24, '24-hour clock'), chk('f-tzeis', d.showTzeis !== false, 'Show צאת הכוכבים (the board\'s nightfall) in the zmanim list'), chk('f-rt', d.showRT, 'Show Rabbeinu Tam (72 minutes after sunset) in the zmanim list; hidden by itself while nightfall is 72 and צאת הכוכבים is shown'), chk('f-60', d.show60 !== false, 'Show 60 מינוט אחר השקיעה in the zmanim list')]));
     if (mode !== 'artifact') cSec.body.appendChild(el('div', { class: 'fields' }, [field('New PIN for the admin page', fPin, el('span', { class: 'hint', text: 'Stored scrambled (hashed), so it cannot be read from the site files. It keeps strangers out of the admin page; what everyone else sees can only be changed with the GitHub token on the Publish tab, which stays on the device that entered it.' }))]));
     var tRows = [];
@@ -816,9 +844,9 @@
     /* schedule: one row per minyan */
     var lines = {};
     Cal.DAY_TYPES.forEach(function (t) { lines[t[0]] = {}; d.tefillos.forEach(function (tf) { lines[t[0]][tf.id] = { value: (d.schedules[t[0]] && d.schedules[t[0]][tf.id]) || '' }; }); });
-    var ZMAN_OPTS = [['fixed', 'Fixed time'], ['sunrise', 'Sunrise (netz)'], ['alos', 'Dawn (alos)'], ['shema', 'Sof zman Shema'], ['chatzos', 'Chatzos'], ['minchag', 'Mincha gedola'],
+    var ZMAN_OPTS = [['fixed', 'Fixed time'], ['sunrise', 'Sunrise (netz)'], ['alos', 'Dawn (alos)'], ['shema', 'Sof zman Shema'], ['tefilla', 'Sof zman tefilla'], ['chatzos', 'Chatzos'], ['minchag', 'Mincha gedola'],
       ['plag', 'Plag hamincha'], ['candles', 'Candle lighting'], ['sunset', 'Sunset (shkiah)'], ['tzeis', 'Nightfall (tzeis)'], ['tzeis60', 'Sunset + 60 min'], ['tzeis72', 'Rabbeinu Tam (72 min)']];
-    var ZWORD = { sunrise: 'sunrise', alos: 'alos', shema: 'shema', chatzos: 'chatzos', minchag: 'minchag', plag: 'plag', candles: 'candles', sunset: 'sunset', tzeis: 'tzeis', tzeis60: 'tzeis60', tzeis72: 'rt' };
+    var ZWORD = { sunrise: 'sunrise', alos: 'alos', shema: 'shema', tefilla: 'tefilla', chatzos: 'chatzos', minchag: 'minchag', plag: 'plag', candles: 'candles', sunset: 'sunset', tzeis: 'tzeis', tzeis60: 'tzeis60', tzeis72: 'rt' };
     function hhmm(min) { min = Math.round(min); return pad2(Math.floor(min / 60) % 24) + ':' + pad2(min % 60); }
     function specToRow(spec) { return spec.kind === 'fixed' ? { kind: 'fixed', time: hhmm(spec.min), off: 0, round: false } : { kind: spec.zman, time: '', off: spec.offset || 0, round: !!spec.round }; }
     function lineToRow(line, tf) {
@@ -832,16 +860,19 @@
           var span = p.spec.every * Math.max(0, (p.spec.count || 1) - 1);
           en = st.kind === 'fixed' ? { kind: 'fixed', time: hhmm(p.spec.start.min + span), off: 0, round: false } : { kind: st.kind, time: '', off: st.off + span, round: false };
         }
-        return { series: true, every: p.spec.every, start: st, endMode: 'to', end: en, rooms: p.rooms.join(', '), note: p.note };
+        return { series: true, every: p.spec.every, start: st, endMode: 'to', end: en, rooms: p.rooms.join(', '), note: p.note, cond: condOf(p) };
       }
-      var r = specToRow(p.spec); r.room = p.room; r.note = p.note;
+      var r = specToRow(p.spec); r.room = p.room; r.note = p.note; r.cond = condOf(p);
       return r;
     }
+    /* the row's "show only" condition: {op: 'until'|'after', zman, off} or null */
+    function condOf(p) { return p.cond ? { op: p.cond.op, zman: p.cond.spec.zman, off: p.cond.spec.offset || 0 } : null; }
+    function condTok(r) { return r.cond && r.cond.op ? ' ' + r.cond.op + ' ' + (ZWORD[r.cond.zman] || r.cond.zman) + (r.cond.off ? (r.cond.off < 0 ? '-' : '+') + Math.abs(r.cond.off) : '') : ''; }
     function tokOf(w) { return w.kind === 'fixed' ? (w.time || '07:00') : (ZWORD[w.kind] + (w.off ? (w.off < 0 ? '-' : '+') + Math.abs(w.off) : '') + (w.round ? '~5' : '')); }
     function rowToLine(r) {
       if (r.raw != null) return r.raw;
-      if (r.series) return 'every ' + (r.every || 10) + ' from ' + tokOf(r.start) + ' to ' + tokOf(r.end) + (r.rooms ? ' rooms ' + r.rooms : '') + (r.note ? ' // ' + r.note : '');
-      return tokOf(r) + (r.room ? ' ' + r.room : '') + (r.note ? ' // ' + r.note : '');
+      if (r.series) return 'every ' + (r.every || 10) + ' from ' + tokOf(r.start) + ' to ' + tokOf(r.end) + (r.rooms ? ' rooms ' + r.rooms : '') + condTok(r) + (r.note ? ' // ' + r.note : '');
+      return tokOf(r) + (r.room ? ' ' + r.room : '') + condTok(r) + (r.note ? ' // ' + r.note : '');
     }
     var roomsList = el('datalist', { id: 'rooms-list' }), knownRooms = [];
     function refreshRooms() {
@@ -851,7 +882,8 @@
       Object.keys(lines).forEach(function (k) { Object.keys(lines[k]).forEach(function (id) { lines[k][id].value.split('\n').forEach(take); }); });
       oRows.forEach(function (r) { Object.keys(r.lines).forEach(function (id) { r.lines[id].value.split('\n').forEach(take); }); });
       roomsList.innerHTML = '';
-      knownRooms = Object.keys(set).sort();
+      var ordered = fRooms.value.split(',').map(function (x) { return x.trim(); }).filter(function (x, i, a) { return x && a.indexOf(x) === i; });
+      knownRooms = ordered.concat(Object.keys(set).filter(function (x) { return ordered.indexOf(x) < 0; }).sort()); /* the list's order, then anything else found in the rows */
       knownRooms.forEach(function (name) { roomsList.appendChild(el('option', { value: name })); });
     }
     /* "דברי יואל ברך משה" typed without commas -> ["דברי יואל", "ברך משה"] when it is exactly a run of known room names */
@@ -875,12 +907,17 @@
       function load() { rows = []; store.value.split('\n').forEach(function (l) { var r = lineToRow(l, tf()); if (r) rows.push(r); }); sortRows(); }
       function timesOf(r) { return expandLine(parseLine(rowToLine(r), tf()), todayRd, typeKeyFn()).map(function (x) { return x.start; }); }
       function previewOf(r) { var t = timesOf(r); return t.length ? t[0] : NaN; }
+      function condText(r) {
+        if (!r.cond || !r.cond.op) return '';
+        var lim = engine.condLimit(parseLine(rowToLine(r), tf()), todayRd, typeKeyFn()), name = Cal.ZMAN_NAMES[r.cond.zman] || r.cond.zman;
+        return (r.cond.op === 'until' ? 'before ' : 'from ') + name + (r.cond.off ? (r.cond.off < 0 ? ' −' : ' +') + Math.abs(r.cond.off) + ' min' : '') + (isNaN(lim) ? '' : ', today ' + fmtTime(lim));
+      }
       function previewText(r) {
-        var t = timesOf(r);
-        if (!t.length) return r.series ? 'no minyanim today (check the times)' : '';
-        if (!r.series) return 'today ' + fmtTime(t[0]);
+        var t = timesOf(r), c = condText(r);
+        if (!t.length) return c ? 'not today: only ' + c : (r.series ? 'no minyanim today (check the times)' : '');
+        if (!r.series) return 'today ' + fmtTime(t[0]) + (c ? ' · only ' + c : '');
         var head = t.slice(0, 3).map(fmtTime).join(', ');
-        return 'today ' + head + (t.length > 4 ? ' … ' : t.length === 4 ? ', ' : '') + (t.length > 3 ? fmtTime(t[t.length - 1]) : '');
+        return 'today ' + head + (t.length > 4 ? ' … ' : t.length === 4 ? ', ' : '') + (t.length > 3 ? fmtTime(t[t.length - 1]) : '') + (c ? ' · only ' + c : '');
       }
       /* the "when" widget: fixed time picker, or zman + minutes before/after + rounding. Mutates w and calls onChange. */
       function timeWidget(w, onChange, label, roundLabel) {
@@ -901,6 +938,28 @@
         roundC.addEventListener('change', function () { w.round = roundC.checked; onChange(); });
         show();
         return [when, time, sign, mins, roundL];
+      }
+      /* "Show: only while it starts before <zman>": a late Shacharis drops away by itself in summer, a run shortens by itself */
+      function condWidget(r, onChange) {
+        var op = el('select', { 'aria-label': 'Show only' }, [el('option', { value: '', text: 'Always' }), el('option', { value: 'until', text: 'Only while it starts before' }), el('option', { value: 'after', text: 'Only once it starts at or after' })]);
+        var zman = el('select', { 'aria-label': 'Condition zman' }); ZMAN_OPTS.forEach(function (o) { if (o[0] !== 'fixed') zman.appendChild(el('option', { value: o[0], text: o[1] })); });
+        var mins = el('input', { type: 'number', min: '0', step: '1', inputmode: 'numeric', class: 'cmins', 'aria-label': 'Condition minutes' });
+        var sign = el('select', { 'aria-label': 'Condition before or after' }, [el('option', { value: '-', text: 'min before it' }), el('option', { value: '+', text: 'min after it' })]);
+        function paint() {
+          var on = !!(r.cond && r.cond.op);
+          op.value = on ? r.cond.op : ''; zman.hidden = mins.hidden = sign.hidden = !on;
+          if (on) { zman.value = r.cond.zman; if (zman.selectedIndex < 0) zman.value = 'tefilla'; sign.value = r.cond.off > 0 ? '+' : '-'; mins.value = String(Math.abs(r.cond.off || 0)); }
+        }
+        op.addEventListener('change', function () {
+          if (!op.value) r.cond = null;
+          else r.cond = { op: op.value, zman: (r.cond && r.cond.zman) || (tf().period === 'pm' ? 'sunset' : 'tefilla'), off: (r.cond && r.cond.off) || 0 };
+          paint(); onChange();
+        });
+        zman.addEventListener('change', function () { r.cond.zman = zman.value; onChange(); });
+        function offChange() { r.cond.off = (+mins.value || 0) * (sign.value === '-' ? -1 : 1); onChange(); }
+        sign.addEventListener('change', offChange); mins.addEventListener('input', offChange);
+        paint();
+        return el('div', { class: 'mrow-l cond' }, [el('span', { class: 'k', text: 'Show:' }), op, zman, mins, sign]);
       }
       function renderRow(r) {
         var row = el('div', { class: 'mrow' + (r.series ? ' series' : '') });
@@ -938,14 +997,16 @@
           var picker = roomPicker('', function (v) { if (v) { seq.push(v); commitRooms(); } }, 'Add a room');
           paint();
           row.appendChild(el('div', { class: 'mrow-l' }, [el('span', { class: 'tag', text: 'Repeating' }), el('span', { class: 'k', text: 'every' }), every, el('span', { class: 'k', text: 'min, from' })].concat(timeWidget(r.start, changed, 'From', 'round every minyan to 5'))));
-          row.appendChild(el('div', { class: 'mrow-l' }, [el('span', { class: 'k', text: 'until' })].concat(endW)));
+          row.appendChild(el('div', { class: 'mrow-l' }, [el('span', { class: 'k', text: 'to' })].concat(endW)));
           row.appendChild(el('div', { class: 'mrow-l' }, [el('span', { class: 'k', text: 'rooms, in this order (1st minyan, 2nd, …, then again from 1):' }), chips]));
           row.appendChild(el('div', { class: 'mrow-l' }, picker));
           row.appendChild(el('div', { class: 'mrow-l' }, [note, pv, del]));
+          row.appendChild(condWidget(r, changed));
         } else {
           var room = roomPicker(function () { return r.room; }, function (v) { r.room = v; sync(); }, 'Room');
           row.appendChild(el('div', { class: 'mrow-l' }, timeWidget(r, changed).concat([pv])));
           row.appendChild(el('div', { class: 'mrow-l' }, room.concat([note, del])));
+          row.appendChild(condWidget(r, changed));
         }
         pv.textContent = previewText(r);
         /* when the gabbai leaves this row, it moves to its place in time order */
@@ -1181,7 +1242,7 @@
       return s;
     }
     var connected = ghConfigured(gh);
-    var cPub = card('Publishing to the website', 'The website and the app read the schedule from a file called config.json on the website. With a GitHub token here, every Save updates everyone within a few minutes.',
+    var cPub = card('Publishing to the website', 'The website and the app read the schedule from a file called config.json on the website. With a GitHub token here, Publish sends what you saved to everyone within a few minutes.',
       { extra: el('span', { class: 'status ' + (connected ? 'ok' : 'dirty'), text: connected ? 'Connected: ' + gh.repo : 'Not connected on this device' }) });
     cPub.body.appendChild(el('details', { class: 'help' }, [el('summary', { text: 'How to set it up' }), el('div', { class: 'hint' }, [
       el('p', null, ['1. In your GitHub repository: Settings → Pages is enabled.  2. Create a fine-grained token with "Contents: Read and write" for that repository only: ', el('a', { href: 'https://github.com/settings/personal-access-tokens/new', target: '_blank', rel: 'noopener', text: 'github.com/settings/personal-access-tokens/new' }), '.  3. Paste it here. The token stays in this browser only; every device that should publish needs it once.'])])]));
@@ -1195,9 +1256,61 @@
     } }), ghMsg]));
     var cRemote = card('Store app', 'Only for a version of the app installed from an app store.');
     cRemote.body.appendChild(el('div', { class: 'fields' }, [field('Central schedule URL (blank = config.json on this site)', fRemote)]));
-    pp.appendChild(cPub); pp.appendChild(cRemote);
+    var pubStatus = el('span', { class: 'status' }), cChanges = card('Not yet published', 'Save keeps changes on this device. Publishing sends them to the website and the app, for everyone. Here is what would go out.', { extra: pubStatus });
+    function renderChanges() {
+      var ch = pendingChanges(), pub = publishedCfg(), conn2 = ghConfigured(ghSettings());
+      cChanges.body.textContent = '';
+      pubStatus.textContent = ch.length ? ch.length + (ch.length === 1 ? ' change' : ' changes') : 'Everything is published';
+      pubStatus.className = 'status ' + (ch.length ? 'dirty' : 'ok');
+      if (!ch.length) { cChanges.body.appendChild(el('div', { class: 'hint', text: (pub && pub.savedAt ? 'The website has the version saved ' + new Date(pub.savedAt).toLocaleString() + '. ' : '') + 'Save a change and it is listed here before it goes out.' })); return; }
+      cChanges.body.appendChild(el('ul', { class: 'changes' }, ch.map(function (x) { return el('li', { text: x }); })));
+      cChanges.body.appendChild(el('div', { class: 'bar actions' }, [
+        el('button', { type: 'button', class: 'btn primary', 'data-nodirty': '1', text: 'Publish now', onclick: function () { if (!conn2) { toast('Enter the GitHub token below first'); return; } if (ui.adminDirty) { if (confirm('Save the changes you are making here first, then publish?')) saveConfig(collect(), { publish: true }); return; } publishNow(); } }),
+        pub ? el('button', { type: 'button', class: 'btn danger', 'data-nodirty': '1', text: 'Discard: back to the published version', onclick: function () {
+          if (!confirm('Throw away the changes saved on this device and go back to what the website has?')) return;
+          try { localStorage.removeItem('minyan-config'); } catch (e) {}
+          setCfg(pub); ui.adminDirty = false; render(); buildAdmin(pub); toast('Back to the published version');
+        } }) : null]));
+      if (!conn2) cChanges.body.appendChild(el('div', { class: 'hint', text: 'To publish from this device, enter the GitHub token below once.' }));
+    }
+    renderChanges();
+    pp.appendChild(cChanges); pp.appendChild(cPub); pp.appendChild(cRemote);
     pages.publish = pp;
     function history() { try { return JSON.parse(localStorage.getItem('minyan-history') || '[]'); } catch (e) { return []; } }
+
+    /* send: a notification from the gabbai to every device with reminders on (the service checks the admin PIN) */
+    var sp2 = el('div', { class: 'col' });
+    if (mode !== 'artifact' && (d.notifyUrl || '').trim()) {
+      var bcTitle = inp('bc-title', d.name || ''), bcPin = inp('bc-pin', ui.pinValue || '', { type: 'password', autocomplete: 'off', placeholder: 'the admin PIN' });
+      var bcText = el('textarea', { id: 'bc-text', dir: 'auto', maxlength: '300', placeholder: 'e.g. Mincha today 1:45 instead of 1:30' }), bcCount = el('span', { class: 'hint', text: '0 / 300' }), bcMsg = el('div', { class: 'hint', id: 'bc-msg' });
+      bcText.style.minHeight = '90px';
+      var pvT = el('b', { text: d.name || '' }), pvB = el('div', { class: 'npv-b', text: '…' });
+      bcTitle.addEventListener('input', function () { pvT.textContent = bcTitle.value || d.name || ''; });
+      bcText.addEventListener('input', function () { bcCount.textContent = bcText.value.length + ' / 300'; pvB.textContent = bcText.value || '…'; });
+      var pst = pushState();
+      function sendBroadcast(test) {
+        var text = bcText.value.trim();
+        if (!text) { bcMsg.textContent = 'Write the message first.'; return; }
+        if (!bcPin.value) { bcMsg.textContent = 'Enter the admin PIN.'; return; }
+        bcMsg.textContent = test ? 'Sending to this device…' : 'Sending to everyone…';
+        fetch(notifyBase() + '/push/broadcast', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ pin: bcPin.value, title: bcTitle.value.trim() || d.name, body: text, test: test ? (pst && pst.id) : undefined }) })
+          .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || ('service ' + r.status)); return j; }, function () { throw new Error('service ' + r.status); }); })
+          .then(function (j) {
+            bcMsg.textContent = (test ? 'Test sent' : 'Sent') + ' to ' + j.sent + (j.sent === 1 ? ' device' : ' devices') + (j.failed ? ', ' + j.failed + ' failed' : '') + (j.gone ? ', ' + j.gone + ' no longer subscribed' : '') + '.';
+            if (!test) { bcText.value = ''; bcCount.textContent = '0 / 300'; pvB.textContent = '…'; }
+          }, function (e) { bcMsg.textContent = 'Could not send: ' + (e && e.message || e); });
+      }
+      var cSend = card('Send a notification', 'Goes out right now to everyone who turned reminders on in the app. Keep it short: a change for today, a simcha, a word from the gabbai.');
+      cSend.body.appendChild(el('div', { class: 'fields' }, [field('Title', bcTitle), field('Admin PIN (the notification service checks it)', bcPin)]));
+      cSend.body.appendChild(el('div', { class: 'field' }, [el('label', { for: 'bc-text', text: 'Message' }), bcText, bcCount]));
+      cSend.body.appendChild(el('div', { class: 'npv' }, [el('div', { class: 'npv-h' }, [el('span', { text: '🔔' }), el('span', { text: 'How it looks on the phone' })]), pvT, pvB]));
+      cSend.body.appendChild(el('div', { class: 'bar actions' }, [
+        el('button', { type: 'button', class: 'btn primary', id: 'bc-send', 'data-nodirty': '1', text: 'Send to everyone', onclick: function () { if (confirm('Send this notification to everyone now?')) sendBroadcast(false); } }),
+        pst && pst.id ? el('button', { type: 'button', class: 'btn', id: 'bc-test', 'data-nodirty': '1', text: 'Test on this device', onclick: function () { sendBroadcast(true); } }) : el('span', { class: 'hint', text: 'Turn reminders on for this device (Settings on the board) to be able to send yourself a test first.' }),
+        bcMsg]));
+      sp2.appendChild(cSend);
+    } else sp2.appendChild(el('div', { class: 'hint lead', text: 'Enter the notification service address under General → Website and services to be able to send notifications.' }));
+    pages.send = sp2;
 
     /* data */
     var dp = el('div', { class: 'col' }), dataArea = el('textarea', { id: 'data-json', spellcheck: 'false', dir: 'ltr' });
@@ -1276,7 +1389,7 @@
       try { new Intl.DateTimeFormat('en-US', { timeZone: c.location.tz }); } catch (e) { return 'Invalid time zone'; }
       return null;
     }
-    function saveConfig(c) {
+    function saveConfig(c, opts) {
       var err = validate(c);
       if (err) { toast(err); return; }
       saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
@@ -1291,9 +1404,10 @@
         setCfg(c);
         if (r.reloads) { toast('Saved. Reloading the page…', 8000); return; }
         ui.adminDirty = false; render(); buildAdmin(c); /* stay in the settings, on the same tab, with the board behind refreshed */
-        if (r.published) toast('Saved and published. Everyone gets the update within a few minutes.', 6000);
-        else if (r.configured) toast('Saved on this device, but publishing to the site failed: ' + (r.error && r.error.message || ''), 8000);
-        else toast(remoteUrl() ? 'Saved on this device only. Use the Publish tab to update everyone.' : 'Saved on this device', 6000);
+        var pend = pendingChanges().length;
+        if (opts && opts.publish) publishNow();
+        else if (r.configured) toast(pend ? 'Saved. ' + pend + (pend === 1 ? ' change is' : ' changes are') + ' not yet published: Publish when you are ready.' : 'Saved. Nothing new to publish.', 6000);
+        else toast(remoteUrl() ? 'Saved on this device only. Connect the website on the Publish tab to update everyone.' : 'Saved on this device', 6000);
       }, function (e) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; toast(errorText(e), 6000); });
     }
     var saveBtn = el('button', { type: 'button', class: 'btn primary', text: 'Save', onclick: function () { saveConfig(collect()); } });
@@ -1308,15 +1422,25 @@
       el('a', { class: 'btn ghost', href: 'index.html', target: '_blank', rel: 'noopener' }, [svgIcon('open'), el('span', { text: 'View the board' })]),
       el('button', { type: 'button', class: 'btn ghost', 'data-nodirty': '1', onclick: function () { if (ui.adminDirty && !confirm('Lock without saving? The changes made here will be lost.')) return; pinOk = false; try { sessionStorage.removeItem('minyan-pin'); } catch (e) {} ui.adminDirty = false; closeOverlay(); showPin(); } }, [svgIcon('lock'), el('span', { text: 'Lock' })])]);
     var ghNow = mode === 'artifact' ? null : ghSettings();
-    var footHint = mode === 'artifact' ? 'Save publishes a new version of this page for everyone who has the link.' : (ghConfigured(ghNow) ? 'Save publishes to the website; everyone gets the update within a few minutes.' : 'Save keeps the settings in this browser only. Connect the website on the Publish tab so that Save updates everyone.');
-    var main = el('div', { class: 'amain' }, [el('div', { class: 'ptitle' }, [pageTitle, pageDesc]), pages.today, pages.general, pages.schedule, pages.notices, pages.overrides, mode !== 'artifact' ? pages.publish : null, pages.data,
+    var footHint = mode === 'artifact' ? 'Save publishes a new version of this page for everyone who has the link.' : (ghConfigured(ghNow) ? 'Save keeps the changes on this device. Publish sends them to the website and the app.' : 'Save keeps the settings on this device only. Connect the website on the Publish tab to be able to publish.');
+    var main = el('div', { class: 'amain' }, [el('div', { class: 'ptitle' }, [pageTitle, pageDesc]), pages.today, pages.general, pages.schedule, pages.notices, pages.overrides, mode !== 'artifact' ? pages.publish : null, mode !== 'artifact' ? pages.send : null, pages.data,
       el('div', { class: 'bar afoot' }, [el('span', { class: 'hint', text: footHint }), saveBtn.cloneNode(true)])]);
+    var pubBar = el('div', { class: 'pubbar' }); pubBar.hidden = true;
+    function refreshPubBar() {
+      var ch = pendingChanges(), k = ch.length, conn = mode !== 'artifact' && ghConfigured(ghSettings());
+      pubBar.textContent = ''; pubBar.hidden = !k;
+      if (!k) return;
+      pubBar.appendChild(el('span', { class: 'pubmsg', text: k + (k === 1 ? ' change' : ' changes') + ' not yet published' }));
+      pubBar.appendChild(el('div', { class: 'bar' }, [el('button', { type: 'button', class: 'btn small', 'data-nodirty': '1', text: 'What changed', onclick: function () { selectTab('publish'); } }),
+        el('button', { type: 'button', class: 'btn small gold', 'data-nodirty': '1', text: conn ? 'Publish' : 'Connect to publish', onclick: function () { if (!conn) { selectTab('publish'); return; } if (ui.adminDirty) { if (confirm('Save the changes you are making here first, then publish?')) saveConfig(collect(), { publish: true }); return; } publishNow(); } })]));
+    }
     var panel = el('div', { class: 'shell' }, [
       el('header', { class: 'abar' }, [
         el('div', { class: 'brand' }, [el('div', { class: 'mark', text: (cfg.name || 'B').trim().charAt(0).toUpperCase() }), el('div', { class: 'bt' }, [el('h2', { text: 'Board settings' }), el('div', { class: 'sub', text: cfg.name || '' })])]),
         el('div', { class: 'bar' }, [status, saveBtn, closeBtn])]),
-      el('div', { class: 'abody' }, [el('nav', { class: 'anav' }, [tabBar, navFoot]), main])]);
+      el('div', { class: 'abody' }, [el('nav', { class: 'anav' }, [tabBar, navFoot]), main]), pubBar]);
     overlay(panel);
+    refreshPubBar();
     selectTab(draft && ui.adminTab && pages[ui.adminTab] ? ui.adminTab : 'today'); showType('weekday'); markTabs();
     setDirty(!!ui.adminDirty);
     var bottomSave = main.lastChild.lastChild;
@@ -1369,12 +1493,86 @@
     }
     return new Promise(function (res, rej) {
       try { localStorage.setItem('minyan-config', JSON.stringify(c)); res(); } catch (e) { rej(e); }
-    }).then(function () {
-      var s = ghSettings();
-      if (!ghConfigured(s)) return { reloads: false, published: false, configured: false };
-      return ghPublish(c, s).then(function () { return { reloads: false, published: true, configured: true }; },
-        function (e) { return { reloads: false, published: false, configured: true, error: e }; });
+    }).then(function () { return { reloads: false, published: false, configured: ghConfigured(ghSettings()) }; }); /* publishing is its own step: the Publish tab lists what changed first */
+  }
+  /* ---------- publishing: what is saved on this device vs. what the website has ---------- */
+  function publishedCfg() { try { return JSON.parse(localStorage.getItem('minyan-remote') || 'null'); } catch (e) { return null; } }
+  function localDraft() { try { return JSON.parse(localStorage.getItem('minyan-config') || 'null'); } catch (e) { return null; } }
+  function pendingChanges() {
+    var pub = publishedCfg(), mine = localDraft();
+    if (!mine || mode === 'artifact') return [];
+    if (pub && (mine.savedAt || 0) < (pub.savedAt || 0)) return []; /* the website is newer than this device's copy */
+    return describeChanges(pub, mine);
+  }
+  /* a readable list of what differs between two settings files */
+  function describeChanges(a, b) {
+    if (!b) return [];
+    if (!a) return ['Everything (this device has no copy of the published version yet)'];
+    a = withDefaults(a); b = withDefaults(b);
+    var out = [], names = {}, tfById = {};
+    (a.tefillos || []).concat(b.tefillos || []).forEach(function (t) { tfById[t.id] = t; });
+    /* a line in its parsed form, so "6:20" and "06:20" (how the editor writes it) are the same line */
+    function canonLine(line, id) { var p = MinyanEngine.parseLine(line, tfById[id] || { period: 'am' }); if (!p) return null; return JSON.stringify({ s: p.spec, r: p.room || p.rooms, n: p.note, c: p.cond }); }
+    function lineMap(text, id) { var m = {}; lines(text).forEach(function (l) { var k = canonLine(l, id) || l; if (!m[k]) m[k] = l; }); return m; }
+    /* blank, missing, false and 0 count as the same; key order does not matter */
+    function canon(v) {
+      if (v == null || v === '' || v === false || v === 0) return null;
+      if (Array.isArray(v)) return v.map(canon);
+      if (typeof v === 'object') { var o = {}; Object.keys(v).sort().forEach(function (k) { var c = canon(v[k]); if (c != null) o[k] = c; }); return o; }
+      return v;
+    }
+    function same(x, y) { return JSON.stringify(canon(x)) === JSON.stringify(canon(y)); }
+    function lines(t) { return (t || '').split('\n').map(function (l) { return l.trim(); }).filter(Boolean); }
+    function few(list) { return list.slice(0, 5).join('; ') + (list.length > 5 ? ' … (' + list.length + ')' : ''); }
+    (a.tefillos || []).concat(b.tefillos || []).forEach(function (t) { names[t.id] = t.name; });
+    [['name', 'Shul name'], ['rooms', 'Rooms'], ['palette', 'Colors'], ['lang', 'Board labels'], ['bigTime', 'Big number'], ['dateFormat', 'Date format'], ['nowMinutes', '"Now" minutes'], ['countdownZmanim', 'Countdown zmanim'],
+      ['candles', 'Candle lighting minutes'], ['tzeisMinutes', 'Nightfall minutes'], ['tzeisDeg', 'Nightfall degrees'], ['israel', 'Eretz Yisroel calendar'], ['weeklyEarliest', 'Weekly earliest sunset'], ['clock24', '24-hour clock'],
+      ['showTzeis', 'Show צאת הכוכבים'], ['showRT', 'Show Rabbeinu Tam'], ['show60', 'Show 60 minutes'], ['siteUrl', 'Website address'], ['logo', 'Logo'], ['notifyUrl', 'Notification service'], ['smsNumber', 'SMS number'],
+      ['sponsorSeconds', 'Sponsor seconds'], ['remoteConfigUrl', 'Central schedule URL'], ['location', 'Location'], ['pinHash', 'PIN'], ['pin', 'PIN']].forEach(function (f) {
+      if (same(a[f[0]], b[f[0]])) return;
+      var v = b[f[0]];
+      out.push(f[1] + (f[0] === 'location' || f[0] === 'pinHash' || f[0] === 'pin' ? ' changed' : ': ' + (v == null || v === '' ? '(blank)' : typeof v === 'object' ? JSON.stringify(v) : String(v))));
     });
+    if (!same(a.tefillos, b.tefillos)) out.push('Tefillos / categories changed');
+    Cal.DAY_TYPES.forEach(function (t) {
+      var k = t[0], sa = (a.schedules || {})[k] || {}, sb = (b.schedules || {})[k] || {}, ids = {};
+      Object.keys(sa).concat(Object.keys(sb)).forEach(function (id) { ids[id] = 1; });
+      Object.keys(ids).forEach(function (id) {
+        var ma = lineMap(sa[id], id), mb = lineMap(sb[id], id), added = Object.keys(mb).filter(function (k) { return !ma[k]; }).map(function (k) { return mb[k]; }), removed = Object.keys(ma).filter(function (k) { return !mb[k]; }).map(function (k) { return ma[k]; });
+        if (!added.length && !removed.length) return;
+        out.push(t[3] + ' · ' + (names[id] || id) + ': ' + [added.length ? 'added ' + few(added) : '', removed.length ? 'removed ' + few(removed) : ''].filter(Boolean).join('; '));
+      });
+    });
+    function okey(o) { return o.date ? o.date : o.hm != null ? 'hebrew ' + o.hm + '/' + o.hd : 'calendar ' + o.calLabel; }
+    var oa = {}, ob = {};
+    (a.overrides || []).forEach(function (o) { oa[okey(o)] = o; }); (b.overrides || []).forEach(function (o) { ob[okey(o)] = o; });
+    Object.keys(ob).forEach(function (k) { if (!oa[k]) out.push('Special date added: ' + k + (ob[k].label ? ' (' + ob[k].label + ')' : '')); else if (!same(oa[k], ob[k])) out.push('Special date changed: ' + k + (ob[k].label ? ' (' + ob[k].label + ')' : '')); });
+    Object.keys(oa).forEach(function (k) { if (!ob[k]) out.push('Special date removed: ' + k + (oa[k].label ? ' (' + oa[k].label + ')' : '')); });
+    var na = {}, nb = {};
+    (a.notices || []).forEach(function (x) { na[x.title] = x; }); (b.notices || []).forEach(function (x) { nb[x.title] = x; });
+    Object.keys(nb).forEach(function (k) { if (!na[k]) out.push('Notice added: ' + k); else if (!same(na[k], nb[k])) out.push('Notice changed: ' + k); });
+    Object.keys(na).forEach(function (k) { if (!nb[k]) out.push('Notice removed: ' + k); });
+    if (!same(a.banner, b.banner)) out.push(b.banner && b.banner.text ? 'Banner: ' + b.banner.text : 'Banner cleared');
+    return out;
+  }
+  /* the settings the admin form fills in by itself, so a published file that never had them does not look changed */
+  function withDefaults(c) {
+    var o = clone(c), tz = (o.location || {}).tz || '';
+    var d = { palette: 'shul', lang: 'he', bigTime: 'start', dateFormat: /^America\//.test(tz) ? 'mdy' : 'dmy', nowMinutes: 20, sponsorSeconds: 8, tzeisDeg: 8.5, candles: 18 };
+    Object.keys(d).forEach(function (k) { if (o[k] == null || o[k] === '') o[k] = d[k]; });
+    return o;
+  }
+  /* send what is saved on this device to the website (GitHub); the board and the app pick it up within minutes */
+  function publishNow() {
+    var s = ghSettings(), c = localDraft() || cfg;
+    if (!ghConfigured(s)) { toast('Connect the website first: Publish tab, GitHub token'); return Promise.resolve(false); }
+    toast('Publishing…', 4000);
+    return ghPublish(c, s).then(function () {
+      try { localStorage.setItem('minyan-remote', JSON.stringify(c)); localStorage.setItem('minyan-published-at', String(Date.now())); } catch (e) {}
+      toast('Published. Everyone gets the update within a few minutes.', 6000);
+      if (ui.adminOpen) { ui.adminDirty = false; buildAdmin(cfg); }
+      return true;
+    }, function (e) { toast('Publishing failed: ' + (e && e.message || e), 9000); return false; });
   }
 
   /* ---------- central schedule file (self-hosted site and app) ---------- */

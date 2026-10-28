@@ -362,7 +362,7 @@ var MinyanEngine = (function () {
   Cal.DAY_TYPES.forEach(function (t) { FALLBACK[t[0]] = t[2]; TYPE_NAME[t[0]] = t[1]; TYPE_NAME_EN[t[0]] = t[3]; });
   var ZMAN_ALIAS = { 'שקיעה': 'sunset', 'sunset': 'sunset', 'נץ': 'sunrise', 'sunrise': 'sunrise', 'הדלקה': 'candles', 'candles': 'candles',
     'צאת': 'tzeis', 'tzeis': 'tzeis', 'פלג': 'plag', 'plag': 'plag', 'חצות': 'chatzos', 'chatzos': 'chatzos', 'עלות': 'alos', 'alos': 'alos',
-    'ר״ת': 'tzeis72', 'ר"ת': 'tzeis72', 'rt': 'tzeis72', 'tzeis60': 'tzeis60', 'צאת60': 'tzeis60', 'minchag': 'minchag', 'מנחה־גדולה': 'minchag', 'שמע': 'shema', 'shema': 'shema' };
+    'ר״ת': 'tzeis72', 'ר"ת': 'tzeis72', 'rt': 'tzeis72', 'tzeis60': 'tzeis60', 'צאת60': 'tzeis60', 'minchag': 'minchag', 'מנחה־גדולה': 'minchag', 'שמע': 'shema', 'shema': 'shema', 'tefilla': 'tefilla', 'תפילה': 'tefilla' };
   var WEEKLY_TYPES = { weekday: 1, sunday: 1, rosh_chodesh: 1, fast: 1, chanukah: 1, purim: 1, chol_hamoed: 1 };
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
   function isoDate(rd) { var g = Cal.gregFromRD(rd); return g.y + '-' + pad2(g.m) + '-' + pad2(g.d); }
@@ -385,21 +385,24 @@ var MinyanEngine = (function () {
     if (!z) return null;
     return { kind: 'zman', zman: z, offset: m[2] ? (+m[3]) * (m[2] === '-' ? -1 : 1) : 0, round: m[4] ? +m[4] : 0 };
   }
-  /* "6:20 ברך משה // הערה" -> {spec, room, note} */
+  /* "6:20 ברך משה // הערה" -> {spec, room, note}. A trailing "until <zman>" / "after <zman>" (עד / אחרי) is a condition:
+     the minyan is listed only while it starts before (or from) that zman on that day, so a late Shacharis drops away in summer by itself. */
   function parseLine(line, tefilla) {
     var s = line.trim();
     if (!s || s.charAt(0) === '#') return null;
     var note = '', i = s.indexOf('//');
     if (i >= 0) { note = s.slice(i + 2).trim(); s = s.slice(0, i).trim(); }
+    var cond = null, cm = /^(.*?)\s+(until|after|עד|אחרי)\s+(\S+)$/i.exec(s);
+    if (cm) { var cs = parseSpec(cm[3], tefilla); if (cs && cs.kind === 'zman') { cond = { op: /^(until|עד)$/i.test(cm[2]) ? 'until' : 'after', spec: cs }; s = cm[1].trim(); } }
     var m = /^every\s+(\d+)\s+from\s+(\S+)\s+(?:to\s+(\S+)|count\s+(\d+))(?:\s+rooms\s+(.*))?$/i.exec(s);
     if (m) {
       var start = parseSpec(m[2], tefilla), end = m[3] ? parseSpec(m[3], tefilla) : null;
       var rooms = (m[5] || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean);
       var ok = !!start && +m[1] > 0 && (m[3] ? !!end : +m[4] > 0);
-      return { raw: line, tok: s, series: true, spec: ok ? { kind: 'series', every: +m[1], start: start, end: end, count: m[4] ? +m[4] : 0 } : null, room: '', rooms: rooms, note: note };
+      return { raw: line, tok: s, series: true, spec: ok ? { kind: 'series', every: +m[1], start: start, end: end, count: m[4] ? +m[4] : 0 } : null, room: '', rooms: rooms, note: note, cond: cond };
     }
     var parts = s.split(/\s*\|\s*|\s+/), tok = parts.shift();
-    return { raw: line, tok: tok, spec: parseSpec(tok, tefilla), room: parts.join(' '), note: note };
+    return { raw: line, tok: tok, spec: parseSpec(tok, tefilla), room: parts.join(' '), note: note, cond: cond };
   }
 
   function create(cfg) {
@@ -424,8 +427,17 @@ var MinyanEngine = (function () {
       var v = Math.round(base) + spec.offset; /* start from the zman as the zmanim list shows it (to the minute), then add the offset */
       return spec.round ? Math.floor(v / spec.round) * spec.round : v;
     }
+    /* the zman a line's "until"/"after" condition resolves to on day rd (NaN when the line has none) */
+    function condLimit(p, rd, type) { return p && p.cond ? resolveMin(p.cond.spec, rd, type) : NaN; }
+    function applyCond(p, list, rd, type) {
+      if (!p || !p.cond || !list.length) return list;
+      var lim = condLimit(p, rd, type);
+      if (isNaN(lim)) return list;
+      return list.filter(function (e) { return p.cond.op === 'until' ? e.start < lim : e.start >= lim; });
+    }
     /* A parsed line -> the minyanim it produces on day rd: [{start, room, note}] (a repeating line gives many). */
-    function expand(p, rd, type) {
+    function expand(p, rd, type) { return applyCond(p, expandAll(p, rd, type), rd, type); }
+    function expandAll(p, rd, type) {
       if (!p || !p.spec) return [];
       if (p.spec.kind !== 'series') { var st = resolveMin(p.spec, rd, type); return isNaN(st) ? [] : [{ start: st, room: p.room, note: p.note }]; }
       var out = [], start = resolveMin(p.spec.start, rd, type);
@@ -490,8 +502,12 @@ var MinyanEngine = (function () {
       });
       return out;
     }
+    function roomRank() {
+      var m = {}; (cfg.rooms || '').split(',').forEach(function (x, i) { x = x.trim(); if (x && m[x] == null) m[x] = i; });
+      return function (room) { return m[room] == null ? 1e6 : m[room]; };
+    }
     function scheduleFor(rd) {
-      var info = Cal.dayInfo(rd, !!cfg.israel), dt = dayTexts(rd, info), tz = loc().tz, byT = {}, all = [];
+      var info = Cal.dayInfo(rd, !!cfg.israel), dt = dayTexts(rd, info), tz = loc().tz, byT = {}, all = [], rank = roomRank();
       tefillos().forEach(function (t) {
         var list = [];
         var offset = (t.offset == null || t.offset === '') ? 0 : +t.offset;
@@ -500,10 +516,10 @@ var MinyanEngine = (function () {
             list.push({ tefilla: t, room: x.room, note: x.note, start: x.start, ms: Cal.epochFromWall(rd, x.start, tz), milestone: x.start + offset, rd: rd });
           });
         });
-        list.sort(function (a, b) { return a.start - b.start; });
+        list.sort(function (a, b) { return a.start - b.start || rank(a.room) - rank(b.room); });
         byT[t.id] = list; all = all.concat(list);
       });
-      all.sort(function (a, b) { return a.start - b.start; });
+      all.sort(function (a, b) { return a.start - b.start || rank(a.room) - rank(b.room); });
       return { rd: rd, info: info, type: dt.type, override: dt.override, byTefilla: byT, all: all };
     }
     /* All minyanim after nowMs within the next `days` days, in order. */
@@ -549,7 +565,7 @@ var MinyanEngine = (function () {
       if (s.override) return 'לוח מיוחד' + (s.override.label ? ': ' + s.override.label : '');
       return 'לוח ' + (TYPE_NAME[s.type] || s.type);
     }
-    return { cfg: cfg, loc: loc, zmanimFor: zmanimFor, resolveMin: resolveMin, expand: expand, tefillos: tefillos, activeNotices: activeNotices, activeBanner: activeBanner, dayTexts: dayTexts, scheduleFor: scheduleFor, fmtDate: fmtDate,
+    return { cfg: cfg, loc: loc, zmanimFor: zmanimFor, resolveMin: resolveMin, expand: expand, condLimit: condLimit, tefillos: tefillos, activeNotices: activeNotices, activeBanner: activeBanner, dayTexts: dayTexts, scheduleFor: scheduleFor, fmtDate: fmtDate,
       after: after, upcoming: upcoming, fmtTime: fmtTime, fmtCountdown: fmtCountdown, dayLine: dayLine, typeLabel: typeLabel, parseLine: parseLine };
   }
   create.parseLine = parseLine; create.parseSpec = parseSpec; create.sameEntry = sameEntry; create.gregStr = gregStr; create.isoDate = isoDate;
@@ -904,9 +920,11 @@ var WebPush = (function () {
 
 /* ---- Cloudflare Worker: text/WhatsApp responder, reminder texts, daily schedule texts and app notifications.
    Bindings: KV namespace SUBS. Variables: CONFIG_URL (required), ALLOWED_ORIGIN (the website address), VAPID_SUBJECT (mailto:…).
+   Optional secret BROADCAST_KEY: a second way to authorise the admin page's "Send a notification", besides the admin PIN.
    Secrets (wrangler secret put): TWILIO_AUTH_TOKEN (also verifies Twilio's signature), TWILIO_ACCOUNT_SID, TWILIO_FROM (+1718…),
    WA_FROM (whatsapp:+1718…, optional), WA_CONTENT_SID (optional WhatsApp template), VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY.
    Cron trigger every 5 minutes (wrangler.toml) sends what is due. ---- */
+async function sha256Hex(str) { var b = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str))), s = '', i; for (i = 0; i < b.length; i++) s += ('0' + b[i].toString(16)).slice(-2); return s; }
 function escapeXml(s) { return s.replace(/[<>&'"]/g, function (c) { return { '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]; }); }
 async function twilioSignatureOk(request, params, token) {
   var data = request.url;
@@ -968,6 +986,31 @@ export default {
       var b2 = await request.json().catch(function () { return {}; });
       if (b2.id && /^[a-z0-9]{8,32}$/.test(b2.id)) await env.SUBS.delete('push:' + b2.id);
       return json(env, { ok: true });
+    }
+    /* The gabbai sends a notification to every device that turned reminders on. Authorised by the admin PIN (the site's config carries its hash)
+       or the BROADCAST_KEY secret; ten wrong tries lock that address out for an hour. {test: id} sends to that one device only. */
+    if (path === '/push/broadcast' && request.method === 'POST') {
+      var bb = await request.json().catch(function () { return null; });
+      if (!bb) return json(env, { error: 'bad request' }, 400);
+      var ip = request.headers.get('cf-connecting-ip') || 'unknown', failKey = 'bcfail:' + ip, fails = +(await env.SUBS.get(failKey)) || 0;
+      if (fails >= 10) return json(env, { error: 'too many wrong tries; try again in an hour' }, 429);
+      var bcfg = await loadConfig(env), hasPin = !!(bcfg.pinHash || bcfg.pin);
+      var okKey = !!env.BROADCAST_KEY && bb.key === env.BROADCAST_KEY;
+      var okPin = hasPin && typeof bb.pin === 'string' && bb.pin !== '' && (bcfg.pinHash ? (await sha256Hex(bb.pin)) === bcfg.pinHash : bb.pin === String(bcfg.pin));
+      if (!okKey && !okPin) { await env.SUBS.put(failKey, String(fails + 1), { expirationTtl: 3600 }); return json(env, { error: hasPin ? 'wrong PIN' : 'set an admin PIN first' }, 403); }
+      var title = String(bb.title || bcfg.name || '').trim().slice(0, 80), text = String(bb.body || '').trim().slice(0, 300);
+      if (!text) return json(env, { error: 'empty message' }, 400);
+      var names = await allSubscriptions(env), payload = JSON.stringify({ title: title, body: text, tag: 'gabbai-' + Date.now() }), penv = await pushEnv(env), sent = 0, failed = 0, gone = 0, k;
+      if (bb.test) names = names.filter(function (nm) { return nm === 'push:' + bb.test; });
+      for (k = 0; k < names.length; k++) {
+        var ps = await env.SUBS.get(names[k], 'json');
+        if (!ps || ps.channel !== 'push') continue;
+        try {
+          var pr = await WebPush.send(ps.push, payload, penv);
+          if (pr.status === 404 || pr.status === 410) { await env.SUBS.delete(names[k]); gone++; } else if (pr.status < 300) sent++; else failed++;
+        } catch (e) { failed++; }
+      }
+      return json(env, { sent: sent, failed: failed, gone: gone });
     }
     /* Twilio webhook (SMS or WhatsApp): POST form. GET ?q=text[&from=+1…] answers in plain text for testing. */
     var isPost = request.method === 'POST', text = '', params = {}, from = '';
