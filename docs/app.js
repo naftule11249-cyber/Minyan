@@ -774,7 +774,7 @@
     d.location = d.location || {}; d.schedules = d.schedules || {}; d.overrides = d.overrides || []; d.notices = d.notices || [];
     d.tefillos = (d.tefillos && d.tefillos.length) ? d.tefillos : clone(TEFILLA_DEFAULTS);
     var todayRd = Cal.nowInTz(Date.now(), loc().tz).rd, todayInfo = Cal.dayInfo(todayRd, !!cfg.israel);
-    var tabs = [['today', 'Today', 'Move, cancel or add a minyan for today only.'], ['general', 'General', 'Name, rooms, location, looks and the tefillos.'], ['schedule', 'Schedule', 'The regular minyanim for each kind of day.'], ['notices', 'Notices', 'Banner, sponsors and announcements on the board.'], ['overrides', 'Special dates', 'A different schedule for one date or for a day every year.', 'Special']];
+    var tabs = [['today', 'This week', 'Move, cancel or add a minyan for today or for one of the next days; that day only.', 'Week'], ['general', 'General', 'Name, rooms, location, looks and the tefillos.'], ['schedule', 'Schedule', 'The regular minyanim for each kind of day.'], ['notices', 'Notices', 'Banner, sponsors and announcements on the board.'], ['overrides', 'Special dates', 'A different schedule for one date or for a day every year.', 'Special']];
     if (mode !== 'artifact') tabs.push(['publish', 'Publish', 'What is waiting to go out, and the connection to the website.']);
     if (mode !== 'artifact') tabs.push(['send', 'Send', 'A notification, right now, to everyone who turned reminders on.']);
     tabs.push(['data', 'Backup', 'Previous versions and the settings as text.']);
@@ -1216,49 +1216,69 @@
     np.appendChild(cBanner); np.appendChild(cNotices);
     pages.notices = np;
 
-    /* today: add, move or cancel a minyan for today only, without the editor; saved as a one-date special schedule */
-    var tp = el('div', { class: 'col', id: 'page-today' }), todayIso = MinyanEngine.isoDate(todayRd), todaySched = scheduleFor(todayRd), quick = {};
+    /* this week: add, move or cancel a minyan for today or one of the next six days, without the editor; each day is saved as its own one-date schedule */
+    var tp = el('div', { class: 'col', id: 'page-today' }), quickDays = {}; /* iso -> { rd, iso, sched, quick: { tefillaId: [{start, room, note}] } } */
+    if (!ui.quickRd || ui.quickRd < todayRd || ui.quickRd > todayRd + 6) ui.quickRd = todayRd;
     function hhmm(min) { var m = Math.round(min); return pad2(Math.floor(m / 60) % 24) + ':' + pad2(m % 60); }
     function parseHHMM(v) { var m = /^(\d{2}):(\d{2})$/.exec(v || ''); return m ? +m[1] * 60 + +m[2] : null; }
-    function todayList(tf) { return quick[tf.id] || (todaySched.byTefilla[tf.id] || []).map(function (e) { return { start: e.start, room: e.room, note: e.note }; }); }
-    function touch(tf) { if (!quick[tf.id]) quick[tf.id] = todayList(tf).map(function (x) { return { start: x.start, room: x.room, note: x.note }; }); return quick[tf.id]; }
-    function quickLines(tf) {
-      var list = quick[tf.id]; if (!list) return null;
+    function shortDate(rd) { var g = Cal.gregFromRD(rd); return (d.dateFormat || cfg.dateFormat) === 'dmy' ? g.d + '.' + g.m : g.m + '/' + g.d; }
+    function dayState(rd) { var iso = MinyanEngine.isoDate(rd); if (!quickDays[iso]) quickDays[iso] = { rd: rd, iso: iso, sched: scheduleFor(rd), quick: {} }; return quickDays[iso]; }
+    function dayList(st, tf) { return st.quick[tf.id] || (st.sched.byTefilla[tf.id] || []).map(function (e) { return { start: e.start, room: e.room, note: e.note }; }); }
+    function touch(st, tf) { if (!st.quick[tf.id]) st.quick[tf.id] = dayList(st, tf).map(function (x) { return { start: x.start, room: x.room, note: x.note }; }); return st.quick[tf.id]; }
+    function quickLines(st, tf) {
+      var list = st.quick[tf.id]; if (!list) return null;
       if (!list.length) return '# בוטל להיום'; /* a comment line: the special schedule applies, with no minyanim */
       return list.slice().sort(function (a, b) { return a.start - b.start; }).map(function (x) { return hhmm(x.start) + (x.room ? ' ' + x.room : '') + (x.note ? ' // ' + x.note : ''); }).join('\n');
     }
+    function dayName(rd) { return rd === todayRd ? 'Today' : rd === todayRd + 1 ? 'Tomorrow' : Cal.DAY_NAMES[dayState(rd).sched.info.dow]; }
     function renderToday() {
       tp.textContent = '';
-      var existing = d.overrides.filter(function (o) { return o.date === todayIso; })[0], changed = Object.keys(quick).length > 0;
+      var st = dayState(ui.quickRd), isToday = st.rd === todayRd, existing = d.overrides.filter(function (o) { return o.date === st.iso; })[0];
+      /* the day cards: today and the next six days */
+      var chips = el('div', { class: 'daychips', role: 'tablist' });
+      for (var k = 0; k < 7; k++) (function (rd) {
+        var s2 = dayState(rd), has = Object.keys(s2.quick).length > 0 || d.overrides.some(function (o) { return o.date === s2.iso; });
+        chips.appendChild(el('button', { type: 'button', role: 'tab', class: 'daychip' + (rd === ui.quickRd ? ' on' : '') + (has ? ' has' : ''), 'aria-selected': String(rd === ui.quickRd), 'data-nodirty': '1', onclick: function () { ui.quickRd = rd; renderToday(); } }, [
+          el('span', { class: 'dc-day', text: dayName(rd) }), el('span', { class: 'dc-date num', text: shortDate(rd) }),
+          s2.sched.type !== 'weekday' ? el('span', { class: 'dc-tag', text: TYPE_NAME[s2.sched.type] || s2.sched.type }) : null]));
+      })(todayRd + k);
+      tp.appendChild(chips);
       tp.appendChild(el('div', { class: 'card today-head' }, [
-        el('div', null, [el('div', { class: 'd', text: Cal.DAY_NAMES[todaySched.info.dow] + ' · ' + engine.fmtDate(todayRd) }), el('div', { class: 'cdesc', text: Cal.formatHeb(todaySched.info.heb) })]),
-        el('div', { class: 'note' }, [existing ? el('span', { class: 'status dirty', text: 'Today has its own schedule' + (existing.label ? ' (' + existing.label + ')' : '') }) : null,
-          el('span', { text: 'Move a time, cancel a minyan or add one. It applies to today only; the regular schedule stays as it is.' })])]));
+        el('div', null, [el('div', { class: 'd', text: Cal.DAY_NAMES[st.sched.info.dow] + ' · ' + engine.fmtDate(st.rd) }), el('div', { class: 'cdesc', text: Cal.formatHeb(st.sched.info.heb) + (st.sched.type !== 'weekday' ? ' · ' + (TYPE_NAME[st.sched.type] || '') : '') })]),
+        el('div', { class: 'note' }, [existing ? el('span', { class: 'status dirty', text: (isToday ? 'Today' : 'This day') + ' has its own schedule' + (existing.label ? ' (' + existing.label + ')' : '') }) : null,
+          el('span', { text: 'Move a time, cancel a minyan or add one. It applies to ' + (isToday ? 'today' : 'this day') + ' only; the regular schedule stays as it is.' })])]));
       d.tefillos.filter(function (t) { return t.kind !== 'event'; }).forEach(function (tf) {
-        var box = el('div', { class: 'col' }), list = todayList(tf);
+        var box = el('div', { class: 'col' }), list = dayList(st, tf);
         list.forEach(function (x, i) {
           var t = el('input', { type: 'time', value: hhmm(x.start), 'aria-label': 'Time' });
-          t.addEventListener('change', function () { var m = parseHHMM(t.value); if (m == null) return; touch(tf)[i].start = m; renderToday(); });
-          var roomSel = roomPicker(function () { return (quick[tf.id] ? quick[tf.id][i] : x).room || ''; }, function (v) { touch(tf)[i].room = v; }, 'Room'); /* change the room for today */
+          t.addEventListener('change', function () { var m = parseHHMM(t.value); if (m == null) return; touch(st, tf)[i].start = m; renderToday(); });
+          var roomSel = roomPicker(function () { return (st.quick[tf.id] ? st.quick[tf.id][i] : x).room || ''; }, function (v) { touch(st, tf)[i].room = v; }, 'Room'); /* change the room for that day */
           box.appendChild(el('div', { class: 'mrow-l today-row' }, [t].concat(roomSel, [x.note ? el('span', { class: 'hint', text: x.note }) : null,
-            el('button', { type: 'button', class: 'btn small danger', text: 'Cancel', title: 'No such minyan today', onclick: function () { touch(tf).splice(i, 1); renderToday(); } })])));
+            el('button', { type: 'button', class: 'btn small danger', text: 'Cancel', title: 'No such minyan that day', onclick: function () { touch(st, tf).splice(i, 1); renderToday(); } })])));
         });
-        if (!list.length) box.appendChild(el('div', { class: 'hint', text: 'No ' + tf.name + ' minyanim today.' }));
+        if (!list.length) box.appendChild(el('div', { class: 'hint', text: 'No ' + tf.name + ' minyanim ' + (isToday ? 'today' : 'that day') + '.' }));
         var addT = el('input', { type: 'time', 'aria-label': 'New time' }), addRoom = '';
         var picker = roomPicker(function () { return addRoom; }, function (v) { addRoom = v; }, 'Add a room');
-        var addB = el('button', { type: 'button', class: 'btn small', text: '+ Add for today', onclick: function () { var m = parseHHMM(addT.value); if (m == null) { toast('Pick a time first'); return; } touch(tf).push({ start: m, room: addRoom, note: '' }); renderToday(); } });
+        var addB = el('button', { type: 'button', class: 'btn small', text: isToday ? '+ Add for today' : '+ Add for ' + dayName(st.rd), onclick: function () { var m = parseHHMM(addT.value); if (m == null) { toast('Pick a time first'); return; } touch(st, tf).push({ start: m, room: addRoom, note: '' }); renderToday(); } });
         box.appendChild(el('div', { class: 'mrow-l today-add' }, [addT].concat(picker, [addB])));
         tp.appendChild(el('div', { class: 'field card tcard' }, [el('label', { text: tf.name }), box]));
       });
-      var saveT = el('button', { type: 'button', class: 'btn primary', text: 'Save today\'s changes', 'data-nodirty': '1', onclick: function () {
-        if (!Object.keys(quick).length) { toast('Nothing changed yet'); return; }
-        var c = collect(), ovr = c.overrides.filter(function (o) { return o.date === todayIso; })[0];
-        if (!ovr) { ovr = { date: todayIso, label: 'שינוי להיום', lines: {} }; c.overrides.push(ovr); }
-        d.tefillos.forEach(function (tf) { var l = quickLines(tf); if (l != null) ovr.lines[tf.id] = l; });
+      /* Save writes every day that was touched, each as its own one-date schedule */
+      var touched = Object.keys(quickDays).filter(function (k2) { return Object.keys(quickDays[k2].quick).length > 0; });
+      var saveT = el('button', { type: 'button', class: 'btn primary', text: isToday ? 'Save today\'s changes' : 'Save the changes for ' + dayName(st.rd), 'data-nodirty': '1', onclick: function () {
+        var days = Object.keys(quickDays).filter(function (k2) { return Object.keys(quickDays[k2].quick).length > 0; });
+        if (!days.length) { toast('Nothing changed yet'); return; }
+        var c = collect();
+        days.forEach(function (k2) {
+          var s3 = quickDays[k2], ovr = c.overrides.filter(function (o) { return o.date === s3.iso; })[0];
+          if (!ovr) { ovr = { date: s3.iso, label: s3.rd === todayRd ? 'שינוי להיום' : 'שינוי', lines: {} }; c.overrides.push(ovr); }
+          d.tefillos.forEach(function (tf) { var l = quickLines(s3, tf); if (l != null) ovr.lines[tf.id] = l; });
+        });
         saveConfig(c);
       } });
       var row = el('div', { class: 'bar actions' }, [saveT]);
-      if (existing) row.appendChild(el('button', { type: 'button', class: 'btn', text: 'Back to the regular schedule for today', 'data-nodirty': '1', onclick: function () { var c = collect(); c.overrides = c.overrides.filter(function (o) { return o.date !== todayIso; }); saveConfig(c); } }));
+      if (touched.length > 1 || (touched.length === 1 && touched[0] !== st.iso)) row.appendChild(el('span', { class: 'hint', text: 'Also saves: ' + touched.filter(function (k2) { return k2 !== st.iso; }).map(function (k2) { return dayName(quickDays[k2].rd); }).join(', ') }));
+      if (existing) row.appendChild(el('button', { type: 'button', class: 'btn', text: 'Back to the regular schedule for ' + (isToday ? 'today' : 'this day'), 'data-nodirty': '1', onclick: function () { var c = collect(); c.overrides = c.overrides.filter(function (o) { return o.date !== st.iso; }); saveConfig(c); } }));
       tp.appendChild(row);
     }
     renderToday();

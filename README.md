@@ -58,7 +58,7 @@ which still belongs to that night: it sorts at the end of the list and the board
 
 The admin page is a full page of its own, styled like a phone app (navy header, gold for the one action that matters, big white cards and large controls; on a phone the sections are a bottom tab bar, the Schedule tab shows one tefilla at a time behind a switch, and minute boxes have − and + steppers). A sidebar lists its sections (Today, General, Schedule, Notices, Special dates, Publish, Backup), the header holds Save, Close and a "Saved …" / "Unsaved changes" marker, Ctrl+S (Cmd+S) saves, and the sidebar also offers "View the board" and "Lock". On a phone the sections become a scrolling strip under the header. Settings are grouped into cards (The board, Look and labels, Location and zmanim, Tefillos, Website and services, Security).
 
-The admin page opens on a **Today** tab: today's minyanim with a time box, a room picker and a Cancel button each, and an "+ Add for today" row per tefilla.
+The admin page opens on a **This week** tab: a card for today and each of the next six days (with ערב שבת, שבת and the like marked), and for the chosen day its minyanim with a time box, a room picker and a Cancel button each, and an "+ Add for today" row per tefilla.
 Move, cancel or add, then "Save today's changes". It is stored as a one-date special schedule (Special dates tab), so the regular
 schedule is untouched and tomorrow is back to normal; "Back to the regular schedule for today" removes it. On a phone this is the
 fastest way to say "Mincha is 5:30 today".

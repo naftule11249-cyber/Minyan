@@ -50,6 +50,19 @@ const { chromium } = require('playwright');
   await page.click('#page-today button:has-text("Back to the regular schedule")'); await page.waitForTimeout(600);
   const cfg2 = await page.evaluate(() => JSON.parse(localStorage.getItem('minyan-config')));
   ok('undo removes it', (cfg2.overrides || []).filter(o => o.label === 'שינוי להיום').length, 0);
+  // a later day: pick the day after tomorrow, cancel its first Shacharis, save; it gets its own one-date schedule, today stays untouched
+  await page.waitForSelector('#tab-today'); await page.waitForTimeout(200);
+  ok('seven day cards, today first and selected', [await page.locator('.daychip').count(), await page.locator('.daychip').first().getAttribute('aria-selected'), await page.locator('.daychip .dc-day').nth(1).textContent()], [7, 'true', 'Tomorrow']);
+  await page.locator('.daychip').nth(2).click(); await page.waitForTimeout(200);
+  const n3 = await sh().locator('.today-row').count();
+  await sh().locator('.today-row').first().locator('button:has-text("Cancel")').click();
+  ok('the later day lists its minyanim and one is cancelled', [n3 > 0, await sh().locator('.today-row').count()], [true, n3 - 1]);
+  ok('the day card is marked as touched', await page.locator('.daychip').nth(2).evaluate(e => e.classList.contains('has')), true);
+  await page.click('#page-today button:has-text("Save the changes for")'); await page.waitForTimeout(600);
+  const cfg3 = await page.evaluate(() => JSON.parse(localStorage.getItem('minyan-config')));
+  const dayIso = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date(fixed + 2 * 86400000)); /* the page's clock is `fixed`; the third card is two days after its today */
+  const o3 = (cfg3.overrides || []).filter(o => o.label === 'שינוי')[0];
+  ok('saved as that day\'s own schedule, today untouched', [!!o3, o3 && o3.date === dayIso, o3 && o3.lines.shacharis.split('\n').length, (cfg3.overrides || []).filter(o => o.label === 'שינוי להיום').length], [true, true, n3 - 1, 0]);
   await ctx.close(); await browser.close();
   console.log(errors.length ? 'ERRORS:\n' + errors.join('\n') : 'no console errors');
   if (fails || errors.length) process.exit(1); else console.log('today: all good');

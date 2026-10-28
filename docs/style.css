@@ -384,7 +384,7 @@ footer { max-width: 1120px; margin: 0 auto; padding-block: 0 30px; padding-left:
 .checks label { display: flex; align-items: flex-start; gap: 10px; font-size: .98rem; }
 .checks input { margin: 3px 0 0; width: 20px; height: 20px; accent-color: var(--a-navy); }
 .chipset { display: flex; flex-wrap: wrap; gap: 8px; }
-.chipset label { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--a-line); background: var(--a-field); border-radius: 999px; padding: 9px 16px 9px 12px; font-size: .95rem; cursor: pointer; min-height: 44px; }
+.chipset label { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--a-line); background: var(--a-field); border-radius: 999px; padding: 6px 14px 6px 10px; font-size: .9rem; cursor: pointer; min-height: 36px; white-space: nowrap; flex: 0 0 auto; }
 .chipset label:has(input:checked) { background: var(--a-navy); color: #fff; border-color: var(--a-navy); }
 .chipset input { margin: 0; accent-color: #fff; }
 .tabs { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -452,6 +452,17 @@ footer { max-width: 1120px; margin: 0 auto; padding-block: 0 30px; padding-left:
 .ohead { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 0 -16px; padding: 12px 16px; background: var(--a-soft); border-bottom: 1px solid var(--a-line); font-weight: 700; font-size: 1rem; unicode-bidi: plaintext; }
 #data-json { width: 100%; font-size: .8rem; line-height: 1.45; }
 
+/* this week: a card per day */
+.daychips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 6px; scrollbar-width: none; }
+.daychips::-webkit-scrollbar { display: none; }
+.daychip { flex: 0 0 auto; min-width: 96px; display: grid; gap: 2px; justify-items: center; padding: 10px 12px; border: 1px solid var(--a-line); border-radius: 16px; background: #fff; font: inherit; color: var(--a-ink); position: relative; box-shadow: 0 1px 3px rgba(40,30,10,.05); }
+.daychip .dc-day { font-weight: 700; font-size: .95rem; unicode-bidi: plaintext; }
+.daychip .dc-date { font-size: .8rem; color: var(--a-muted); }
+.daychip .dc-tag { font-size: .7rem; background: var(--a-soft); color: var(--a-navy); border-radius: 999px; padding: 1px 8px; margin-top: 2px; unicode-bidi: plaintext; }
+.daychip.on { background: var(--a-navy); color: #fff; border-color: var(--a-navy); }
+.daychip.on .dc-date { color: rgba(255,255,255,.8); }
+.daychip.on .dc-tag { background: rgba(255,255,255,.2); color: #fff; }
+.daychip.has::after { content: ""; position: absolute; top: 8px; right: 8px; width: 7px; height: 7px; border-radius: 50%; background: var(--a-gold); }
 /* today, backup, publish, send */
 .today-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px 20px; padding: 18px 20px; }
 .today-head .d { font-family: var(--font-display); font-size: 1.7rem; line-height: 1.15; unicode-bidi: plaintext; color: var(--a-navy); }
@@ -556,7 +567,10 @@ details.help p { margin: 6px 0; }
 }
 
 /* the board's footer buttons: bigger, and full width on a phone (after the footer rule, so this wins) */
-footer .tabs .btn { min-height: 42px; border-radius: 12px; padding: 8px 16px; font-weight: 600; }
+footer { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 18px; }
+footer .tabs { gap: 10px; }
+footer .tabs .btn { min-height: 44px; border-radius: 999px; padding: 8px 18px; font-weight: 600; font-size: .95rem; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+footer .tabs .btn:hover { border-color: var(--accent); }
 .sheet .sset .btn { width: 100%; min-height: 50px; border-radius: 14px; font-size: 1rem; font-weight: 600; }
 @media (max-width: 640px) {
   footer { display: grid; gap: 12px; justify-items: stretch; }
