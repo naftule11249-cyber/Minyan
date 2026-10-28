@@ -700,6 +700,7 @@
     publish: '<path d="M7 18a4 4 0 0 1-.6-7.95A6 6 0 0 1 18 8.5a4 4 0 0 1-1 7.5"/><path d="M12 12v9M8.5 15.5 12 12l3.5 3.5"/>',
     data: '<rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/>',
     send: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/>',
+    x: '<path d="M18 6 6 18M6 6l12 12"/>',
     lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
     open: '<path d="M14 4h6v6M20 4l-9 9M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/>',
     logout: '<path d="M10 17l5-5-5-5M15 12H3M13 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/>'
@@ -708,6 +709,14 @@
     var sp = el('span', { class: 'ico', 'aria-hidden': 'true' });
     sp.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + (ICONS[name] || '') + '</svg>';
     return sp;
+  }
+  /* a minutes box with − and + beside it (5 at a time); typing still works */
+  function stepper(input, big) {
+    var w = el('span', { class: 'step' }), dec = el('button', { type: 'button', text: '−', 'aria-label': 'Less', tabindex: '-1' }), inc = el('button', { type: 'button', text: '+', 'aria-label': 'More', tabindex: '-1' });
+    function bump(d) { var min = input.min === '' ? -Infinity : +input.min, v = (+input.value || 0) + d; if (v < min) v = min; input.value = String(v); input.dispatchEvent(new Event('input', { bubbles: true })); }
+    dec.addEventListener('click', function () { bump(-(big || 1)); }); inc.addEventListener('click', function () { bump(big || 1); });
+    w.appendChild(dec); w.appendChild(input); w.appendChild(inc);
+    return w;
   }
   /* a titled card for the admin pages; fill card.body */
   function card(title, desc, opts) {
@@ -722,13 +731,13 @@
     var d = draft ? clone(draft) : clone(cfg);
     d.location = d.location || {}; d.schedules = d.schedules || {}; d.overrides = d.overrides || []; d.notices = d.notices || [];
     d.tefillos = (d.tefillos && d.tefillos.length) ? d.tefillos : clone(TEFILLA_DEFAULTS);
-    var todayRd = Cal.nowInTz(Date.now(), loc().tz).rd;
-    var tabs = [['today', 'Today', 'Move, cancel or add a minyan for today only.'], ['general', 'General', 'Name, rooms, location, looks and the tefillos.'], ['schedule', 'Schedule', 'The regular minyanim for each kind of day.'], ['notices', 'Notices', 'Banner, sponsors and announcements on the board.'], ['overrides', 'Special dates', 'A different schedule for one date or for a day every year.']];
+    var todayRd = Cal.nowInTz(Date.now(), loc().tz).rd, todayInfo = Cal.dayInfo(todayRd, !!cfg.israel);
+    var tabs = [['today', 'Today', 'Move, cancel or add a minyan for today only.'], ['general', 'General', 'Name, rooms, location, looks and the tefillos.'], ['schedule', 'Schedule', 'The regular minyanim for each kind of day.'], ['notices', 'Notices', 'Banner, sponsors and announcements on the board.'], ['overrides', 'Special dates', 'A different schedule for one date or for a day every year.', 'Special']];
     if (mode !== 'artifact') tabs.push(['publish', 'Publish', 'What is waiting to go out, and the connection to the website.']);
     if (mode !== 'artifact') tabs.push(['send', 'Send', 'A notification, right now, to everyone who turned reminders on.']);
     tabs.push(['data', 'Backup', 'Previous versions and the settings as text.']);
     var pages = {}, tabBar = el('div', { class: 'tabs', role: 'tablist' }), pageTitle = el('h2', { text: '' }), pageDesc = el('div', { class: 'cdesc', text: '' });
-    tabs.forEach(function (t) { tabBar.appendChild(el('button', { type: 'button', role: 'tab', id: 'tab-' + t[0], 'aria-selected': 'false', onclick: function () { selectTab(t[0]); } }, [svgIcon(t[0]), el('span', { text: t[1] })])); });
+    tabs.forEach(function (t) { tabBar.appendChild(el('button', { type: 'button', role: 'tab', id: 'tab-' + t[0], 'aria-selected': 'false', onclick: function () { selectTab(t[0]); } }, [svgIcon(t[0]), el('span', { class: 'lbl', text: t[1] }), el('span', { class: 'lbl-s', text: t[3] || t[1] })])); });
     function selectTab(id) {
       ui.adminTab = id; /* a rebuild (adding a category, restoring a backup) keeps the gabbai on the same tab */
       tabs.forEach(function (t) { pages[t[0]].hidden = t[0] !== id; $('#tab-' + t[0], tabBar).setAttribute('aria-selected', String(t[0] === id)); if (t[0] === id) { pageTitle.textContent = t[1]; pageDesc.textContent = t[2]; } });
@@ -927,27 +936,27 @@
         var time = el('input', { type: 'time', value: w.time || '', 'aria-label': 'Time' });
         var sign = el('select', { 'aria-label': 'Before or after' }, [el('option', { value: '-', text: 'min before' }), el('option', { value: '+', text: 'min after' })]);
         sign.value = w.off < 0 ? '-' : '+';
-        var mins = el('input', { type: 'number', min: '0', step: '1', inputmode: 'numeric', class: 'mins', value: String(Math.abs(w.off || 0)), 'aria-label': 'Minutes' });
+        var mins = el('input', { type: 'number', min: '0', step: '1', inputmode: 'numeric', class: 'mins', value: String(Math.abs(w.off || 0)), 'aria-label': 'Minutes' }), minsW = stepper(mins, 5);
         var roundC = el('input', { type: 'checkbox' }); roundC.checked = !!w.round;
         var roundL = el('label', { class: 'small' }, [roundC, ' ' + (roundLabel || 'round to 5')]);
-        function show() { var fixed = when.value === 'fixed'; time.hidden = !fixed; sign.hidden = fixed; mins.hidden = fixed; roundL.hidden = fixed || roundLabel === ''; }
+        function show() { var fixed = when.value === 'fixed'; time.hidden = !fixed; sign.hidden = fixed; minsW.hidden = fixed; roundL.hidden = fixed || roundLabel === ''; }
         when.addEventListener('change', function () { w.kind = when.value; if (w.kind === 'fixed' && !w.time) { w.time = '07:00'; time.value = w.time; } show(); onChange(); });
         time.addEventListener('input', function () { w.time = time.value; onChange(); });
         function offChange() { w.off = (+mins.value || 0) * (sign.value === '-' ? -1 : 1); onChange(); }
         sign.addEventListener('change', offChange); mins.addEventListener('input', offChange);
         roundC.addEventListener('change', function () { w.round = roundC.checked; onChange(); });
         show();
-        return [when, time, sign, mins, roundL];
+        return [when, time, sign, minsW, roundL];
       }
       /* "Show: only while it starts before <zman>": a late Shacharis drops away by itself in summer, a run shortens by itself */
       function condWidget(r, onChange) {
         var op = el('select', { 'aria-label': 'Show only' }, [el('option', { value: '', text: 'Always' }), el('option', { value: 'until', text: 'Only while it starts before' }), el('option', { value: 'after', text: 'Only once it starts at or after' })]);
         var zman = el('select', { 'aria-label': 'Condition zman' }); ZMAN_OPTS.forEach(function (o) { if (o[0] !== 'fixed') zman.appendChild(el('option', { value: o[0], text: o[1] })); });
-        var mins = el('input', { type: 'number', min: '0', step: '1', inputmode: 'numeric', class: 'cmins', 'aria-label': 'Condition minutes' });
+        var mins = el('input', { type: 'number', min: '0', step: '1', inputmode: 'numeric', class: 'cmins', 'aria-label': 'Condition minutes' }), minsW = stepper(mins, 5);
         var sign = el('select', { 'aria-label': 'Condition before or after' }, [el('option', { value: '-', text: 'min before it' }), el('option', { value: '+', text: 'min after it' })]);
         function paint() {
           var on = !!(r.cond && r.cond.op);
-          op.value = on ? r.cond.op : ''; zman.hidden = mins.hidden = sign.hidden = !on;
+          op.value = on ? r.cond.op : ''; zman.hidden = minsW.hidden = sign.hidden = !on;
           if (on) { zman.value = r.cond.zman; if (zman.selectedIndex < 0) zman.value = 'tefilla'; sign.value = r.cond.off > 0 ? '+' : '-'; mins.value = String(Math.abs(r.cond.off || 0)); }
         }
         op.addEventListener('change', function () {
@@ -959,7 +968,7 @@
         function offChange() { r.cond.off = (+mins.value || 0) * (sign.value === '-' ? -1 : 1); onChange(); }
         sign.addEventListener('change', offChange); mins.addEventListener('input', offChange);
         paint();
-        return el('div', { class: 'mrow-l cond' }, [el('span', { class: 'k', text: 'Show:' }), op, zman, mins, sign]);
+        return el('div', { class: 'mrow-l cond' }, [el('span', { class: 'k', text: 'Show:' }), op, zman, minsW, sign]);
       }
       function renderRow(r) {
         var row = el('div', { class: 'mrow' + (r.series ? ' series' : '') });
@@ -996,7 +1005,7 @@
           function commitRooms() { r.rooms = seq.join(', '); paint(); changed(); }
           var picker = roomPicker('', function (v) { if (v) { seq.push(v); commitRooms(); } }, 'Add a room');
           paint();
-          row.appendChild(el('div', { class: 'mrow-l' }, [el('span', { class: 'tag', text: 'Repeating' }), el('span', { class: 'k', text: 'every' }), every, el('span', { class: 'k', text: 'min, from' })].concat(timeWidget(r.start, changed, 'From', 'round every minyan to 5'))));
+          row.appendChild(el('div', { class: 'mrow-l' }, [el('span', { class: 'tag', text: 'Repeating' }), el('span', { class: 'k', text: 'every' }), stepper(every, 5), el('span', { class: 'k', text: 'min, from' })].concat(timeWidget(r.start, changed, 'From', 'round every minyan to 5'))));
           row.appendChild(el('div', { class: 'mrow-l' }, [el('span', { class: 'k', text: 'to' })].concat(endW)));
           row.appendChild(el('div', { class: 'mrow-l' }, [el('span', { class: 'k', text: 'rooms, in this order (1st minyan, 2nd, …, then again from 1):' }), chips]));
           row.appendChild(el('div', { class: 'mrow-l' }, picker));
@@ -1075,7 +1084,7 @@
     Cal.DAY_TYPES.forEach(function (t) {
       var key = t[0], b = el('button', { type: 'button', id: 'dt-' + key, text: t[3], 'aria-selected': 'false', onclick: function () { showType(key); } });
       typeTabs.appendChild(b);
-      var page = el('div', { class: 'col', id: 'dtp-' + key });
+      var page = el('div', { class: 'col dtp tef-0', id: 'dtp-' + key });
       page.hidden = true;
       page.appendChild(el('div', { class: 'hint', text: FALLBACK[key] ? t[3] + ': each tefilla either follows the ' + TYPE_EN[FALLBACK[key]] + ' schedule or gets its own list for this day.' : t[3] + ' is the base schedule: every day that has no list of its own for a tefilla (Sunday, Friday, Rosh Chodesh…) uses it.' }));
       var row = el('div', { class: 'fields three' });
@@ -1106,6 +1115,14 @@
         block.appendChild(editor);
         row.appendChild(block);
       });
+      var seg = el('div', { class: 'seg', role: 'tablist' });
+      d.tefillos.forEach(function (tf, i) {
+        seg.appendChild(el('button', { type: 'button', role: 'tab', 'aria-selected': String(i === 0), text: tf.name, 'data-nodirty': '1', onclick: function () {
+          page.className = 'col dtp tef-' + i;
+          Array.prototype.forEach.call(seg.children, function (x, j) { x.setAttribute('aria-selected', String(j === i)); });
+        } }));
+      });
+      page.appendChild(seg);
       page.appendChild(row);
       typePages[key] = { page: page, button: b };
       sp.appendChild(page);
@@ -1417,7 +1434,7 @@
       status.textContent = on ? 'Unsaved changes' : (cfg.savedAt ? 'Saved ' + new Date(cfg.savedAt).toLocaleString([], { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '');
       status.className = 'status' + (on ? ' dirty' : ''); saveBtn.classList.toggle('attn', on);
     }
-    var closeBtn = el('button', { type: 'button', class: 'btn', text: 'Close', onclick: function () { if (ui.adminDirty && !confirm('Close without saving? The changes made here will be lost.')) return; ui.adminDirty = false; closeOverlay(); } });
+    var closeBtn = el('button', { type: 'button', class: 'btn closebtn', 'aria-label': 'Close', onclick: function () { if (ui.adminDirty && !confirm('Close without saving? The changes made here will be lost.')) return; ui.adminDirty = false; closeOverlay(); } }, [el('span', { class: 'lbl', text: 'Close' }), svgIcon('x')]);
     var navFoot = el('div', { class: 'navfoot' }, mode === 'artifact' ? [] : [
       el('a', { class: 'btn ghost', href: 'index.html', target: '_blank', rel: 'noopener' }, [svgIcon('open'), el('span', { text: 'View the board' })]),
       el('button', { type: 'button', class: 'btn ghost', 'data-nodirty': '1', onclick: function () { if (ui.adminDirty && !confirm('Lock without saving? The changes made here will be lost.')) return; pinOk = false; try { sessionStorage.removeItem('minyan-pin'); } catch (e) {} ui.adminDirty = false; closeOverlay(); showPin(); } }, [svgIcon('lock'), el('span', { text: 'Lock' })])]);
@@ -1436,8 +1453,8 @@
     }
     var panel = el('div', { class: 'shell' }, [
       el('header', { class: 'abar' }, [
-        el('div', { class: 'brand' }, [el('div', { class: 'mark', text: (cfg.name || 'B').trim().charAt(0).toUpperCase() }), el('div', { class: 'bt' }, [el('h2', { text: 'Board settings' }), el('div', { class: 'sub', text: cfg.name || '' })])]),
-        el('div', { class: 'bar' }, [status, saveBtn, closeBtn])]),
+        el('div', { class: 'brand' }, [el('div', { class: 'bt' }, [el('h2', { text: cfg.name || 'Board settings' }), el('div', { class: 'sub', text: Cal.DAY_NAMES[todayInfo.dow] + ' · ' + engine.fmtDate(todayRd) + ' · ' + Cal.formatHeb(todayInfo.heb) })])]),
+        el('div', { class: 'bar' }, [mode !== 'artifact' ? el('a', { class: 'btn toboard', href: 'index.html', target: '_blank', rel: 'noopener', 'aria-label': 'Open the board' }, [el('span', { text: 'Board' }), svgIcon('open')]) : null, status, saveBtn, closeBtn])]),
       el('div', { class: 'abody' }, [el('nav', { class: 'anav' }, [tabBar, navFoot]), main]), pubBar]);
     overlay(panel);
     refreshPubBar();
