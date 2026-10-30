@@ -3,10 +3,10 @@
 var MinyanSms = (function () {
   'use strict';
   var T = {
-    he: { next: 'המנין הבא', then: 'אחריו', in_: 'בעוד', min: 'דק׳', hr: 'שע׳', today: 'היום', tomorrow: 'מחר', none: 'לא רשומים מנינים בימים הקרובים.',
+    he: { next: 'המנין הבא', last: 'מנין העבר', then: 'אחריו', in_: 'בעוד', min: 'דק׳', hr: 'שע׳', today: 'היום', tomorrow: 'מחר', none: 'לא רשומים מנינים בימים הקרובים.',
       left: 'נותרו', noneToday: 'אין עוד מנינים היום', zmanim: 'זמני היום', more: 'ועוד',
       help: 'שלחו אחת מהמילים: מנין, שחרית, מנחה, מעריב, היום, מחר, זמנים. להפסקה שלחו STOP.' },
-    en: { next: 'Next minyan', then: 'Then', in_: 'in', min: 'min', hr: 'hr', today: 'Today', tomorrow: 'Tomorrow', none: 'No minyanim are listed for the coming days.',
+    en: { next: 'Next minyan', last: 'Last minyan', then: 'Then', in_: 'in', min: 'min', hr: 'hr', today: 'Today', tomorrow: 'Tomorrow', none: 'No minyanim are listed for the coming days.',
       left: 'left', noneToday: 'No more minyanim today', zmanim: "Today's zmanim", more: 'more',
       help: 'Text one of: next, shacharis, mincha, maariv, today, tomorrow, zmanim. Reply STOP to opt out, HELP for help. Msg and data rates may apply.' }
   };
@@ -63,7 +63,22 @@ var MinyanSms = (function () {
       var parsha = Cal.parshaOfWeek(d, !!cfg.israel);
       return EN_DAYS[info.dow] + (parsha ? ' (' + parsha + ')' : '');
     }
-    var out = '', list, first, second, i;
+    /* a minyan that has begun but whose הודו (the tefilla's milestone) is still 3 minutes or more away can still be caught: it leads the
+       reply as "מנין העבר", ahead of the next two. Tefillos without a milestone have no such window. */
+    function justStarted(tefillaId) {
+      var best = null, tz = engine.loc().tz;
+      [rd - 1, rd].forEach(function (d) {
+        var s = engine.scheduleFor(d);
+        engine.tefillos().forEach(function (t) {
+          if (!t.milestone || t.kind === 'event' || (tefillaId && t.id !== tefillaId)) return;
+          (s.byTefilla[t.id] || []).forEach(function (e) {
+            if (e.ms <= nowMs && Cal.epochFromWall(d, e.milestone, tz) - nowMs >= 3 * 60000 && (!best || e.ms > best.ms)) best = e;
+          });
+        });
+      });
+      return best;
+    }
+    var out = '', list, first, second, i, last;
     if (k === 'carrier') return { text: '', lang: lang, keyword: k };
     if (k === 'help') out = L.help;
     else if (k === 'zmanim') {
@@ -85,8 +100,8 @@ var MinyanSms = (function () {
       else out = L.tomorrow + ' – ' + dayHeader(d) + ': ' + L.none;
     }
     else if (tf) {
-      list = engine.after(nowMs, rd, 1, tf.id);
-      if (list.length) out = tName(tf) + ' ' + L.today + ' (' + list.length + ' ' + L.left + '): ' + shortList(list);
+      list = engine.after(nowMs, rd, 1, tf.id); last = justStarted(tf.id);
+      if (list.length) out = (last ? L.last + ': ' + entry(last, false) + '.\n' : '') + tName(tf) + ' ' + L.today + ' (' + list.length + ' ' + L.left + '): ' + shortList(list);
       else {
         list = engine.after(nowMs, rd, 10, tf.id);
         if (!list.length) out = tName(tf) + ': ' + L.none;
@@ -100,9 +115,9 @@ var MinyanSms = (function () {
       list = engine.after(nowMs, rd, 10);
       if (!list.length) out = L.none;
       else {
-        first = list[0]; second = list[1];
+        first = list[0]; second = list[1]; last = justStarted(null);
         var r = first.daysAhead === 0 ? rel(first.entry.ms) : '';
-        out = L.next + ': ' + (first.daysAhead ? dayPrefix(first) + ', ' : '') + entry(first.entry, true) + (r ? ', ' + r : '') + '.';
+        out = (last ? L.last + ': ' + entry(last, true) + '.\n' : '') + L.next + ': ' + (first.daysAhead ? dayPrefix(first) + ', ' : '') + entry(first.entry, true) + (r ? ', ' + r : '') + '.';
         if (second) out += '\n' + L.then + ': ' + (second.daysAhead !== first.daysAhead ? dayPrefix(second) + ', ' : '') + entry(second.entry, second.entry.tefilla.id !== first.entry.tefilla.id) + '.';
       }
     }

@@ -12,7 +12,13 @@ function check(name, text, re) { const ok = re.test(text); if (!ok) fails++; con
 const at = (h, m, d) => Cal.epochFromWall(Cal.rdFromGreg(2026, 10, d || 20), h * 60 + m, 'America/New_York');
 const R = (t, now) => MinyanSms.buildReply(cfg, t, now).text;
 check('he next', R('מנין', at(10, 59)), /^המנין הבא: שחרית – דברי יואל 11:00 \(הודו 11:10\), בעוד 1 דק׳\.\nאחריו: ברך משה 11:20/);
-check('en next', R('next', at(10, 45)), /^Next minyan: Shacharis – דברי יואל 11:00 \(Hodu 11:10\), in 15 min\./);
+check('en next, with the minyan that began 5 minutes ago still worth running for (Hodu 10:50)', R('next', at(10, 45)), /^Last minyan: Shacharis – .* 10:40 \(Hodu 10:50\)\.\nNext minyan: Shacharis – דברי יואל 11:00 \(Hodu 11:10\), in 15 min\.\nThen: /);
+/* the "last minyan" rule: a minyan that began leads the reply until 3 minutes before its הודו, then drops out */
+check('he: 10:40 minyan leads as מנין העבר at 10:41', R('מנין', at(10, 41)), /^מנין העבר: שחרית – .* 10:40 \(הודו 10:50\)\.\nהמנין הבא: שחרית – דברי יואל 11:00/);
+check('still at 10:47 (3 minutes before Hodu)', R('מנין', at(10, 47)), /^מנין העבר: /);
+check('gone at 10:48 (less than 3 minutes before Hodu)', R('מנין', at(10, 48)), /^המנין הבא: /);
+check('tefilla reply leads with it too, without the tefilla name', R('שחרית', at(10, 41)), /^מנין העבר: .* 10:40 \(הודו 10:50\)\.\nשחרית היום \(\d+ נותרו\): 11:00 דברי יואל/);
+check('mincha (Shemoneh Esrei 8 minutes in): 1:10 minyan leads at 1:12', R('mincha', at(13, 12)), /^Last minyan: ברך משה 1:10 \(Shemoneh Esrei 1:18\)\.\nMincha Today/);
 check('empty = next', R('', at(10, 30)), /^Next minyan/);
 check('en hours', R('when', at(4, 0)), /ברך משה 6:20 \(Hodu 6:30\), in 2 hr 20 min\./);
 check('he mincha list', R('מנחה', at(10, 0)), /^מנחה היום \(3 נותרו\): 1:10 ברך משה, 5:45 דברי יואל, 6:03 ברך משה$/);

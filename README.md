@@ -213,6 +213,7 @@ Three palettes: **Shul** (light stone and pale oak, brass, charcoal, the burgund
 
 ## Board extras
 
+- **Texting, the last minyan**: a text that arrives after a minyan has begun, but 3 minutes or more before its הודו (the tefilla's milestone), gets that minyan first as מנין העבר, since one can still run for it, and then the next two. Tefillos without a milestone have no such window.
 - **Temporary banner** (Edit → Notices): one line across the top of the board, and at the start of text replies. Give it a start time and it appears by itself at that time (the night before a clock change, say); give it an end time and it disappears by itself. Either may be blank.
 - **Sponsor dates**: each notice can have "show from" and "show until" dates; several entries with the same title form a queue.
 - **Undo** (Edit → Backup → Previous versions): every Save made on a device keeps the version before it; Restore loads it into the editor.
