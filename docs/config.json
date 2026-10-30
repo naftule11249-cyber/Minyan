@@ -88,7 +88,7 @@
  "overrides": [],
  "smsNumber": "",
  "remoteConfigUrl": "",
- "savedAt": 1793338138000,
+ "savedAt": 1793338231962,
  "siteUrl": "https://minyan.cascadeshul.org/",
  "logo": "",
  "rooms": "ברך משה, דברי יואל, לב אהרן, שלמה יודא, היכל אדל, היכל ביהמ״ד",
@@ -99,8 +99,8 @@
  "notifyUrl": "https://cascade-zmanim-notify.naftule11249.workers.dev",
  "sponsorSeconds": 8,
  "banner": {
-  "text": "",
-  "until": ""
+  "text": "נעמט אין אכט! אלע זמנים זענען מיט א שעה פריער",
+  "until": "2026-11-05T01:30"
  },
  "show60": true,
  "countdownZmanim": [
