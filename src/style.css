@@ -421,6 +421,9 @@ footer { max-width: 1120px; margin: 0 auto; padding-block: 0 30px; padding-left:
 .switch input:checked ~ .swl { color: var(--a-ok); }
 .switch input:focus-visible { outline: 2px solid var(--a-navy-2); outline-offset: 2px; }
 .mrow-l { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+/* a row never grows wider than its column: a select's longest option must not set the width (it did, and rows spilled into the next tefilla's column on a laptop) */
+.field > .editor, .editor .rows, .mrow, .mrow-h, .mrow-l, .tcard > *, .today-row, .today-add { min-width: 0; }
+.mrow input, .mrow select, .today-row select, .today-add select { max-width: 100%; }
 .mrow input, .mrow select { background: #fff; }
 .mrow select { width: auto; flex: 1 1 auto; max-width: 100%; }
 .mrow input[type="time"] { width: 8.6em; font-size: 1.25rem; font-weight: 700; color: var(--a-navy); }
