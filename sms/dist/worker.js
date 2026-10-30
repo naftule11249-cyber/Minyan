@@ -487,6 +487,8 @@ var MinyanEngine = (function () {
       list.sort(function (a, b) { return (a.date ? 0 : a.hm != null ? 1 : 2) - (b.date ? 0 : b.hm != null ? 1 : 2); });
       return list[0] || null;
     }
+    /* a day type with no list of its own follows a more general one; Rosh Chodesh, Chanukah, a fast, Purim or Chol Hamoed that lands on a Sunday follows the Sunday list, not the weekday one */
+    function fallbackFor(k, info) { var f = FALLBACK[k]; return f === 'weekday' && info.dow === 0 && k !== 'sunday' ? 'sunday' : f; }
     function dayTexts(rd, info) {
       var type = Cal.dayType(info), iso = isoDate(rd);
       var ovr = pickOverride(rd, info);
@@ -496,7 +498,7 @@ var MinyanEngine = (function () {
         if (ovr && ovr.lines && ovr.lines[t.id] && ovr.lines[t.id].trim()) { text = ovr.lines[t.id]; src = 'override'; }
         while (text == null && k) {
           s = cfg.schedules && cfg.schedules[k];
-          if (s && s[t.id] && s[t.id].trim()) { text = s[t.id]; src = k; } else k = FALLBACK[k];
+          if (s && s[t.id] && s[t.id].trim()) { text = s[t.id]; src = k; } else k = fallbackFor(k, info);
         }
         out.texts[t.id] = { text: text || '', source: src };
       });
