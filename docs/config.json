@@ -56,8 +56,8 @@
    "shacharis": "07:30 לב אהרן\nevery 15 from 08:00 to 11:15 rooms דברי יואל, ברך משה, שלמה יודא, לב אהרן\n11:30 היכל אדל until chatzos-30\n11:45 לב אהרן until chatzos-28\n12:00 דברי יואל until chatzos-30\nchatzos-30 ברך משה"
   },
   "friday": {
-   "mincha": "chatzos+30~5 ברך משה // example\ncandles דברי יואל // example\ncandles+10 ברך משה // example",
-   "maariv": "candles+20 ברך משה // example\nsunset+15 דברי יואל // example"
+   "mincha": "#off 07:00",
+   "maariv": "#off 07:00"
   },
   "shabbos": {
    "shacharis": "8:00 ברך משה // example\n9:00 דברי יואל // example\n9:30 לב אהרן // example\n10:00 שלמה יודא // example",
@@ -88,7 +88,7 @@
  "overrides": [],
  "smsNumber": "",
  "remoteConfigUrl": "",
- "savedAt": 1793338932764,
+ "savedAt": 1793339478489,
  "siteUrl": "https://minyan.cascadeshul.org/",
  "logo": "",
  "rooms": "ברך משה, דברי יואל, לב אהרן, שלמה יודא, היכל אדל, היכל ביהמ״ד",
