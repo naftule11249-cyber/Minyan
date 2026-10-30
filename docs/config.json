@@ -33,7 +33,7 @@
    "milestone": "",
    "offset": 0,
    "startLabel": "",
-   "period": "am",
+   "period": "pm",
    "kind": "minyan"
   },
   {
@@ -42,7 +42,7 @@
    "milestone": "",
    "offset": 0,
    "startLabel": "",
-   "period": "am",
+   "period": "pm",
    "kind": "minyan"
   }
  ],
@@ -88,7 +88,7 @@
  "overrides": [],
  "smsNumber": "",
  "remoteConfigUrl": "",
- "savedAt": 1793338231962,
+ "savedAt": 1793338932764,
  "siteUrl": "https://minyan.cascadeshul.org/",
  "logo": "",
  "rooms": "ברך משה, דברי יואל, לב אהרן, שלמה יודא, היכל אדל, היכל ביהמ״ד",
