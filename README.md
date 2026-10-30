@@ -50,7 +50,7 @@ A rule at the end of a line, `until <zman>` or `after <zman>` (עד / אחרי w
 A zman-based time starts from the zman as the zmanim list shows it (to the minute), so with chatzos at 12:40 `חצות-30` is 12:10.
 Fixed and repeating rows mix freely; the Sunday Shacharis list is `7:30 לב אהרן`, then `every 15 from 8:00 to 11:15 rooms דברי יואל, ברך משה, שלמה יודא, לב אהרן`, then `11:30 היכל אדל`, `11:45 לב אהרן`, `12:00 דברי יואל` and `חצות-30 ברך משה`.
 Day types fall back to a more general one when
-empty (Sunday → weekday for the tefillos it has no list for, Rosh Chodesh → weekday, Yom Tov → Shabbos, Erev Yom Tov → Friday). For Mincha and
+empty (Sunday → weekday for the tefillos it has no list for, Rosh Chodesh → weekday, Yom Tov → Shabbos, Erev Yom Tov → Friday; Rosh Chodesh, Chanukah, a fast, Purim or Chol Hamoed that lands on a Sunday → the Sunday list). For Mincha and
 Maariv a time like `6:45` means 6:45 PM (set per tefilla under General → Tefillos); `00:30` or `01:15` (as the time picker writes them) is a Maariv after midnight,
 which still belongs to that night: it sorts at the end of the list and the board counts down to it past midnight. The cut-off is 4:00 AM ("Night cut-off" per tefilla).
 

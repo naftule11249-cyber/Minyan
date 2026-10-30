@@ -1140,7 +1140,8 @@
       typeTabs.appendChild(b);
       var page = el('div', { class: 'col dtp tef-0', id: 'dtp-' + key });
       page.hidden = true;
-      page.appendChild(el('div', { class: 'hint', text: FALLBACK[key] ? t[3] + ': each tefilla either follows the ' + TYPE_EN[FALLBACK[key]] + ' schedule or gets its own list for this day.' : t[3] + ' is the base schedule: every day that has no list of its own for a tefilla (Sunday, Friday, Rosh Chodesh…) uses it.' }));
+      var onSunday = FALLBACK[key] === 'weekday' && key !== 'sunday' && key !== 'friday' ? ' When it lands on a Sunday it follows the Sunday list.' : '';
+      page.appendChild(el('div', { class: 'hint', text: FALLBACK[key] ? t[3] + ': each tefilla either follows the ' + TYPE_EN[FALLBACK[key]] + ' schedule or gets its own list for this day.' + onSunday : t[3] + ' is the base schedule: every day that has no list of its own for a tefilla (Sunday, Friday, Rosh Chodesh…) uses it.' }));
       var row = el('div', { class: 'fields three' });
       d.tefillos.forEach(function (tf, i) {
         var store = lines[key][tf.id], fb = FALLBACK[key];
@@ -1155,7 +1156,7 @@
           function update() {
             if (!same.checked) { info.textContent = 'Own list for ' + t[3] + '.'; return; }
             var src = sourceOf(key, tf.id);
-            info.textContent = src ? 'Follows the ' + TYPE_EN[src] + ' list.' : 'No list here and none to follow: no ' + tf.name + ' minyanim on this day.';
+            info.textContent = src ? 'Follows the ' + TYPE_EN[src] + ' list.' + (src === 'weekday' && onSunday ? ' On a Sunday, the Sunday list.' : '') : 'No list here and none to follow: no ' + tf.name + ' minyanim on this day.';
           }
           same.addEventListener('change', function () {
             if (same.checked) { kept = store.value; store.value = ''; editor.hidden = true; }
