@@ -49,7 +49,7 @@
  "schedules": {
   "weekday": {
    "shacharis": "06:20 ברך משה\n06:50 דברי יואל\n07:15 ברך משה\n07:40 לב אהרן\n08:00 דברי יואל\n08:15 ברך משה\n08:30 שלמה יודא\n08:45 לב אהרן\n09:00 דברי יואל\n09:15 ברך משה\n09:30 שלמה יודא\n09:45 לב אהרן\n10:00 דברי יואל\n10:20 ברך משה\n10:40 שלמה יודא\n11:00 דברי יואל\n11:20 ברך משה until chatzos-30\n11:40 שלמה יודא until chatzos-30\n12:00 דברי יואל until chatzos-26\nchatzos-30 ברך משה",
-   "mincha": "chatzos+29 ברך משה\n14:00 ברך משה // וידבר\n15:15 היכל ביהמ״ד\n#off 18:00 ברך משה\n#off 18:15 דברי יואל\nrt-15 ברך משה\nrt-12 דברי יואל\nrt-9 לב אהרן",
+   "mincha": "minchag+2 ברך משה\n14:00 ברך משה // וידבר\n15:15 היכל ביהמ״ד\n#off 18:00 ברך משה\n#off 18:15 דברי יואל\nrt-15 ברך משה\nrt-12 דברי יואל\nrt-9 לב אהרן",
    "maariv": "sunset+60 היכל אדל\nrt דברי יואל\nrt לב אהרן\nrt+5 ברך משה\nevery 10 from rt+14~5 to 20:00 rooms ברך משה, דברי יואל, לב אהרן\nevery 10 from 20:45 to 22:15 rooms ברך משה, דברי יואל, לב אהרן, שלמה יודא, היכל אדל, היכל ביהמ״ד\nevery 15 from 22:45 to 00:00 rooms ברך משה, דברי יואל\n00:30 היכל ביהמ״ד"
   },
   "sunday": {
@@ -88,7 +88,7 @@
  "overrides": [],
  "smsNumber": "",
  "remoteConfigUrl": "",
- "savedAt": 1793340168353,
+ "savedAt": 1793340527449,
  "siteUrl": "https://minyan.cascadeshul.org/",
  "logo": "",
  "rooms": "ברך משה, דברי יואל, לב אהרן, שלמה יודא, היכל אדל, היכל ביהמ״ד",
@@ -113,5 +113,5 @@
  "showTzeis": false,
  "palette": "shul",
  "lang": "he",
- "minchaGedola": "mga"
+ "minchaGedola": "later"
 }

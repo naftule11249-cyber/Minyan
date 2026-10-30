@@ -581,9 +581,11 @@ footer .tabs .btn:hover { border-color: var(--accent); }
 
 /* the lobby screen's round clock, between the next-minyan and next-zman boxes */
 .aclock { display: none; }
-#app.display:not(.room) .disp-top { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 20px; align-items: stretch; }
+#app.display:not(.room) .disp-top { display: grid; grid-template-columns: minmax(300px, 1fr) auto minmax(300px, 1fr); gap: 24px; align-items: stretch; }
+/* the lobby screen uses the whole width of the TV */
+#app.display main, #app.display .sponsors, #app.display .top .inner, #app.display .banner-inner { max-width: 1840px; }
 #app.display:not(.room) .aclock { display: grid; justify-items: center; align-content: center; gap: 4px; }
-.aclock svg { width: min(38vh, 400px); height: auto; filter: drop-shadow(0 8px 18px rgba(0,0,0,.2)); }
+.aclock svg { width: min(40vh, 420px); height: auto; filter: drop-shadow(0 8px 18px rgba(0,0,0,.2)); }
 .aclock .face { fill: var(--panel); stroke: var(--gold); stroke-width: 5; }
 .aclock .rim { fill: none; stroke: var(--line); stroke-width: 1; }
 .aclock .tick { stroke: var(--muted); stroke-width: 1.5; }
