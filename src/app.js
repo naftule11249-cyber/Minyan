@@ -1604,7 +1604,9 @@
     (a.tefillos || []).concat(b.tefillos || []).forEach(function (t) { tfById[t.id] = t; });
     /* a line in its parsed form, so "6:20" and "06:20" (how the editor writes it) are the same line */
     function canonLine(line, id) { var p = MinyanEngine.parseLine(line, tfById[id] || { period: 'am' }); if (!p) return null; return JSON.stringify({ s: p.spec, r: p.room || p.rooms, n: p.note, c: p.cond }); }
-    function lineMap(text, id) { var m = {}; lines(text).forEach(function (l) { var off = /^#\s*off\s+/i.test(l), body = off ? l.replace(/^#\s*off\s+/i, '') : l, k = canonLine(body, id) || body; if (!m[k]) m[k] = { text: body, off: off }; }); return m; }
+    /* the same minyan regardless of its rule or note: time and room(s) only */
+    function canonBase(line, id) { var p = MinyanEngine.parseLine(line, tfById[id] || { period: 'am' }); if (!p || !p.spec) return null; return JSON.stringify({ s: p.spec, r: p.room || p.rooms }); }
+    function lineMap(text, id) { var m = {}; lines(text).forEach(function (l) { var off = /^#\s*off\s+/i.test(l), body = off ? l.replace(/^#\s*off\s+/i, '') : l, k = canonLine(body, id) || body; if (!m[k]) m[k] = { text: body, off: off, base: canonBase(body, id) }; }); return m; }
     /* blank, missing, false and 0 count as the same; key order does not matter */
     function canon(v) {
       if (v == null || v === '' || v === false || v === 0) return null;
@@ -1629,11 +1631,17 @@
       var k = t[0], sa = (a.schedules || {})[k] || {}, sb = (b.schedules || {})[k] || {}, ids = {};
       Object.keys(sa).concat(Object.keys(sb)).forEach(function (id) { ids[id] = 1; });
       Object.keys(ids).forEach(function (id) {
-        var ma = lineMap(sa[id], id), mb = lineMap(sb[id], id), added = [], removed = [], on = [], offs = [];
-        Object.keys(mb).forEach(function (k) { if (!ma[k]) added.push(mb[k].text + (mb[k].off ? ' (off)' : '')); else if (ma[k].off !== mb[k].off) (mb[k].off ? offs : on).push(mb[k].text); });
-        Object.keys(ma).forEach(function (k) { if (!mb[k]) removed.push(ma[k].text); });
-        if (!added.length && !removed.length && !on.length && !offs.length) return;
-        out.push(t[3] + ' · ' + (names[id] || id) + ': ' + [added.length ? 'added ' + few(added) : '', offs.length ? 'switched off ' + few(offs) : '', on.length ? 'switched on ' + few(on) : '', removed.length ? 'removed ' + few(removed) : ''].filter(Boolean).join('; '));
+        var ma = lineMap(sa[id], id), mb = lineMap(sb[id], id), added = [], removed = [], changed = [], on = [], offs = [], gone = {};
+        Object.keys(ma).forEach(function (k) { if (!mb[k]) gone[k] = ma[k]; });
+        Object.keys(mb).forEach(function (k) {
+          if (ma[k]) { if (ma[k].off !== mb[k].off) (mb[k].off ? offs : on).push(mb[k].text); return; }
+          /* the same minyan with a different rule or note counts as changed, not as removed and added */
+          var old = mb[k].base && Object.keys(gone).filter(function (g) { return gone[g].base === mb[k].base; })[0];
+          if (old) { changed.push(mb[k].text); delete gone[old]; } else added.push(mb[k].text + (mb[k].off ? ' (off)' : ''));
+        });
+        Object.keys(gone).forEach(function (k) { removed.push(gone[k].text); });
+        if (!added.length && !removed.length && !changed.length && !on.length && !offs.length) return;
+        out.push(t[3] + ' · ' + (names[id] || id) + ': ' + [added.length ? 'added ' + few(added) : '', changed.length ? 'changed ' + few(changed) : '', offs.length ? 'switched off ' + few(offs) : '', on.length ? 'switched on ' + few(on) : '', removed.length ? 'removed ' + few(removed) : ''].filter(Boolean).join('; '));
       });
     });
     function okey(o) { return o.date ? o.date : o.hm != null ? 'hebrew ' + o.hm + '/' + o.hd : 'calendar ' + o.calLabel; }
