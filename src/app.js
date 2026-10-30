@@ -144,6 +144,7 @@
       chips.length ? el('div', { class: 'chips' }, chips) : null,
       view.kind !== 'board' ? (ui.clock = el('div', { class: 'clock num', 'aria-label': S().clock }, [el('span', { class: 'hm' }), el('span', { class: 'ss' })])) : null])]));
     if (view.kind === 'board') ui.clock = null;
+    if (view.kind !== 'display') ui.aclock = null;
     updateClock(now);
 
     var banner = engine.activeBanner(now);
@@ -178,7 +179,8 @@
     }
     var canTap = canSetReminders();
     if (up && canTap && up.entry.tefilla.kind !== 'event') makeTappable(next, up.entry); /* tap the next minyan to be reminded of it */
-    colA.appendChild(next);
+    var lobbyTop = view.kind === 'display' ? el('div', { class: 'disp-top' }, [next, analogClock(now)]) : null; /* the lobby screen: next minyan, the round clock, next zman */
+    colA.appendChild(lobbyTop || next);
     ui.zcount = null; ui.zcountMs = 0;
     var nz = nextZman(info, z, rd, now);
     if (nz) {
@@ -186,7 +188,7 @@
       var zb = el('section', { class: 'next zman' + (nz.ms - now < 30 * 60000 ? ' urgent' : ''), /* 'urgent', not 'soon': .soon is the next-three strip's box */ 'aria-live': 'polite' }, [el('h2', { text: S().nextZman }), el('div', { class: 'what', text: Cal.ZMAN_NAMES[nz.key] }), el('div', { class: 'time num', text: fmtTime(nz.min) }), ui.zcount,
         el('button', { type: 'button', class: 'gear', 'aria-label': 'Choose the countdown zmanim', title: 'Choose zmanim', text: '⚙', onclick: function (ev) { ev.stopPropagation(); openCountdownChooser(); } })]);
       if (canTap) makeTappable(zb, { zman: nz.key, rd: rd, min: nz.min }); /* tap the zman to be reminded before it */
-      colA.appendChild(zb);
+      (lobbyTop || colA).appendChild(zb);
     }
     var sections = (view.kind === 'board' && isPhone()) ? phoneSections : daySections;
     if (ui.lastRenderDay !== rd) ui.showPast = false;
@@ -644,10 +646,28 @@
     return f;
   }
   function updateClock(now) {
-    if (!ui.clock) return;
+    if (!ui.clock && !ui.aclock) return;
     var p = Cal.tzParts(now, loc().tz), h = cfg.clock24 ? pad2(p.hh) : String(p.hh % 12 || 12);
-    ui.clock.firstChild.textContent = h + ':' + pad2(p.mm);
-    ui.clock.lastChild.textContent = pad2(p.ss);
+    if (ui.clock) { ui.clock.firstChild.textContent = h + ':' + pad2(p.mm); ui.clock.lastChild.textContent = pad2(p.ss); }
+    if (ui.aclock) {
+      ui.aclock.h.setAttribute('transform', 'rotate(' + ((p.hh % 12) * 30 + p.mm * 0.5) + ' 100 100)');
+      ui.aclock.m.setAttribute('transform', 'rotate(' + (p.mm * 6 + p.ss * 0.1) + ' 100 100)');
+      ui.aclock.s.setAttribute('transform', 'rotate(' + (p.ss * 6) + ' 100 100)');
+      ui.aclock.t.textContent = h + ':' + pad2(p.mm) + ':' + pad2(p.ss);
+    }
+  }
+  /* the lobby screen's round clock: an SVG face whose hands updateClock turns every second */
+  function analogClock(now) {
+    var wrap = el('div', { class: 'aclock', 'aria-hidden': 'true' }), svg = '', i, a;
+    for (i = 0; i < 60; i++) svg += '<line class="tick' + (i % 5 ? '' : ' major') + '" x1="100" y1="' + (i % 5 ? 9 : 6) + '" x2="100" y2="' + (i % 5 ? 13 : 16) + '" transform="rotate(' + (i * 6) + ' 100 100)"/>';
+    for (i = 1; i <= 12; i++) { a = i * Math.PI / 6; svg += '<text x="' + (100 + 73 * Math.sin(a)).toFixed(1) + '" y="' + (100 - 73 * Math.cos(a)).toFixed(1) + '">' + i + '</text>'; }
+    wrap.innerHTML = '<svg viewBox="0 0 200 200"><circle class="face" cx="100" cy="100" r="97"/><circle class="rim" cx="100" cy="100" r="91"/>' + svg +
+      '<line class="hand hour" x1="100" y1="112" x2="100" y2="52"/><line class="hand minute" x1="100" y1="114" x2="100" y2="30"/><line class="hand second" x1="100" y1="118" x2="100" y2="24"/><circle class="cap" cx="100" cy="100" r="5"/></svg>';
+    var digital = el('div', { class: 'atime num' });
+    wrap.appendChild(digital);
+    ui.aclock = { h: wrap.querySelector('.hour'), m: wrap.querySelector('.minute'), s: wrap.querySelector('.second'), t: digital };
+    updateClock(now);
+    return wrap;
   }
   function tick() {
     var now = Date.now();

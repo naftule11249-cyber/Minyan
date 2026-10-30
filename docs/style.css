@@ -578,3 +578,23 @@ footer .tabs .btn:hover { border-color: var(--accent); }
   footer .tabs .btn { width: 100%; min-height: 52px; font-size: 1rem; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; }
   footer .tabs .btn.primary { background: var(--band-2); color: var(--band-ink); border-color: var(--band-2); }
 }
+
+/* the lobby screen's round clock, between the next-minyan and next-zman boxes */
+.aclock { display: none; }
+#app.display:not(.room) .disp-top { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 20px; align-items: stretch; }
+#app.display:not(.room) .aclock { display: grid; justify-items: center; align-content: center; gap: 4px; }
+.aclock svg { width: min(38vh, 400px); height: auto; filter: drop-shadow(0 8px 18px rgba(0,0,0,.2)); }
+.aclock .face { fill: var(--panel); stroke: var(--gold); stroke-width: 5; }
+.aclock .rim { fill: none; stroke: var(--line); stroke-width: 1; }
+.aclock .tick { stroke: var(--muted); stroke-width: 1.5; }
+.aclock .tick.major { stroke: var(--ink); stroke-width: 3; }
+.aclock text { fill: var(--ink); font-family: var(--font-display); font-size: 17px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
+.aclock .hand { stroke: var(--ink); stroke-linecap: round; }
+.aclock .hour { stroke-width: 7; }
+.aclock .minute { stroke-width: 5; }
+.aclock .second { stroke: var(--count); stroke-width: 2; }
+.aclock .cap { fill: var(--gold); stroke: var(--ink); stroke-width: 1.5; }
+.aclock .atime { font-size: 1.4rem; font-weight: 700; color: var(--muted); letter-spacing: .04em; direction: ltr; }
+#app.display:not(.room) .top .clock .hm { font-size: clamp(2.4rem, 6vw, 3.6rem); }
+#app.display:not(.room) .top .clock .ss { font-size: clamp(1rem, 2vw, 1.5rem); }
+@media (max-width: 820px) { #app.display:not(.room) .disp-top { grid-template-columns: 1fr; } }
