@@ -46,6 +46,8 @@ ok('condLimit gives the zman the line is measured against', eng.fmtTime(withLine
   const w = Cal.zmanim(winter, loc), s = Cal.zmanim(summer, loc), fix = Cal.zmanim(winter, Object.assign({}, loc, { minchaGedola: 'fixed30' })), zm = Cal.zmanim(summer, Object.assign({}, loc, { minchaGedola: 'zmanis' })), fixS = Cal.zmanim(summer, Object.assign({}, loc, { minchaGedola: 'fixed30' }));
   ok('winter: half a proportional hour is under 30 minutes, so the default is chatzos + 30', [Math.round(w.minchag - w.chatzos), Math.round(fix.minchag - fix.chatzos)], [30, 30]);
   ok('summer: half a proportional hour is over 30 minutes, so the default is the proportional one', [Math.round(s.minchag - s.chatzos) > 30, Math.round(s.minchag) === Math.round(zm.minchag), Math.round(fixS.minchag - fixS.chatzos)], [true, true, 30]);
+  const mgaS = Cal.zmanim(summer, Object.assign({}, loc, { minchaGedola: 'mga' }));
+  ok('Magen Avraham: half a proportional hour of a day that is 72 minutes longer at each end', Math.round(mgaS.minchag - mgaS.chatzos), Math.round((s.sunset - s.sunrise + 144) / 24));
   ok('the engine passes the setting through', eng.fmtTime(require('../src/engine.js')(Object.assign({}, cfg, { minchaGedola: 'fixed30' })).zmanimFor(summer).minchag), eng.fmtTime(fixS.minchag));
 }
 /* Rosh Chodesh on a Sunday follows the Sunday list; on a weekday it still follows the weekday list */

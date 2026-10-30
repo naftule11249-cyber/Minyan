@@ -1,5 +1,5 @@
 global.Cal = require('../src/cal.js'); global.MinyanEngine = require('../src/engine.js');
-const MinyanSms = require('../src/sms.js'); const cfg = JSON.parse(JSON.stringify(require('../config.default.json')));
+const MinyanSms = require('../src/sms.js'); const cfg = JSON.parse(JSON.stringify(require('../config.default.json'))); cfg.banner = null; /* a banner the shul happens to have published would prefix every reply */
 cfg.location = { name: 'x', lat: 40.6975, lng: -73.9512, tz: 'America/New_York', elev: 0 }; cfg.candles = 15; cfg.tzeisMinutes = 72;
 cfg.tefillos = [{ id: 'shacharis', name: 'שחרית', milestone: 'הודו', offset: 10, period: 'am' }, { id: 'mincha', name: 'מנחה', milestone: 'שמונה עשרה', offset: 8, period: 'pm' }, { id: 'maariv', name: 'מעריב', milestone: 'שמונה עשרה', offset: 5, period: 'pm' }];
 cfg.schedules = { weekday: { shacharis: '6:20 ברך משה\n6:50 דברי יואל\n7:15 ברך משה\n7:40 לב אהרן\n8:00 דברי יואל\n8:15 ברך משה\n8:30 שלמה יודא\n8:45 לב אהרן\n9:00 דברי יואל\n9:15 ברך משה\n9:30 שלמה יודא\n9:45 לב אהרן\n10:00 דברי יואל\n10:20 ברך משה\n10:40 שלמה יודא\n11:00 דברי יואל\n11:20 ברך משה\n11:40 שלמה יודא\n12:00 דברי יואל\nchatzos-30 ברך משה',

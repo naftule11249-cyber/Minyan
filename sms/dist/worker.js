@@ -287,10 +287,11 @@ var Cal = (function () {
     return time;
   }
   /* Zmanim as wall-clock minutes in tz for the civil date rd. */
-  /* Mincha gedola: half a proportional hour after chatzos ('zmanis'), 30 clock minutes after chatzos ('fixed30'), or the later of the two ('later', the default) */
+  /* Mincha gedola after chatzos: half a proportional hour of sunrise-to-sunset ('zmanis'), 30 clock minutes ('fixed30'), the later of those two ('later', the default),
+     or half a proportional hour of the Magen Avraham day, dawn to nightfall at 72 minutes each side ('mga': (12 * shaah + 144) / 24 = shaah / 2 + 6) */
   function minchaGedola(chatzos, shaah, mode) {
     var z = chatzos + shaah / 2, f = chatzos + 30;
-    return mode === 'zmanis' ? z : mode === 'fixed30' ? f : Math.max(z, f);
+    return mode === 'mga' ? chatzos + shaah / 2 + 6 : mode === 'zmanis' ? z : mode === 'fixed30' ? f : Math.max(z, f);
   }
   function zmanim(rd, loc) {
     var lat = loc.lat, lng = loc.lng, tz = loc.tz, elev = loc.elev || 0;
