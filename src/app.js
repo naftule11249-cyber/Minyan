@@ -1325,7 +1325,7 @@
     var pp = el('div', { class: 'col' }), gh = ghSettings();
     var fRemote = inp('f-remote', d.remoteConfigUrl || '', { dir: 'ltr', placeholder: 'https://.../config.json' });
     var gRepo = inp('gh-repo', gh.repo || d.githubRepo || '', { dir: 'ltr', placeholder: 'username/minyan', autocomplete: 'off' }), gBranch = inp('gh-branch', gh.branch || d.githubBranch || 'main', { dir: 'ltr' }),
-      gPath = inp('gh-path', gh.path || d.githubPath || 'docs/config.json', { dir: 'ltr' }), gToken = inp('gh-token', gh.token || '', { type: 'password', dir: 'ltr', autocomplete: 'off' });
+      gPath = inp('gh-path', gh.path || d.githubPath || 'docs/config.json', { dir: 'ltr' }), gToken = inp('gh-token', gh.token || '', { type: 'password', dir: 'ltr', autocomplete: 'new-password', spellcheck: 'false' }); /* new-password: keeps the browser from filling a saved password (the PIN) into the token box */
     var ghMsg = el('div', { class: 'hint' });
     function saveGh() {
       var s = { repo: gRepo.value.trim(), branch: gBranch.value.trim() || 'main', path: gPath.value.trim() || 'config.json', token: gToken.value.trim() };
@@ -1372,7 +1372,7 @@
     /* send: a notification from the gabbai to every device with reminders on (the service checks the admin PIN) */
     var sp2 = el('div', { class: 'col' });
     if (mode !== 'artifact' && (d.notifyUrl || '').trim()) {
-      var bcTitle = inp('bc-title', d.name || ''), bcPin = inp('bc-pin', ui.pinValue || '', { type: 'password', autocomplete: 'off', placeholder: 'the admin PIN' });
+      var bcTitle = inp('bc-title', d.name || ''), bcPin = inp('bc-pin', ui.pinValue || '', { type: 'password', autocomplete: 'new-password', placeholder: 'the admin PIN' });
       var bcText = el('textarea', { id: 'bc-text', dir: 'auto', maxlength: '300', placeholder: 'e.g. Mincha today 1:45 instead of 1:30' }), bcCount = el('span', { class: 'hint', text: '0 / 300' }), bcMsg = el('div', { class: 'hint', id: 'bc-msg' });
       bcText.style.minHeight = '90px';
       var pvT = el('b', { text: d.name || '' }), pvB = el('div', { class: 'npv-b', text: '…' });
