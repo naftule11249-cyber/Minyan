@@ -1,5 +1,5 @@
 /* sw.js — offline cache for the minyan board. VERSION is stamped by build.js. */
-var VERSION = 'minyan-shell-8c49c25ddf37';
+var VERSION = 'minyan-shell-1c082565d10d';
 var FONTS = 'minyan-fonts';
 var SHELL = ['./index.html', './admin.html', './style.css', './cal.js', './engine.js', './template.js', './app.js', './manifest.webmanifest', './icon-192.png', './icon-512.png', './config.json'];
 self.addEventListener('install', function (e) {

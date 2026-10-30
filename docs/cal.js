@@ -287,6 +287,11 @@ var Cal = (function () {
     return time;
   }
   /* Zmanim as wall-clock minutes in tz for the civil date rd. */
+  /* Mincha gedola: half a proportional hour after chatzos ('zmanis'), 30 clock minutes after chatzos ('fixed30'), or the later of the two ('later', the default) */
+  function minchaGedola(chatzos, shaah, mode) {
+    var z = chatzos + shaah / 2, f = chatzos + 30;
+    return mode === 'zmanis' ? z : mode === 'fixed30' ? f : Math.max(z, f);
+  }
   function zmanim(rd, loc) {
     var lat = loc.lat, lng = loc.lng, tz = loc.tz, elev = loc.elev || 0;
     var elevAdj = elev > 0 ? 0.0347 * Math.sqrt(elev) : 0;
@@ -303,7 +308,7 @@ var Cal = (function () {
     var tzeis = loc.tzeisMinutes ? sunset + loc.tzeisMinutes : tzeisDeg;
     return {
       alos: alos, sunrise: sunrise, shema: sunrise + 3 * shaah, tefilla: sunrise + 4 * shaah,
-      chatzos: sunrise + 6 * shaah, minchag: sunrise + 6.5 * shaah, plag: sunrise + 10.75 * shaah,
+      chatzos: sunrise + 6 * shaah, minchag: minchaGedola(sunrise + 6 * shaah, shaah, loc.minchaGedola), plag: sunrise + 10.75 * shaah,
       candles: sunset - (loc.candles == null ? 18 : loc.candles), sunset: sunset, tzeis: tzeis, tzeis60: sunset + 60, tzeis72: sunset + 72
     };
   }

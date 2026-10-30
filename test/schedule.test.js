@@ -40,6 +40,14 @@ ok('"after minchag": a 1:00 PM Mincha is listed only once mincha gedola is earli
 ok('Hebrew keyword עד works the same', withLines({ shacharis: '10:45 ברך משה עד tefilla' }).scheduleFor(junRd).byTefilla.shacharis.length, 0);
 ok('the condition survives the parse (room and note intact)', (() => { const p = E.parseLine('10:45 ברך משה until tefilla-10 // late', { period: 'am' }); return [p.room, p.note, p.cond.op, p.cond.spec.zman, p.cond.spec.offset]; })(), ['ברך משה', 'late', 'until', 'tefilla', -10]);
 ok('condLimit gives the zman the line is measured against', eng.fmtTime(withLines({ shacharis: '10:45 ברך משה until tefilla' }).condLimit(E.parseLine('10:45 x until tefilla', { period: 'am' }), octRd, 'weekday')), eng.fmtTime(Math.round(zOct.tefilla)));
+/* Mincha gedola: by default the later of 30 clock minutes after chatzos and half a proportional hour; the setting picks one */
+{
+  const loc = cfg.location, winter = Cal.rdFromGreg(2026, 12, 20), summer = Cal.rdFromGreg(2027, 6, 20);
+  const w = Cal.zmanim(winter, loc), s = Cal.zmanim(summer, loc), fix = Cal.zmanim(winter, Object.assign({}, loc, { minchaGedola: 'fixed30' })), zm = Cal.zmanim(summer, Object.assign({}, loc, { minchaGedola: 'zmanis' })), fixS = Cal.zmanim(summer, Object.assign({}, loc, { minchaGedola: 'fixed30' }));
+  ok('winter: half a proportional hour is under 30 minutes, so the default is chatzos + 30', [Math.round(w.minchag - w.chatzos), Math.round(fix.minchag - fix.chatzos)], [30, 30]);
+  ok('summer: half a proportional hour is over 30 minutes, so the default is the proportional one', [Math.round(s.minchag - s.chatzos) > 30, Math.round(s.minchag) === Math.round(zm.minchag), Math.round(fixS.minchag - fixS.chatzos)], [true, true, 30]);
+  ok('the engine passes the setting through', eng.fmtTime(require('../src/engine.js')(Object.assign({}, cfg, { minchaGedola: 'fixed30' })).zmanimFor(summer).minchag), eng.fmtTime(fixS.minchag));
+}
 /* Rosh Chodesh on a Sunday follows the Sunday list; on a weekday it still follows the weekday list */
 {
   const rcSun = Cal.rdFromGreg(2027, 6, 6), plainSun = Cal.rdFromGreg(2027, 6, 13), infoRc = Cal.dayInfo(rcSun, false);

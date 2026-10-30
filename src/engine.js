@@ -60,7 +60,7 @@ var MinyanEngine = (function () {
       var L = cfg.location || {};
       return { lat: +L.lat || 0, lng: +L.lng || 0, tz: L.tz || 'America/New_York', elev: +L.elev || 0,
         candles: cfg.candles == null || cfg.candles === '' ? 18 : +cfg.candles,
-        tzeisMinutes: cfg.tzeisMinutes ? +cfg.tzeisMinutes : 0, tzeisDeg: cfg.tzeisDeg ? +cfg.tzeisDeg : 8.5 };
+        tzeisMinutes: cfg.tzeisMinutes ? +cfg.tzeisMinutes : 0, tzeisDeg: cfg.tzeisDeg ? +cfg.tzeisDeg : 8.5, minchaGedola: cfg.minchaGedola || 'later' };
     }
     function zmanimFor(rd) { if (!zCache[rd]) zCache[rd] = Cal.zmanim(rd, loc()); return zCache[rd]; }
     function weeklyBase(rd, zman) {
