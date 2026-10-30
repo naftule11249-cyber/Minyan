@@ -25,7 +25,7 @@ const { chromium } = require('playwright');
   r = await at(23, 50);
   ok('late night: Shacharis and Mincha show tomorrow, Maariv (12:00, 12:15 AM still ahead) stays today, one day block', [/מחר/.test(r.heads[0]), /מחר/.test(r.heads[1]), /מחר/.test(r.heads[2]), r.dayHeads.length], [true, true, false, 1]);
   r = await at(13, 0, '#display');
-  ok('lobby screen also shows tomorrow\'s Shacharis after chatzos', /מחר/.test(r.heads[0]), true);
+  ok('lobby screen: tomorrow\'s Shacharis comes after today\'s sections (it is shown when there is room for it)', [/מחר/.test(r.heads[r.heads.length - 1]), r.heads.slice(0, -1).every(h => !/מחר/.test(h))], [true, true]);
   await browser.close();
   console.log(errors.length ? 'ERRORS:\n' + errors.join('\n') : 'no console errors');
   if (fails || errors.length) process.exit(1); else console.log('tomorrow: all good');

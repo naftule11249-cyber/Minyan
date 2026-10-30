@@ -21,7 +21,7 @@
     var q = {}, h = (location.hash || '').replace(/^#/, ''), m;
     try { location.search.replace(/^\?/, '').split('&').forEach(function (kv) { var p = kv.split('='); if (p[0]) q[decodeURIComponent(p[0])] = decodeURIComponent((p[1] || '').replace(/\+/g, ' ')); }); } catch (e) {}
     if (q.room) return { kind: 'room', room: q.room };
-    if (q.view === 'display' || h === 'display') return { kind: 'display' };
+    if (q.view === 'display' || h === 'display') return { kind: 'display', size: +q.size || 0 }; /* &size=120: this screen only, in percent */
     if (q.view === 'week' || h === 'week') return { kind: 'week' };
     m = /^room(\d+)$/.exec(h);
     if (m) { var rooms = (cfg.rooms || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean); if (rooms[+m[1] - 1]) return { kind: 'room', room: rooms[+m[1] - 1] }; }
@@ -97,6 +97,19 @@
     });
     return best;
   }
+  /* the zmanim after the next one, in the day's order (the lobby's next-zman box lists a few) */
+  function laterZmanim(info, z, rd, afterMs, n) {
+    var tz = loc().tz, out = [];
+    ['alos', 'sunrise', 'shema', 'tefilla', 'chatzos', 'minchag', 'plag', 'candles', 'sunset', 'tzeis', 'tzeis60', 'tzeis72'].forEach(function (k) {
+      if (k === 'candles' && !(info.dow === 5 || info.erevYT)) return;
+      if (zmanHidden(k)) return;
+      var v = z[k]; if (v == null || isNaN(v)) return;
+      var ms = Cal.epochFromWall(rd, Math.round(v), tz);
+      if (ms > afterMs) out.push({ key: k, min: v, ms: ms });
+    });
+    out.sort(function (a, b) { return a.ms - b.ms; });
+    return out.slice(0, n);
+  }
   function upcoming(nowMs, nowRd) {
     if (!ui.roomFilter && bigMode() !== 'milestone') return engine.upcoming(nowMs, nowRd);
     var i, j, s;
@@ -133,10 +146,16 @@
     var root = $('#app'), keepOv = ui.adminOpen ? $('#overlay') : null; /* an open settings panel survives a re-render of the board behind it */
     root.innerHTML = '';
     root.className = view.kind === 'display' ? 'display' : view.kind === 'room' ? 'display room' : '';
+    /* the lobby screen scales with the TV (the stylesheet sizes it from the screen); General → "Hallway screen size", or &size= in the address, makes everything larger or smaller */
+    var html = document.documentElement, lobby = view.kind === 'display';
+    html.classList.toggle('lobby', lobby);
+    ui.lobbyScale = lobby ? Math.max(50, Math.min(200, view.size || +cfg.displayScale || 100)) / 100 : 1;
+    html.style.setProperty('--lobby-scale', String(ui.lobbyScale));
     ui.roomFilter = view.kind === 'room' ? view.room : null;
     var hebLine = Cal.formatHeb(info.heb);
     if (!isNaN(z.sunset) && n.min >= z.sunset) hebLine += ' · ' + S().tonight + ': ' + Cal.formatHeb(Cal.hebFromRD(rd + 1));
-    var chips = info.labels.map(function (l) { return el('span', { class: 'chip', text: l }); });
+    var chips = info.labels.map(function (l) { return el('span', { class: 'chip', text: l }); }), sched = scheduleFor(rd);
+    if (lobby && sched.override) chips.push(el('span', { class: 'chip', text: typeLabel(sched) }));
     root.appendChild(el('header', { class: 'top' }, [el('div', { class: 'inner' }, [
       el('div', { class: 'shul' }, [view.kind === 'board' ? el('button', { type: 'button', class: 'gear-top', 'aria-label': 'Settings', title: 'Settings', text: '⚙', onclick: openSettings }) : null, cfg.logo ? el('img', { class: 'logo', src: cfg.logo, alt: '' }) : null, el('span', { text: (cfg.name || 'לוח המנינים') + (ui.roomFilter ? ' · ' + ui.roomFilter : '') })]),
       el('h1', { class: 'dayline', text: dayLine(info, rd) }),
@@ -150,7 +169,7 @@
     var banner = engine.activeBanner(now);
     if (banner) root.appendChild(el('div', { class: 'banner', role: 'status' }, [el('div', { class: 'banner-inner', text: banner.text.trim() })]));
     var strip = sponsorsStrip(rd);
-    if (strip) root.appendChild(strip);
+    if (strip && !lobby) root.appendChild(strip); /* on the lobby screen the sponsor box sits in the side column, under the zmanim */
     var up = upcoming(now, rd);
     var main = el('main'), colA = el('div', { class: 'col' }), colB = el('div', { class: 'col' });
     var next = el('section', { class: 'next', 'aria-live': 'polite' }, [el('h2', { text: S().nextMinyan })]);
@@ -187,14 +206,16 @@
       ui.zcountMs = nz.ms; ui.zcount = el('div', { class: 'count num', text: fmtCountdown(nz.ms - now) });
       var zb = el('section', { class: 'next zman' + (nz.ms - now < 30 * 60000 ? ' urgent' : ''), /* 'urgent', not 'soon': .soon is the next-three strip's box */ 'aria-live': 'polite' }, [el('h2', { text: S().nextZman }), el('div', { class: 'what', text: Cal.ZMAN_NAMES[nz.key] }), el('div', { class: 'time num', text: fmtTime(nz.min) }), ui.zcount,
         el('button', { type: 'button', class: 'gear', 'aria-label': 'Choose the countdown zmanim', title: 'Choose zmanim', text: '⚙', onclick: function (ev) { ev.stopPropagation(); openCountdownChooser(); } })]);
+      if (lobby) { var later = laterZmanim(info, z, rd, nz.ms, 3); if (later.length) zb.appendChild(el('div', { class: 'soon-row' }, later.map(function (x) { return el('div', { class: 'soon' }, [el('div', { class: 'time num', text: fmtTime(x.min) }), el('div', { class: 'room', text: Cal.ZMAN_NAMES[x.key] })]); }))); } /* the lobby: the zmanim after it, as small cards */
       if (canTap) makeTappable(zb, { zman: nz.key, rd: rd, min: nz.min }); /* tap the zman to be reminded before it */
       (lobbyTop || colA).appendChild(zb);
     }
     var sections = (view.kind === 'board' && isPhone()) ? phoneSections : daySections;
     if (ui.lastRenderDay !== rd) ui.showPast = false;
-    colA.appendChild(sections(scheduleFor(rd), now, up, true));
-    if (up && up.daysAhead > 0 && !(up.daysAhead === 1 && ui.todayAllSwitched)) colA.appendChild(sections(up.sched, now, up, false)); /* tomorrow is already shown section by section once today is over */
+    var secToday = sections(sched, now, up, true), secTomo = up && up.daysAhead > 0 && !(up.daysAhead === 1 && ui.todayAllSwitched) ? sections(up.sched, now, up, false) : null; /* tomorrow is already shown section by section once today is over */
+    if (lobby) colA.appendChild(lobbySections([secToday, secTomo])); else { colA.appendChild(secToday); if (secTomo) colA.appendChild(secTomo); }
     colB.appendChild(zmanimPanel(info, z));
+    if (lobby && strip) colB.appendChild(strip);
     if (view.kind === 'board') {
       var sms = smsPanel();
       if (sms) colB.appendChild(sms);
@@ -205,6 +226,7 @@
     root.appendChild(main);
     if (view.kind === 'board') root.appendChild(footer());
     if (keepOv) root.appendChild(keepOv);
+    if (lobby) fitLobby();
     ui.lastRenderDay = rd; ui.lastMinute = Math.floor(now / 60000);
   }
   /* Printable weekly sheet (?view=week / #week): this week and next, Sunday to Shabbos */
@@ -262,7 +284,7 @@
     var wrap = el('div', { class: 'col' }), canRemind = canSetReminders();
     wrap.appendChild(dayHead(s, isToday));
     tefillaLists(s, now, isToday).forEach(function (x) {
-      var t = x.t, list = x.list, sec = el('section', { class: 'tefilla' });
+      var t = x.t, list = x.list, sec = el('section', { class: 'tefilla' + (x.fromTomorrow || !isToday ? ' tomo' : '') });
       if ($('#app').classList.contains('display') && !x.fromTomorrow && list.every(function (e) { return e.ms <= now && now - e.ms >= nowWindowMs(); })) return;
       sec.appendChild(el('h3', null, [sectionTitle(x)]));
       if (!list.length) { sec.appendChild(el('div', { class: 'none', text: S().none })); }
@@ -289,6 +311,94 @@
     });
     return wrap;
   }
+  /* the lobby screen: today's sections first, then the ones showing tomorrow; today's own day heading is left out (the header's chips carry a special label) */
+  function lobbySections(wraps) {
+    var secs = el('div', { class: 'secs' }), later = [];
+    wraps.forEach(function (w, i) {
+      if (!w) return;
+      Array.prototype.slice.call(w.children).forEach(function (c) {
+        if (i === 0 && c.classList.contains('day-head')) return;
+        if (c.classList.contains('tomo') || c.classList.contains('day-head')) later.push(c); else secs.appendChild(c);
+      });
+    });
+    later.forEach(function (c) { secs.appendChild(c); });
+    return secs;
+  }
+  var PAGE_MS = 8000;
+  /* The lobby screen fits the TV. Under the clock row the sections share what is left of the height: each shows whole rows of tiles, the
+     spare rows go to the sections with the most still to show, and a section with more rows than it got pages through them every eight
+     seconds. Tomorrow's lists are shown only when there is room for them. When even one row per section does not fit, the whole screen
+     shrinks a little (never below 70%) instead of running off the bottom. */
+  function fitLobby() {
+    var root = $('#app'), secs = root.querySelector('.secs'), html = document.documentElement;
+    ui.pages = [];
+    if (!secs || !root.classList.contains('display') || root.classList.contains('room')) return;
+    var chosen = ui.lobbyScale || 1, scale = chosen, pass, items = Array.prototype.slice.call(secs.children), H = window.innerHeight;
+    var sections = items.filter(function (c) { return c.classList.contains('tefilla'); }), mainOnes = sections.filter(function (c) { return !c.classList.contains('tomo'); });
+    if (!mainOnes.length) mainOnes = sections; /* once today is over, tomorrow's lists are the main content */
+    var heads = items.length - sections.length;
+    function num(v) { return parseFloat(v) || 0; }
+    /* the rows of a grid: top and height of each, measured with the grid at its natural height */
+    function measure() {
+      var m = [], gap = num(getComputedStyle(secs).rowGap);
+      items.forEach(function (c) { c.hidden = false; });
+      sections.forEach(function (sec) {
+        var grid = sec.querySelector('.grid'), h3 = sec.querySelector('h3'); if (grid) grid.style.height = '';
+        var tiles = grid ? Array.prototype.filter.call(grid.children, function (t) { return t.offsetParent !== null; }) : [];
+        var cs = getComputedStyle(sec), pad = num(cs.paddingTop) + num(cs.paddingBottom) + num(cs.borderTopWidth) + num(cs.borderBottomWidth);
+        var x = { sec: sec, grid: grid, main: mainOnes.indexOf(sec) >= 0, rows: 0, k: 0, head: h3 ? h3.offsetHeight : 0, pad: pad, key: h3 ? h3.textContent : '', tops: [], hs: [], body: 0 };
+        if (grid && tiles.length) {
+          var cg = getComputedStyle(grid), g0 = grid.getBoundingClientRect().top + num(cg.paddingTop);
+          tiles.forEach(function (t) { var r = t.getBoundingClientRect(), top = Math.round(r.top - g0), i = x.tops.indexOf(top); if (i < 0) { x.tops.push(top); x.hs.push(r.height); } else x.hs[i] = Math.max(x.hs[i], r.height); });
+          x.rows = x.tops.length; x.k = 1; x.gpad = num(cg.paddingTop) + num(cg.paddingBottom);
+        } else x.body = sec.offsetHeight - pad - (h3 ? h3.offsetHeight : 0);
+        m.push(x);
+      });
+      return { m: m, gap: gap, have: secs.clientHeight, heads: items.filter(function (c) { return !c.classList.contains('tefilla'); }).reduce(function (a, c) { return a + c.offsetHeight; }, 0) };
+    }
+    /* the height a grid needs to show k rows at a time: its tallest page */
+    function gridH(x, k) { var best = 0, p; for (p = 0; p < x.rows; p += k) { var last = Math.min(p + k, x.rows) - 1, h = x.tops[last] + x.hs[last] - x.tops[p]; if (h > best) best = h; } return best + x.gpad; }
+    function height(x) { return x.pad + Math.max(x.head, x.rows ? gridH(x, x.k) : x.body); }
+    function gapsFor(count) { return r.gap * Math.max(0, count - 1); }
+    var r;
+    for (pass = 0; pass < 4; pass++) {
+      html.style.setProperty('--lobby-scale', String(scale));
+      r = measure();
+      var need = r.heads + gapsFor(heads + mainOnes.length) + r.m.filter(function (x) { return x.main; }).reduce(function (a, x) { return a + height(x); }, 0);
+      if (need <= r.have + 1 || scale <= 0.7) break;
+      scale = Math.max(0.7, scale * H / (H + need - r.have) * 0.99); /* the whole screen scales, so the overflow shrinks in that proportion */
+    }
+    /* tomorrow's sections, in order, as long as a row of each still fits; then the spare rows go where the most is left to show */
+    var shown = r.m.filter(function (x) { return x.main; }), used = r.heads + gapsFor(heads + shown.length) + shown.reduce(function (a, x) { return a + height(x); }, 0);
+    r.m.forEach(function (x) { if (x.main) return; var h = height(x) + r.gap; if (used + h <= r.have + 1) { used += h; shown.push(x); } else x.sec.hidden = true; });
+    for (;;) {
+      var best = null, bestCost = 0;
+      shown.forEach(function (x) {
+        if (x.rows <= x.k) return;
+        var cost = x.pad + Math.max(x.head, gridH(x, x.k + 1)) - height(x);
+        if (used + cost > r.have + 1) return;
+        if (!best || (x.main && !best.main) || (x.main === best.main && x.rows - x.k > best.rows - best.k)) { best = x; bestCost = cost; }
+      });
+      if (!best) break;
+      used += bestCost; best.k++;
+    }
+    /* a day heading (tomorrow's, when today is over) only ahead of a section that is shown */
+    items.forEach(function (c, i) { if (c.classList.contains('day-head')) { var nxt = items[i + 1]; c.hidden = !nxt || nxt.hidden || !nxt.classList.contains('tefilla'); } });
+    ui.pageIdx = ui.pageIdx || {};
+    shown.forEach(function (x) {
+      if (!x.rows) return;
+      x.grid.style.height = gridH(x, x.k) + 'px';
+      var old = x.sec.querySelector('.pg'); if (old) old.parentNode.removeChild(old);
+      if (x.rows <= x.k) { delete ui.pageIdx[x.key]; return; }
+      var pages = Math.ceil(x.rows / x.k), p = { key: x.key, grid: x.grid, tops: x.tops.filter(function (t, i) { return i % x.k === 0; }).map(function (t) { return t - x.tops[0]; }), pages: pages, idx: Math.min(ui.pageIdx[x.key] || 0, pages - 1), dots: el('span', { class: 'pg', 'aria-hidden': 'true' }) };
+      x.sec.querySelector('h3').appendChild(p.dots);
+      x.grid.style.scrollBehavior = 'auto'; x.grid.scrollTop = p.tops[p.idx]; x.grid.style.scrollBehavior = '';
+      paintDots(p); ui.pages.push(p);
+    });
+    if (!ui.pageAt) ui.pageAt = Date.now();
+  }
+  function paintDots(p) { var t = ''; for (var i = 0; i < p.pages; i++) t += (i ? ' ' : '') + (i === p.idx ? '●' : '○'); p.dots.textContent = t; }
+  function turnPage(p) { p.idx = (p.idx + 1) % p.pages; ui.pageIdx[p.key] = p.idx; p.grid.scrollTo({ top: p.tops[p.idx], behavior: 'smooth' }); paintDots(p); }
   /* phones: one tefilla at a time behind tabs, each minyan a row, the past ones folded away */
   function isPhone() { return !!(window.matchMedia && window.matchMedia('(max-width: 640px)').matches); }
   function phoneSections(s, now, up, isToday) {
@@ -677,6 +787,7 @@
     if (ui.zcountMs && now >= ui.zcountMs) { render(); return; }
     if (ui.countdown) ui.countdown.textContent = fmtCountdown(ui.countdownMs - now);
     if (ui.zcount) ui.zcount.textContent = fmtCountdown(ui.zcountMs - now);
+    if (ui.pages && ui.pages.length && now - (ui.pageAt || 0) >= PAGE_MS) { ui.pageAt = now; ui.pages.forEach(turnPage); }
     if (Math.floor(now / 60000) !== ui.lastMinute) render();
   }
 
@@ -895,6 +1006,9 @@
     var fLang = el('select', { id: 'f-lang' }, [el('option', { value: 'he', text: 'Hebrew (היום, מחר, מנין הבא…)' }), el('option', { value: 'yi', text: 'Yiddish (היינט, מארגן, זונטאג…)' })]); fLang.value = d.lang === 'yi' ? 'yi' : 'he';
     cLook.body.appendChild(el('div', { class: 'fields' }, [field('Colors: the look everyone gets unless they pick another in the footer; the lobby screen and door displays always use it', fPalette), field('Board labels: the language everyone gets unless they pick another in the footer', fLang)]));
     cLook.body.appendChild(lookRow2);
+    var fDispSize = el('select', { id: 'f-display-size' }, [['85', 'Smaller (85%)'], ['100', 'Normal (100%)'], ['115', 'Larger (115%)'], ['130', 'Largest (130%)'], ['150', 'Giant (150%)']].map(function (o) { return el('option', { value: o[0], text: o[1] }); }));
+    fDispSize.value = String(d.displayScale || 100); if (!fDispSize.value) fDispSize.value = '100';
+    cLook.body.appendChild(el('div', { class: 'fields' }, [field('Hallway screen (TV) size. The screen already grows with the TV; pick Larger when people stand far from it, Smaller to fit more minyanim at once (what does not fit pages through)', fDispSize)]));
     cZman.body.appendChild(el('div', { class: 'field' }, [el('label', { text: 'Countdown box ("הזמן הבא"): the next of these zmanim still ahead today' }), el('div', { class: 'chipset' }, COUNTDOWN_KEYS.map(function (k) { return chk('cd-' + k, countdownKeysOf(d).indexOf(k) >= 0, Cal.ZMAN_NAMES[k]); }))]));
     cZman.body.appendChild(el('div', { class: 'checks' }, [chk('f-israel', d.israel, 'Eretz Yisroel calendar (one-day Yom Tov)'), chk('f-weekly', d.weeklyEarliest, 'Weekday zman-based times use the earliest sunset of the week (Sun–Thu)'), chk('f-24', d.clock24, '24-hour clock'), chk('f-tzeis', d.showTzeis !== false, 'Show צאת הכוכבים (the board\'s nightfall) in the zmanim list'), chk('f-rt', d.showRT, 'Show Rabbeinu Tam (72 minutes after sunset) in the zmanim list; hidden by itself while nightfall is 72 and צאת הכוכבים is shown'), chk('f-60', d.show60 !== false, 'Show 60 מינוט אחר השקיעה in the zmanim list')]));
     if (mode !== 'artifact') cSec.body.appendChild(el('div', { class: 'fields' }, [field('New PIN for the admin page', fPin, el('span', { class: 'hint', text: 'Stored scrambled (hashed), so it cannot be read from the site files. It keeps strangers out of the admin page; what everyone else sees can only be changed with the GitHub token on the Publish tab, which stays on the device that entered it.' }))]));
@@ -1474,6 +1588,7 @@
       out.nowMinutes = fNowMins.value === '' ? 20 : Math.max(0, Math.min(180, +fNowMins.value || 0));
       out.dateFormat = fDateFmt.value;
       out.bigTime = fBig.value;
+      out.displayScale = +fDispSize.value || 100;
       out.countdownZmanim = COUNTDOWN_KEYS.filter(function (k) { return $('#cd-' + k).checked; });
       out.palette = fPalette.value;
       out.lang = fLang.value;
@@ -1643,7 +1758,7 @@
     function lines(t) { return (t || '').split('\n').map(function (l) { return l.trim(); }).filter(Boolean); }
     function few(list) { return list.slice(0, 5).join('; ') + (list.length > 5 ? ' … (' + list.length + ')' : ''); }
     (a.tefillos || []).concat(b.tefillos || []).forEach(function (t) { names[t.id] = t.name; });
-    [['name', 'Shul name'], ['rooms', 'Rooms'], ['palette', 'Colors'], ['lang', 'Board labels'], ['bigTime', 'Big number'], ['dateFormat', 'Date format'], ['nowMinutes', '"Now" minutes'], ['countdownZmanim', 'Countdown zmanim'],
+    [['name', 'Shul name'], ['rooms', 'Rooms'], ['palette', 'Colors'], ['lang', 'Board labels'], ['bigTime', 'Big number'], ['displayScale', 'Hallway screen size'], ['dateFormat', 'Date format'], ['nowMinutes', '"Now" minutes'], ['countdownZmanim', 'Countdown zmanim'],
       ['candles', 'Candle lighting minutes'], ['tzeisMinutes', 'Nightfall minutes'], ['tzeisDeg', 'Nightfall degrees'], ['minchaGedola', 'Mincha gedola'], ['israel', 'Eretz Yisroel calendar'], ['weeklyEarliest', 'Weekly earliest sunset'], ['clock24', '24-hour clock'],
       ['showTzeis', 'Show צאת הכוכבים'], ['showRT', 'Show Rabbeinu Tam'], ['show60', 'Show 60 minutes'], ['siteUrl', 'Website address'], ['logo', 'Logo'], ['notifyUrl', 'Notification service'], ['smsNumber', 'SMS number'],
       ['sponsorSeconds', 'Sponsor seconds'], ['remoteConfigUrl', 'Central schedule URL'], ['location', 'Location'], ['pinHash', 'PIN'], ['pin', 'PIN']].forEach(function (f) {
@@ -1684,7 +1799,7 @@
   /* the settings the admin form fills in by itself, so a published file that never had them does not look changed */
   function withDefaults(c) {
     var o = clone(c), tz = (o.location || {}).tz || '';
-    var d = { palette: 'shul', lang: 'he', bigTime: 'start', dateFormat: /^America\//.test(tz) ? 'mdy' : 'dmy', nowMinutes: 20, sponsorSeconds: 8, tzeisDeg: 8.5, candles: 18, minchaGedola: 'later' };
+    var d = { palette: 'shul', lang: 'he', bigTime: 'start', dateFormat: /^America\//.test(tz) ? 'mdy' : 'dmy', nowMinutes: 20, sponsorSeconds: 8, tzeisDeg: 8.5, candles: 18, minchaGedola: 'later', displayScale: 100 };
     Object.keys(d).forEach(function (k) { if (o[k] == null || o[k] === '') o[k] = d[k]; });
     return o;
   }
@@ -1801,6 +1916,7 @@
     setInterval(tick, 1000);
     if (window.matchMedia) { var mq = window.matchMedia('(max-width: 640px)'); (mq.addEventListener ? mq.addEventListener('change', function () { render(); }) : mq.addListener(function () { render(); })); } /* phone layout follows the width */
     window.addEventListener('hashchange', function () { refreshEditBtn(); if (isAdminPage() && canEditNow() && !ui.adminOpen) openAdmin(); });
+    window.addEventListener('resize', function () { clearTimeout(ui.fitTimer); ui.fitTimer = setTimeout(function () { if (document.documentElement.classList.contains('lobby')) render(); }, 200); });
     if (!inArtifact && isAdminPage()) openAdmin();
     if (!inArtifact) {
       loadRemote();
