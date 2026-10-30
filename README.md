@@ -171,6 +171,7 @@ Same address, different screens (the `#` forms also work on the claude.ai page):
 | Door display | `index.html?room=ברך משה` or `#room1`, `#room2`… (order of the Rooms list) | a tablet at a room's door: that room's next minyan and its list |
 | Weekly sheet | `index.html?view=week` or `#week` | this week and next, Sunday to Shabbos, with candle lighting, Shabbos end and every minyan; Print button |
 | QR sign | `sign.html` | a printable sign with the site's QR code and the text number |
+| TV preview | `tv.html` | the hallway screen exactly as the TV renders it, scaled down to your phone or computer (1080p, 720p or 4K). Opening the lobby address on a phone lands here; the admin header has a TV link |
 | Text service page | `sms.html` | how the texting works (also the opt-in page for the carriers) |
 
 ## The lobby screen on a TV
@@ -212,7 +213,7 @@ Three palettes: **Shul** (light stone and pale oak, brass, charcoal, the burgund
 
 ## Board extras
 
-- **Temporary banner** (Edit → Notices): one line across the top of the board, and at the start of text replies, until the time you set.
+- **Temporary banner** (Edit → Notices): one line across the top of the board, and at the start of text replies. Give it a start time and it appears by itself at that time (the night before a clock change, say); give it an end time and it disappears by itself. Either may be blank.
 - **Sponsor dates**: each notice can have "show from" and "show until" dates; several entries with the same title form a queue.
 - **Undo** (Edit → Backup → Previous versions): every Save made on a device keeps the version before it; Restore loads it into the editor.
 

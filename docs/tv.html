@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Hallway screen preview</title>
+<link rel="icon" href="favicon.png">
+<style>
+  /* The hallway screen as the TV renders it: the real lobby page in a frame the size of the TV, scaled down to fit this device. */
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: #1a1613; color: #eadfcf; font-family: 'Heebo', 'Arial Hebrew', Arial, sans-serif; font-size: 15px; line-height: 1.4; padding: 0 max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-right)); }
+  .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px 0; }
+  .bar h1 { font-size: 1rem; font-weight: 600; margin: 0 auto 0 0; }
+  @media (max-width: 1000px) { body { font-size: 14px; } .bar { gap: 6px 10px; padding: 6px 0; } .bar h1 { width: 100%; font-size: .95rem; } .hint { display: none; } .bar select, .bar a, .bar button { padding: 4px 8px; } }
+  .bar select, .bar a, .bar button { font: inherit; color: inherit; background: #2a2420; border: 1px solid #4a4038; border-radius: 8px; padding: 6px 10px; text-decoration: none; cursor: pointer; }
+  .bar a:hover, .bar button:hover { border-color: #c9a449; }
+  .hint { font-size: .85rem; color: #b7a99a; width: 100%; margin: 0; }
+  .stage { position: relative; margin: 6px auto 0; background: #000; border: 8px solid #0b0908; border-radius: 10px; box-shadow: 0 10px 40px rgba(0,0,0,.6), inset 0 0 0 1px #2b2522; overflow: hidden; }
+  .stage iframe { position: absolute; top: 0; left: 0; border: 0; transform-origin: 0 0; background: #ece2cf; }
+  .stand { width: 180px; height: 10px; margin: 0 auto; background: linear-gradient(#2b2522, #0b0908); border-radius: 0 0 8px 8px; }
+  .at { font-size: .8rem; color: #8f8276; text-align: center; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="bar">
+  <h1>The hallway screen, as the TV shows it</h1>
+  <label>TV <select id="size" aria-label="TV size">
+    <option value="1920x1080">1920 × 1080 (most TVs)</option>
+    <option value="1280x720">1280 × 720</option>
+    <option value="3840x2160">3840 × 2160 (4K at full resolution)</option>
+  </select></label>
+  <button type="button" id="reload">Refresh</button>
+  <a href="index.html?view=display&amp;full=1" target="_blank" rel="noopener">Open full size</a>
+  <a href="admin.html">Admin</a>
+  <p class="hint" id="hint">Live: it follows the published schedule, like the TV. Pinch to zoom in. On a phone, turn it sideways for a bigger picture.</p>
+</div>
+<div class="stage" id="stage"><iframe id="tv" src="index.html?view=display" title="Hallway screen" scrolling="no"></iframe></div>
+<div class="stand"></div>
+<p class="at" id="at"></p>
+<script>
+  (function () {
+    var sel = document.getElementById('size'), stage = document.getElementById('stage'), tv = document.getElementById('tv'), at = document.getElementById('at');
+    try { if (localStorage.getItem('minyan-tv-size')) sel.value = localStorage.getItem('minyan-tv-size'); } catch (e) {}
+    function fit() {
+      var p = sel.value.split('x'), w = +p[0], h = +p[1], bar = document.querySelector('.bar').getBoundingClientRect().bottom;
+      var availW = document.documentElement.clientWidth - 24 - 16, availH = window.innerHeight - bar - 16 - 10 - 30;
+      /* a computer sees the whole TV; a phone gets the full width and scrolls a little, which beats a tiny picture */
+      var k = availW / w; if (document.documentElement.clientWidth >= 1000 && availH > 200) k = Math.min(k, availH / h);
+      stage.style.width = (w * k + 16) + 'px'; stage.style.height = (h * k + 16) + 'px';
+      tv.width = w; tv.height = h; tv.style.width = w + 'px'; tv.style.height = h + 'px'; tv.style.transform = 'scale(' + k + ')';
+      at.textContent = w + ' × ' + h + ' shown at ' + Math.round(k * 100) + '%';
+    }
+    sel.addEventListener('change', function () { try { localStorage.setItem('minyan-tv-size', sel.value); } catch (e) {} fit(); });
+    document.getElementById('reload').addEventListener('click', function () { tv.src = 'index.html?view=display&t=' + Date.now(); });
+    window.addEventListener('resize', fit); window.addEventListener('orientationchange', function () { setTimeout(fit, 300); });
+    fit();
+  })();
+</script>
+</body>
+</html>

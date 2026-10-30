@@ -78,4 +78,15 @@ ok("at 00:10 the next minyan is last night's 12:30 Maariv", [ne.fmtTime(u.entry.
 ok('mincha 1:30 still means 1:30 PM', ne.fmtTime(mkE(Object.assign({}, cfg, { schedules: { weekday: { mincha: '1:30 ברך משה' } } })).scheduleFor(monRd).byTefilla.mincha[0].start), '1:30');
 ok('night cut-off per tefilla (2:00): 1:15 is night, 2:30 is morning', mkE(Object.assign({}, nightCfg, { tefillos: cfg.tefillos.map(t => t.id === 'maariv' ? Object.assign({}, t, { nightUntil: 2 }) : t), schedules: { weekday: { maariv: '01:15 לב אהרן\n02:30 שלמה יודא' } } })).scheduleFor(monRd).byTefilla.maariv.map(e => ne.fmtTime(e.start)), ['2:30', '1:15']);
 if (fails) { console.log(fails + ' FAILING'); process.exit(1); } else console.log('schedule (night): all good');
+/* the temporary banner: from / until, shul time */
+{
+  const mk = b => (E.MinyanEngine || E)(Object.assign({}, cfg, { banner: b }));
+  const at = (y, mo, d, h, mi) => Cal.epochFromWall(Cal.rdFromGreg(y, mo, d), h * 60 + mi, cfg.location.tz);
+  const b = { text: 'אלע זמנים זענען מיט א שעה פריער', from: '2026-10-31T19:00', until: '2026-11-05T01:30' };
+  ok('banner with a start time: not before it', mk(b).activeBanner(at(2026, 10, 31, 18, 59)), null);
+  ok('banner: shown from the start time', (mk(b).activeBanner(at(2026, 10, 31, 19, 0)) || {}).text, b.text);
+  ok('banner: shown until the end time, then gone', [(mk(b).activeBanner(at(2026, 11, 5, 1, 29)) || {}).text === b.text, mk(b).activeBanner(at(2026, 11, 5, 1, 30))], [true, null]);
+  ok('banner with only an end time: shown right away', (mk({ text: 'x', until: '2026-11-05T01:30' }).activeBanner(at(2026, 1, 1, 0, 0)) || {}).text, 'x');
+  ok('banner with only a start time: stays once it starts', [mk({ text: 'x', from: '2026-10-31T19:00' }).activeBanner(at(2026, 10, 31, 18, 0)), (mk({ text: 'x', from: '2026-10-31T19:00' }).activeBanner(at(2027, 10, 31, 18, 0)) || {}).text], [null, 'x']);
+}
 ok('צאת (60) is 60 minutes after sunset', Math.round(Cal.zmanim(sunRd, cfg.location).tzeis60 - Cal.zmanim(sunRd, cfg.location).sunset), 60);

@@ -112,12 +112,14 @@ var MinyanEngine = (function () {
         return true;
       });
     }
-    /* the temporary banner, or null once it has expired (until = "YYYY-MM-DDTHH:MM" in the shul's time zone) */
+    /* the temporary banner, or null before its start or after its end (from / until = "YYYY-MM-DDTHH:MM" in the shul's time zone) */
+    function wallMs(v) { var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(v || ''); return m ? Cal.epochFromWall(Cal.rdFromGreg(+m[1], +m[2], +m[3]), +m[4] * 60 + +m[5], loc().tz) : null; }
     function activeBanner(nowMs) {
       var b = cfg.banner;
       if (!b || !(b.text || '').trim()) return null;
-      var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(b.until || '');
-      if (m && nowMs >= Cal.epochFromWall(Cal.rdFromGreg(+m[1], +m[2], +m[3]), +m[4] * 60 + +m[5], loc().tz)) return null;
+      var from = wallMs(b.from), until = wallMs(b.until);
+      if (from != null && nowMs < from) return null;
+      if (until != null && nowMs >= until) return null;
       return b;
     }
     /* Does an override apply to this day? date (one civil day) > hebrew date (every year) > calendar day name (every year). */

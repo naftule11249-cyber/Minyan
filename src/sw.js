@@ -25,10 +25,20 @@ self.addEventListener('fetch', function (e) {
       return;
     }
     if (e.request.mode === 'navigate') {
-      e.respondWith(caches.match('./index.html').then(function (cached) {
-        var net = fetch(e.request).then(function (r) { if (r.ok) caches.open(VERSION).then(function (c) { c.put('./index.html', r.clone()); }); return r; });
-        return cached || net.catch(function () { return cached; });
-      }));
+      /* the board (/, index.html) and the admin page are the app shell: cached copy first, refreshed behind it, each under its own name.
+         Any other page (sign, sms, privacy, tv) comes from the network and is cached under its own name for offline use. */
+      var shell = /\/(index\.html)?$/.test(url.pathname) ? './index.html' : /\/admin\.html$/.test(url.pathname) ? './admin.html' : null;
+      if (shell) {
+        e.respondWith(caches.match(shell).then(function (cached) {
+          var net = fetch(e.request).then(function (r) { if (r.ok) caches.open(VERSION).then(function (c) { c.put(shell, r.clone()); }); return r; });
+          return cached || net.catch(function () { return cached; });
+        }));
+      } else {
+        e.respondWith(fetch(e.request).then(function (r) {
+          if (r.ok) { var copy = r.clone(); caches.open(VERSION).then(function (c) { c.put(e.request, copy); }); }
+          return r;
+        }).catch(function () { return caches.match(e.request, { ignoreSearch: true }); }));
+      }
       return;
     }
     /* app shell: cached copy first, refreshed in the background */

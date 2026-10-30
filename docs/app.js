@@ -21,7 +21,7 @@
     var q = {}, h = (location.hash || '').replace(/^#/, ''), m;
     try { location.search.replace(/^\?/, '').split('&').forEach(function (kv) { var p = kv.split('='); if (p[0]) q[decodeURIComponent(p[0])] = decodeURIComponent((p[1] || '').replace(/\+/g, ' ')); }); } catch (e) {}
     if (q.room) return { kind: 'room', room: q.room };
-    if (q.view === 'display' || h === 'display') return { kind: 'display', size: +q.size || 0 }; /* &size=120: this screen only, in percent */
+    if (q.view === 'display' || h === 'display') return { kind: 'display', size: +q.size || 0, full: !!q.full }; /* &size=120: this screen only, in percent; &full=1: even on a phone */
     if (q.view === 'week' || h === 'week') return { kind: 'week' };
     m = /^room(\d+)$/.exec(h);
     if (m) { var rooms = (cfg.rooms || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean); if (rooms[+m[1] - 1]) return { kind: 'room', room: rooms[+m[1] - 1] }; }
@@ -856,6 +856,7 @@
     return el('label', { for: id }, [c, ' ' + label]);
   }
   var ICONS = {
+    tv: '<rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/>',
     today: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><circle cx="12" cy="15.5" r="1.7" fill="currentColor" stroke="none"/>',
     general: '<path d="M4 6h8M18 6h2M4 12h2M12 12h8M4 18h10M20 18h0"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>',
     schedule: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
@@ -1344,10 +1345,11 @@
       nRows.push(r); nList.appendChild(r.wrap);
     }
     (d.notices.length ? d.notices : [{ title: 'פרנס החודש', body: '' }, { title: 'פרנס השבוע', body: '' }, { title: 'נר למאור', body: '' }]).forEach(addNotice);
-    var bText = el('textarea', { id: 'banner-text', dir: 'auto', placeholder: 'e.g. אין מעריב בלב אהרן הערב' }), bUntil = inp('banner-until', (d.banner && d.banner.until) || '', { type: 'datetime-local' });
+    var bText = el('textarea', { id: 'banner-text', dir: 'auto', placeholder: 'e.g. אין מעריב בלב אהרן הערב' }), bFrom = inp('banner-from', (d.banner && d.banner.from) || '', { type: 'datetime-local' }), bUntil = inp('banner-until', (d.banner && d.banner.until) || '', { type: 'datetime-local' });
     bText.value = (d.banner && d.banner.text) || ''; bText.style.minHeight = '60px';
-    var cBanner = card('Temporary banner', 'One line shown across the top of the board (and at the start of text replies) until the time you set, then it disappears by itself.');
-    cBanner.body.appendChild(el('div', { class: 'fields' }, [field('Banner text', bText), field('Show until (shul time)', bUntil, el('button', { type: 'button', class: 'btn small', text: 'Clear banner', onclick: function () { bText.value = ''; bUntil.value = ''; } }))]));
+    var cBanner = card('Temporary banner', 'One line shown across the top of the board (and at the start of text replies). Give it a start time and it appears by itself; give it an end time and it disappears by itself. Blank means right away, or for good.');
+    cBanner.body.appendChild(el('div', { class: 'fields' }, [field('Banner text', bText)]));
+    cBanner.body.appendChild(el('div', { class: 'fields' }, [field('Show from (shul time; blank = right away)', bFrom), field('Show until (shul time; blank = until you clear it)', bUntil, el('button', { type: 'button', class: 'btn small', text: 'Clear banner', onclick: function () { bText.value = ''; bFrom.value = ''; bUntil.value = ''; } }))]));
     var cNotices = card('Sponsors and announcements', 'Sponsor panels (פרנס החודש, פרנס השבוע, נר למאור) and announcements, shown in framed boxes at the top of the board. Give each one dates and it appears and disappears by itself; several entries with the same title form a queue. A notice with empty text is not shown.');
     cNotices.body.appendChild(nList);
     cNotices.body.appendChild(el('div', null, [el('button', { type: 'button', class: 'btn', text: '+ Notice', onclick: function () { addNotice({ title: '', body: '' }); } })]));
@@ -1600,7 +1602,7 @@
         if (Object.keys(o).length) out.schedules[t[0]] = o;
       });
       out.notices = nRows.map(function (r) { return { title: r.title.value.trim(), body: r.body.value.trim(), from: r.from.value, to: r.to.value }; }).filter(function (n) { return n.title || n.body; });
-      out.banner = { text: bText.value.trim(), until: bUntil.value };
+      out.banner = { text: bText.value.trim(), from: bFrom.value, until: bUntil.value };
       out.overrides = oRows.map(function (r) {
         var lines = {};
         d.tefillos.forEach(function (tf) { if (r.lines[tf.id].value.trim()) lines[tf.id] = r.lines[tf.id].value; });
@@ -1668,7 +1670,8 @@
     var panel = el('div', { class: 'shell' }, [
       el('header', { class: 'abar' }, [
         el('div', { class: 'brand' }, [el('div', { class: 'bt' }, [el('h2', { text: cfg.name || 'Board settings' }), el('div', { class: 'sub', text: Cal.DAY_NAMES[todayInfo.dow] + ' · ' + engine.fmtDate(todayRd) + ' · ' + Cal.formatHeb(todayInfo.heb) })])]),
-        el('div', { class: 'bar' }, [mode !== 'artifact' ? el('a', { class: 'btn toboard', href: 'index.html', target: '_blank', rel: 'noopener', 'aria-label': 'Open the board' }, [el('span', { text: 'Board' }), svgIcon('open')]) : null, status, saveBtn, closeBtn])]),
+        el('div', { class: 'bar' }, [mode !== 'artifact' ? el('a', { class: 'btn toboard', href: 'index.html', target: '_blank', rel: 'noopener', 'aria-label': 'Open the board' }, [el('span', { text: 'Board' }), svgIcon('open')]) : null,
+          mode !== 'artifact' ? el('a', { class: 'btn toboard', href: 'tv.html', target: '_blank', rel: 'noopener', 'aria-label': 'See the hallway screen as the TV shows it', title: 'The hallway screen as the TV shows it' }, [el('span', { text: 'TV' }), svgIcon('tv')]) : null, status, saveBtn, closeBtn])]),
       el('div', { class: 'abody' }, [el('nav', { class: 'anav' }, [tabBar, navFoot]), main]), pubBar]);
     overlay(panel);
     refreshPubBar();
@@ -1793,7 +1796,7 @@
     (a.notices || []).forEach(function (x) { na[x.title] = x; }); (b.notices || []).forEach(function (x) { nb[x.title] = x; });
     Object.keys(nb).forEach(function (k) { if (!na[k]) out.push('Notice added: ' + k); else if (!same(na[k], nb[k])) out.push('Notice changed: ' + k); });
     Object.keys(na).forEach(function (k) { if (!nb[k]) out.push('Notice removed: ' + k); });
-    if (!same(a.banner, b.banner)) out.push(b.banner && b.banner.text ? 'Banner: ' + b.banner.text : 'Banner cleared');
+    if (!same(a.banner, b.banner)) out.push(b.banner && b.banner.text ? 'Banner: ' + b.banner.text + (b.banner.from ? ' · from ' + b.banner.from.replace('T', ' ') : '') + (b.banner.until ? ' · until ' + b.banner.until.replace('T', ' ') : '') : 'Banner cleared');
     return out;
   }
   /* the settings the admin form fills in by itself, so a published file that never had them does not look changed */
@@ -1911,6 +1914,9 @@
       try { applyIfNewer(JSON.parse(localStorage.getItem('minyan-remote') || 'null')); } catch (e) {}
       try { applyIfNewer(JSON.parse(localStorage.getItem('minyan-config') || 'null')); } catch (e) {}
       try { pinOk = sessionStorage.getItem('minyan-pin') === '1'; } catch (e) {}
+      /* the lobby address on a phone: show the TV preview (the lobby as the TV renders it, scaled down) instead of a squeezed lobby */
+      var v0 = currentView();
+      if (v0.kind === 'display' && !v0.full && Math.max(window.innerWidth, window.innerHeight) < 1000) { location.replace('tv.html'); return; }
     }
     render();
     setInterval(tick, 1000);
