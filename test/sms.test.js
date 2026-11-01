@@ -1,5 +1,5 @@
 global.Cal = require('../src/cal.js'); global.MinyanEngine = require('../src/engine.js');
-const MinyanSms = require('../src/sms.js'); const cfg = JSON.parse(JSON.stringify(require('../config.default.json'))); cfg.banner = null; /* a banner the shul happens to have published would prefix every reply */
+const MinyanSms = require('../src/sms.js'); const cfg = JSON.parse(JSON.stringify(require('../config.default.json'))); cfg.banner = null; cfg.smsLang = 'auto'; /* this shul answers in לשון קודש always; the base checks exercise the sender's-language mode */ /* a banner the shul happens to have published would prefix every reply */
 cfg.location = { name: 'x', lat: 40.6975, lng: -73.9512, tz: 'America/New_York', elev: 0 }; cfg.candles = 15; cfg.tzeisMinutes = 72;
 cfg.tefillos = [{ id: 'shacharis', name: 'שחרית', milestone: 'הודו', offset: 10, period: 'am' }, { id: 'mincha', name: 'מנחה', milestone: 'שמונה עשרה', offset: 8, period: 'pm' }, { id: 'maariv', name: 'מעריב', milestone: 'שמונה עשרה', offset: 5, period: 'pm' }];
 cfg.schedules = { weekday: { shacharis: '6:20 ברך משה\n6:50 דברי יואל\n7:15 ברך משה\n7:40 לב אהרן\n8:00 דברי יואל\n8:15 ברך משה\n8:30 שלמה יודא\n8:45 לב אהרן\n9:00 דברי יואל\n9:15 ברך משה\n9:30 שלמה יודא\n9:45 לב אהרן\n10:00 דברי יואל\n10:20 ברך משה\n10:40 שלמה יודא\n11:00 דברי יואל\n11:20 ברך משה\n11:40 שלמה יודא\n12:00 דברי יואל\nchatzos-30 ברך משה',
@@ -32,4 +32,15 @@ check('friday candles', R('zmanim', at(11, 0, 23)), /Candles 5:4\d, Sunset/);
 check('help', R('עזרה', at(11, 0)), /^שלחו אחת מהמילים/);
 check('next on friday night -> shabbos', R('next', at(20, 0, 23)), /^Next minyan: Tomorrow, Shacharis – ברך משה 8:00/);
 check('keyword punctuation', MinyanSms.keyword('Mincha?'), /^mincha$/);
+/* the reply language setting */
+{
+  const he = JSON.parse(JSON.stringify(cfg)); he.smsLang = 'he';
+  const H = (t, now) => MinyanSms.buildReply(he, t, now).text;
+  check('לשון קודש always: an English "mincha" is answered in Hebrew', H('mincha', at(10, 0)), /^מנחה היום \(3 נותרו\): 1:10 ברך משה/);
+  check('לשון קודש always: "next" too', H('next', at(10, 45)), /^מנין העבר: שחרית – .* 10:40 \(הודו 10:50\)\.\nהמנין הבא: שחרית – דברי יואל 11:00 \(הודו 11:10\), בעוד 15 דק׳\./);
+  check('…but HELP keeps the sender\'s language for the carrier wording', H('help', at(10, 0)), /^Text one of: next, shacharis/);
+  check('…and a Hebrew עזרה gets the Hebrew help', H('עזרה', at(10, 0)), /^שלחו אחת מהמילים/);
+  const en = JSON.parse(JSON.stringify(cfg)); en.smsLang = 'en';
+  check('English always: a Hebrew מנחה is answered in English', MinyanSms.buildReply(en, 'מנחה', at(10, 0)).text, /^Mincha Today \(3 left\)/);
+}
 console.log(fails ? fails + ' FAILURES' : 'ALL PASS');

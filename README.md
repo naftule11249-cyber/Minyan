@@ -213,6 +213,7 @@ Three palettes: **Shul** (light stone and pale oak, brass, charcoal, the burgund
 
 ## Board extras
 
+- **Texting, the language**: General → "Text replies are written in" picks לשון קודש always, English always, or the sender's language (the default). HELP is always answered in the sender's language, as the carriers expect.
 - **Texting, the last minyan**: a text that arrives after a minyan has begun, but 3 minutes or more before its הודו (the tefilla's milestone), gets that minyan first as מנין העבר, since one can still run for it, and then the next two. Tefillos without a milestone have no such window.
 - **Temporary banner** (Edit → Notices): one line across the top of the board, and at the start of text replies. Give it a start time and it appears by itself at that time (the night before a clock change, say); give it an end time and it disappears by itself. Either may be blank.
 - **Sponsor dates**: each notice can have "show from" and "show until" dates; several entries with the same title form a queue.

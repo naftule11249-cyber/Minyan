@@ -616,7 +616,8 @@ var MinyanSms = (function () {
     return 'next';
   }
   function buildReply(cfg, text, nowMs) {
-    var engine = MinyanEngine(cfg), lang = hasHebrew(text || '') ? 'he' : 'en', L = T[lang];
+    /* reply language: General → "Text replies" (לשון קודש always, English always, or the sender's language); HELP always answers in the sender's language */
+    var engine = MinyanEngine(cfg), senderLang = hasHebrew(text || '') ? 'he' : 'en', lang = cfg.smsLang === 'he' || cfg.smsLang === 'en' ? cfg.smsLang : senderLang, L = T[lang];
     var rd = Cal.nowInTz(nowMs, engine.loc().tz).rd, k = keyword(text), tf = null, raw = (text || '').trim();
     engine.tefillos().forEach(function (t) { if (raw === t.name || k === t.id) tf = t; });
     function tName(t) { return lang === 'en' && EN_TEFILLA[t.id] ? EN_TEFILLA[t.id] : t.name; }
@@ -666,7 +667,7 @@ var MinyanSms = (function () {
     }
     var out = '', list, first, second, i, last;
     if (k === 'carrier') return { text: '', lang: lang, keyword: k };
-    if (k === 'help') out = L.help;
+    if (k === 'help') out = T[senderLang].help;
     else if (k === 'zmanim') {
       var z = engine.zmanimFor(rd), info = Cal.dayInfo(rd, !!cfg.israel), keys = ['sunrise', 'shema', 'chatzos', 'plag', 'candles', 'sunset', 'tzeis'], parts = [];
       keys.forEach(function (key) {
