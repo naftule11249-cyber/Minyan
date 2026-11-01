@@ -37,7 +37,7 @@ const { chromium } = require('playwright');
     ok('chooser opens from the footer with the zmanim', await page.locator('#zc-overlay input[type=checkbox]').count() >= 8, true);
     for (const id of await page.locator('#zc-overlay input[type=checkbox]:checked').evaluateAll(els => els.map(e => e.id))) await page.uncheck('#' + id);
     await page.check('#zc-tzeis60');
-    await page.click('#zc-overlay button:has-text("Save")'); await page.waitForTimeout(300);
+    await page.click('#zc-save'); await page.waitForTimeout(300);
     ok('the choice is saved on the device', await page.evaluate(() => localStorage.getItem('minyan-countdown')), '["tzeis60"]');
     await ctx.close();
   }

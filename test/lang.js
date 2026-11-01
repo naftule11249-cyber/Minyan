@@ -20,7 +20,7 @@ const { chromium } = require('playwright');
   ok('yiddish: board type label and settings switch', [await page.locator('.day-head .sub').first().textContent(), await page.locator('#lang').inputValue()], ['לוח זונטאג', 'yi']);
   await ctx.close();
   ({ ctx, page } = await open(1280, 13, 0, '?view=display', 'yi'));
-  ok('lobby screen keeps the gabbai\'s Hebrew default', [await page.locator('.day-head h2').first().textContent(), await page.locator('section.tefilla h3').first().textContent()], ['היום', 'מניני שחרית – מחר, יום שני']);
+  ok('lobby screen keeps the gabbai\'s Hebrew default', [(await page.locator('.dayline').textContent()).split(' ').slice(0, 2).join(' '), (await page.locator('section.tefilla h3').first().textContent()).replace(/[●○ ]+$/, '')], ['יום ראשון', 'מניני מנחה']);
   await ctx.close();
   ({ ctx, page } = await open(1280, 13, 0, '', 'yi'));
   ok('yiddish tile badge via CSS variable', await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--badge-now').trim()), '"יעצט"');

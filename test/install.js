@@ -13,13 +13,13 @@ const { chromium } = require('playwright');
     await ctx.close(); return r;
   }
   let r = await guide('Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1');
-  ok('iPhone Safari: share, add to home screen, open from the icon', [r.title, r.steps.length, /Share/.test(r.steps[0]), /Add to Home Screen/.test(r.steps[1]), r.copy, r.visible], ['Install as an app', 3, true, true, 0, true]);
+  ok('iPhone Safari: share, add to home screen, open from the icon', [r.title, r.steps.length, /השיתוף/.test(r.steps[0]), /הוסף למסך הבית/.test(r.steps[1]), r.copy, r.visible], ['התקנה כאפליקציה', 3, true, true, 0, true]);
   r = await guide('Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/126.0 Mobile/15E148 Safari/604.1');
-  ok('iPhone Chrome: open in Safari first, with the address to copy', [/only Safari/.test(r.lead), r.copy, r.steps.length], [true, 1, 2]);
+  ok('iPhone Chrome: open in Safari first, with the address to copy', [/רק ספארי/.test(r.lead), r.copy, r.steps.length], [true, 1, 2]);
   r = await guide('Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Mobile Safari/537.36');
-  ok('Android Chrome: the menu, add to home screen, install', [/Android/.test(r.lead), /⋮/.test(r.steps[0]), /Install/.test(r.steps[2])], [true, true, true]);
+  ok('Android Chrome: the menu, add to home screen, install', [/אנדרואיד/.test(r.lead), /⋮/.test(r.steps[0]), /התקן/.test(r.steps[2])], [true, true, true]);
   r = await guide(null);
-  ok('computer: the install icon in the address bar', [/computer/.test(r.lead), /address bar/.test(r.steps[0]), /Install Cascade Zmanim/.test(r.steps[1])], [true, true, true]);
+  ok('computer: the install icon in the address bar', [/במחשב/.test(r.lead), /שורת הכתובת/.test(r.steps[0]), /התקן Cascade Zmanim/.test(r.steps[1])], [true, true, true]);
   await browser.close();
   console.log(errors.length ? 'ERRORS:\n' + errors.join('\n') : 'no console errors');
   console.log(fails ? fails + ' FAILING' : 'install: all good');

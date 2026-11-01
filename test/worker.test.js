@@ -12,7 +12,7 @@ global.Cal = require('../src/cal.js');
   const env = { SUBS, CONFIG_URL: 'https://minyan.cascadeshul.org/config.json', ALLOWED_ORIGIN: 'https://minyan.cascadeshul.org', VAPID_SUBJECT: 'https://minyan.cascadeshul.org' };
   const pushed = [];
   global.fetch = async (url, init) => {
-    if (url === env.CONFIG_URL) return new Response(JSON.stringify(cfg), { headers: { 'content-type': 'application/json' } });
+    if (String(url).split('?')[0] === env.CONFIG_URL) return new Response(JSON.stringify(cfg), { headers: { 'content-type': 'application/json' } }); /* the worker adds ?t=<minute> to pass the site's CDN cache */
     if (/^https:\/\/push\.example\//.test(url)) { pushed.push({ url, headers: init.headers, bytes: init.body.byteLength || init.body.length }); return new Response('', { status: 201 }); }
     throw new Error('unexpected fetch ' + url);
   };
