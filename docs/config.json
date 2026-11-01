@@ -88,7 +88,7 @@
  "overrides": [],
  "smsNumber": "+1 929 828 7677",
  "remoteConfigUrl": "",
- "savedAt": 1793378650677,
+ "savedAt": 1793507521250,
  "siteUrl": "https://minyan.cascadeshul.org/",
  "logo": "",
  "rooms": "ברך משה, דברי יואל, לב אהרן, שלמה יודא, היכל אדל, היכל ביהמ״ד",
@@ -100,6 +100,7 @@
  "sponsorSeconds": 8,
  "banner": {
   "text": "נעמט אין אכט! אלע זמנים זענען מיט א שעה פריער",
+  "from": "",
   "until": "2026-11-05T01:30"
  },
  "show60": true,
@@ -113,5 +114,6 @@
  "showTzeis": false,
  "palette": "shul",
  "lang": "he",
- "minchaGedola": "mga"
+ "minchaGedola": "mga",
+ "displayScale": 100
 }
