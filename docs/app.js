@@ -1010,7 +1010,8 @@
     cZman.body.appendChild(el('div', { class: 'fields' }, [field('Candle lighting: minutes before sunset', fCandles), field('Nightfall (tzeis): minutes after sunset', fTzeisMin), field('Nightfall: degrees below the horizon (used when minutes is blank)', fTzeisDeg)]));
     var fMinchag = el('select', { id: 'f-minchag' }, [el('option', { value: 'mga', text: 'Magen Avraham: half a proportional hour of the day from dawn to nightfall (72 minutes each side)' }), el('option', { value: 'later', text: 'The later of the two: 30 clock minutes after chatzos, or half a proportional hour (sunrise to sunset) if that is later' }), el('option', { value: 'fixed30', text: '30 clock minutes after chatzos, all year' }), el('option', { value: 'zmanis', text: 'Half a proportional hour (sunrise to sunset) after chatzos' })]);
     fMinchag.value = d.minchaGedola || 'later';
-    cZman.body.appendChild(el('div', { class: 'fields' }, [field('Mincha gedola: how it is counted', fMinchag)]));
+    var fAmidah = inp('f-amidah', d.amidahMinutes == null || d.amidahMinutes === '' ? 20 : d.amidahMinutes, { type: 'number', min: '0', max: '60', inputmode: 'numeric' });
+    cZman.body.appendChild(el('div', { class: 'fields' }, [field('Mincha gedola: how it is counted', fMinchag), field('Minutes from הודו to שמונה עשרה: "the last minyan before sof zman tefilla" (or before chatzos) is the last whose הודו is this long before the zman, so that שמונה עשרה is said in time', fAmidah)]));
     var lookRow2 = el('div', { class: 'fields' }, [field('Civil date on the board and the weekly sheet', fDateFmt), field('Big number on the tiles, by default (everyone may switch it on their own phone)', fBig), field('Minutes a minyan stays marked "now" after it starts (then it is dimmed, and the lobby screen hides it)', fNowMins), field('Lobby screen: seconds per sponsor box (they take turns when there is more than one)', fSponsorSecs)]);
     var fPalette = el('select', { id: 'f-palette' }, [el('option', { value: 'shul', text: 'Shul: light stone, brass, charcoal, burgundy' }), el('option', { value: 'classic', text: 'Classic: parchment and navy' }), el('option', { value: 'contrast', text: 'High contrast: black on white, larger type' })]);
     fPalette.value = lookDefault.call(null) && isLook(d.palette) ? d.palette : 'shul';
@@ -1590,6 +1591,7 @@
       out.tzeisMinutes = fTzeisMin.value === '' ? 0 : +fTzeisMin.value;
       out.tzeisDeg = +fTzeisDeg.value || 8.5;
       out.minchaGedola = fMinchag.value;
+      out.amidahMinutes = fAmidah.value === '' ? 20 : Math.max(0, Math.min(60, +fAmidah.value || 0));
       out.israel = $('#f-israel').checked; out.weeklyEarliest = $('#f-weekly').checked; out.clock24 = $('#f-24').checked; out.showRT = $('#f-rt').checked; out.show60 = $('#f-60').checked; out.showTzeis = $('#f-tzeis').checked;
       delete out.pin;
       out.tefillos = d.tefillos.map(function (t, i) { return liveTefilla(i); });
@@ -1773,7 +1775,7 @@
     function few(list) { return list.slice(0, 5).join('; ') + (list.length > 5 ? ' … (' + list.length + ')' : ''); }
     (a.tefillos || []).concat(b.tefillos || []).forEach(function (t) { names[t.id] = t.name; });
     [['name', 'Shul name'], ['rooms', 'Rooms'], ['palette', 'Colors'], ['lang', 'Board labels'], ['bigTime', 'Big number'], ['displayScale', 'Hallway screen size'], ['dateFormat', 'Date format'], ['nowMinutes', '"Now" minutes'], ['countdownZmanim', 'Countdown zmanim'],
-      ['candles', 'Candle lighting minutes'], ['tzeisMinutes', 'Nightfall minutes'], ['tzeisDeg', 'Nightfall degrees'], ['minchaGedola', 'Mincha gedola'], ['israel', 'Eretz Yisroel calendar'], ['weeklyEarliest', 'Weekly earliest sunset'], ['clock24', '24-hour clock'],
+      ['candles', 'Candle lighting minutes'], ['tzeisMinutes', 'Nightfall minutes'], ['tzeisDeg', 'Nightfall degrees'], ['minchaGedola', 'Mincha gedola'], ['amidahMinutes', 'Minutes from הודו to שמונה עשרה'], ['israel', 'Eretz Yisroel calendar'], ['weeklyEarliest', 'Weekly earliest sunset'], ['clock24', '24-hour clock'],
       ['showTzeis', 'Show צאת הכוכבים'], ['showRT', 'Show Rabbeinu Tam'], ['show60', 'Show 60 minutes'], ['siteUrl', 'Website address'], ['logo', 'Logo'], ['notifyUrl', 'Notification service'], ['smsNumber', 'SMS number'], ['smsLang', 'Text reply language'],
       ['sponsorSeconds', 'Sponsor seconds'], ['remoteConfigUrl', 'Central schedule URL'], ['location', 'Location'], ['pinHash', 'PIN'], ['pin', 'PIN']].forEach(function (f) {
       if (same(a[f[0]], b[f[0]])) return;
@@ -1813,7 +1815,7 @@
   /* the settings the admin form fills in by itself, so a published file that never had them does not look changed */
   function withDefaults(c) {
     var o = clone(c), tz = (o.location || {}).tz || '';
-    var d = { palette: 'shul', lang: 'he', bigTime: 'start', dateFormat: /^America\//.test(tz) ? 'mdy' : 'dmy', nowMinutes: 20, sponsorSeconds: 8, tzeisDeg: 8.5, candles: 18, minchaGedola: 'later', displayScale: 100, smsLang: 'auto' };
+    var d = { palette: 'shul', lang: 'he', bigTime: 'start', dateFormat: /^America\//.test(tz) ? 'mdy' : 'dmy', nowMinutes: 20, sponsorSeconds: 8, tzeisDeg: 8.5, candles: 18, minchaGedola: 'later', displayScale: 100, smsLang: 'auto', amidahMinutes: 20 };
     Object.keys(d).forEach(function (k) { if (o[k] == null || o[k] === '') o[k] = d[k]; });
     return o;
   }

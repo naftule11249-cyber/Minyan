@@ -112,8 +112,11 @@ var MinyanNotify = (function () {
     sub.reminders.push(r);
     return L.set + describe(cfg, r, cmd.lang) + '.';
   }
-  /* The minyan a reminder means on a given day: a set time (nearest, within 45 minutes), the first, the last, or the last that starts before a zman. */
-  function targetFor(list, r, zmanim) {
+  /* The minyan a reminder means on a given day: a set time (nearest, within 45 minutes), the first, the last, or the last before a zman.
+     "Before sof zman tefilla" and "before chatzos" bound שמונה עשרה, so the minyan must reach it in time: its milestone (הודו) has to be
+     cfg.amidahMinutes (20) before the zman. Other zmanim bound the start. */
+  function amidahMinutes(cfg) { var m = cfg && cfg.amidahMinutes; return m == null || m === '' || isNaN(+m) ? 20 : Math.max(0, +m); }
+  function targetFor(list, r, zmanim, cfg) {
     if (!list || !list.length) return null;
     if (r.time != null) {
       var best = null, bestD = 1e9;
@@ -123,9 +126,9 @@ var MinyanNotify = (function () {
     var p = r.pick || 'first';
     if (p === 'last') return list[list.length - 1];
     if (p.indexOf('before:') === 0) {
-      var lim = zmanim ? zmanim[p.slice(7)] : NaN, c;
+      var key = p.slice(7), lim = zmanim ? zmanim[key] : NaN, c, am = amidahMinutes(cfg);
       if (lim == null || isNaN(lim)) return null;
-      c = list.filter(function (e) { return e.start < lim; });
+      c = list.filter(function (e) { return key === 'tefilla' || key === 'chatzos' ? (e.milestone != null ? e.milestone : e.start) + am <= lim : e.start < lim; });
       return c.length ? c[c.length - 1] : null;
     }
     return list[0];
@@ -153,7 +156,7 @@ var MinyanNotify = (function () {
         out.push({ key: 'z:' + iso + ':' + r.zman, title: L.remind + ': ' + zn, text: (lang === 'he' ? 'תזכורת: ' : 'Reminder: ') + zn + ' ' + engine.fmtTime(zm) + ', ' + L.inMin + ' ' + zMins + ' ' + L.min });
         return;
       }
-      var target = targetFor(sched.byTefilla[r.tefilla] || [], r, zmanim);
+      var target = targetFor(sched.byTefilla[r.tefilla] || [], r, zmanim, cfg);
       if (!target) return;
       /* count to the start, or to the milestone (הודו) when the reminder says so */
       var toMs = r.ref === 'milestone' && target.tefilla.milestone, at = toMs ? target.ms + (+target.tefilla.offset || 0) * 60000 : target.ms;
