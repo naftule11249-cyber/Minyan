@@ -831,9 +831,9 @@ var MinyanNotify = (function () {
     return L.set + describe(cfg, r, cmd.lang) + '.';
   }
   /* The minyan a reminder means on a given day: a set time (nearest, within 45 minutes), the first, the last, or the last before a zman.
-     "Before sof zman tefilla" and "before chatzos" bound שמונה עשרה, so the minyan must reach it in time: its milestone (הודו) has to be
-     cfg.amidahMinutes (20) before the zman. Other zmanim bound the start. */
-  function amidahMinutes(cfg) { var m = cfg && cfg.amidahMinutes; return m == null || m === '' || isNaN(+m) ? 20 : Math.max(0, +m); }
+     "Before sof zman Shema", "before sof zman tefilla" and "before chatzos" bound the davening itself, so the minyan must reach it in time:
+     its milestone (הודו) has to be cfg.amidahMinutes (15) before the zman. Sunset and nightfall bound the start. */
+  function amidahMinutes(cfg) { var m = cfg && cfg.amidahMinutes; return m == null || m === '' || isNaN(+m) ? 15 : Math.max(0, +m); }
   function targetFor(list, r, zmanim, cfg) {
     if (!list || !list.length) return null;
     if (r.time != null) {
@@ -846,7 +846,7 @@ var MinyanNotify = (function () {
     if (p.indexOf('before:') === 0) {
       var key = p.slice(7), lim = zmanim ? zmanim[key] : NaN, c, am = amidahMinutes(cfg);
       if (lim == null || isNaN(lim)) return null;
-      c = list.filter(function (e) { return key === 'tefilla' || key === 'chatzos' ? (e.milestone != null ? e.milestone : e.start) + am <= lim : e.start < lim; });
+      c = list.filter(function (e) { return key === 'shema' || key === 'tefilla' || key === 'chatzos' ? (e.milestone != null ? e.milestone : e.start) + am <= lim : e.start < lim; });
       return c.length ? c[c.length - 1] : null;
     }
     return list[0];
