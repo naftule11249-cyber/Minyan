@@ -92,7 +92,9 @@ var MinyanEngine = (function () {
       if (isNaN(start)) return out;
       var end = p.spec.end ? resolveMin(p.spec.end, rd, type) : NaN;
       if (p.spec.end && isNaN(end)) return out;
-      if (p.spec.end && end < start) end += 1440; /* "until 00:15" after a 22:15 start runs past midnight */
+      /* "until 00:15" after a 22:15 start runs past midnight; but a run whose end has passed before it starts (summer: "from rt+14 to 20:00"
+         when rt+14 is already 9:50 PM) simply does not take place that day, instead of running on for a day */
+      if (p.spec.end && end < start) { if (end + 1440 - start <= 6 * 60) end += 1440; else return out; }
       var n = 0, m = start, limit = p.spec.count || 500, rnd = p.spec.start.round || 0, t;
       while (n < limit && n < 500 && (!p.spec.end || m <= end)) {
         t = rnd ? Math.floor(m / rnd) * rnd : m;

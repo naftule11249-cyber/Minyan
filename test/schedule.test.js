@@ -78,6 +78,16 @@ ok("at 00:10 the next minyan is last night's 12:30 Maariv", [ne.fmtTime(u.entry.
 ok('mincha 1:30 still means 1:30 PM', ne.fmtTime(mkE(Object.assign({}, cfg, { schedules: { weekday: { mincha: '1:30 ברך משה' } } })).scheduleFor(monRd).byTefilla.mincha[0].start), '1:30');
 ok('night cut-off per tefilla (2:00): 1:15 is night, 2:30 is morning', mkE(Object.assign({}, nightCfg, { tefillos: cfg.tefillos.map(t => t.id === 'maariv' ? Object.assign({}, t, { nightUntil: 2 }) : t), schedules: { weekday: { maariv: '01:15 לב אהרן\n02:30 שלמה יודא' } } })).scheduleFor(monRd).byTefilla.maariv.map(e => ne.fmtTime(e.start)), ['2:30', '1:15']);
 if (fails) { console.log(fails + ' FAILING'); process.exit(1); } else console.log('schedule (night): all good');
+/* a repeating run whose end comes before its start: past midnight when short, otherwise it does not take place that day */
+{
+  const mkR = (lines) => (E.MinyanEngine || E)(Object.assign({}, cfg, { schedules: { weekday: { maariv: lines } } }));
+  const junRd = Cal.rdFromGreg(2027, 6, 7), jun = mkR('every 10 from rt+14~5 to 20:00 rooms ברך משה, דברי יואל').scheduleFor(junRd);
+  ok('summer: "from rt+14 to 20:00" (rt+14 is 9:50 PM) gives no run, not a day-long one', jun.byTefilla.maariv.length, 0);
+  const win = mkR('every 10 from rt+14~5 to 20:00 rooms ברך משה, דברי יואל').scheduleFor(Cal.rdFromGreg(2026, 12, 7));
+  ok('winter: the same line runs from rt+14 to 8:00 PM', [win.byTefilla.maariv.length > 5, eng.fmtTime(win.byTefilla.maariv[win.byTefilla.maariv.length - 1].start)], [true, '8:00']);
+  ok('a short run past midnight still works: 22:15 to 00:15 every 30', mkR('every 30 from 22:15 to 00:15 rooms ברך משה').scheduleFor(junRd).byTefilla.maariv.map(e => eng.fmtTime(e.start)), ['10:15', '10:45', '11:15', '11:45', '12:15']);
+  ok('the shul\'s own June weekday has a sane Maariv list', mkR(cfg.schedules.weekday.maariv).scheduleFor(junRd).byTefilla.maariv.length < 40, true);
+}
 /* the temporary banner: from / until, shul time */
 {
   const mk = b => (E.MinyanEngine || E)(Object.assign({}, cfg, { banner: b }));
