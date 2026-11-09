@@ -195,7 +195,7 @@ Below 640px the board shows one tefilla at a time behind tabs (the tab of the ne
 
 ## Labels in Hebrew or Yiddish
 
-General → "Board labels" picks Hebrew (היום, מחר, מנין הבא, יום ראשון…), Yiddish or English (Today, Tomorrow, Next minyan, Sunday…; the zmanim and the sheets in English too) (היינט, מארגן, זונטאג…) for the board's own words; the headings מנין הבא and הזמן הבא stay in Hebrew in both; room names, tefillos and zmanim stay as entered. The lobby screen and door displays always use that choice; a "Labels" switch in the footer lets each phone pick its own.
+General → "Board labels" picks Hebrew (היום, מחר, מנין הבא, יום ראשון…) or Yiddish; a person may also put the Settings sheet, the reminder box and the install guide in English (Settings → "Settings language"), while the board itself keeps its Hebrew or Yiddish (היינט, מארגן, זונטאג…) for the board's own words; the headings מנין הבא and הזמן הבא stay in Hebrew in both; room names, tefillos and zmanim stay as entered. The lobby screen and door displays always use that choice; a "Labels" switch in the footer lets each phone pick its own.
 
 In the zmanim list, a zman that has passed keeps today's time, shown dimmed; tapping it sets a reminder for tomorrow's.
 

@@ -79,10 +79,10 @@
     var old = $('#zc-overlay'); if (old) old.remove();
     var cur = countdownKeys(), boxes = {}, ov = el('div', { class: 'overlay modal', id: 'zc-overlay', dir: sheetDir() });
     function close() { ov.remove(); }
-    var list = el('div', { class: 'col' }, COUNTDOWN_KEYS.filter(function (k) { return !zmanHidden(k); }).map(function (k) { var c = el('input', { type: 'checkbox', id: 'zc-' + k }); c.checked = cur.indexOf(k) >= 0; boxes[k] = c; return el('label', { for: 'zc-' + k, class: 'push-row' }, [c, ' ' + zmanName(k)]); }));
-    ov.appendChild(el('div', { class: 'panel small' }, [el('h2', { text: S().cdTitle }), el('p', { class: 'hint', text: S().cdChooserHint }), list,
-      el('div', { class: 'bar' }, [el('button', { type: 'button', class: 'btn', id: 'zc-default', text: S().boardDefault, onclick: function () { try { localStorage.removeItem('minyan-countdown'); } catch (e) {} close(); render(); } }), el('button', { type: 'button', class: 'btn', id: 'zc-cancel', text: S().cancel, onclick: close }),
-        el('button', { type: 'button', class: 'btn primary', id: 'zc-save', text: S().save, onclick: function () { var sel = COUNTDOWN_KEYS.filter(function (k) { return boxes[k] && boxes[k].checked; }); try { localStorage.setItem('minyan-countdown', JSON.stringify(sel)); } catch (e) {} close(); render(); } })])]));
+    var list = el('div', { class: 'col' }, COUNTDOWN_KEYS.filter(function (k) { return !zmanHidden(k); }).map(function (k) { var c = el('input', { type: 'checkbox', id: 'zc-' + k }); c.checked = cur.indexOf(k) >= 0; boxes[k] = c; return el('label', { for: 'zc-' + k, class: 'push-row' }, [c, ' ' + zmanName(k, SU())]); }));
+    ov.appendChild(el('div', { class: 'panel small' }, [el('h2', { text: SU().cdTitle }), el('p', { class: 'hint', text: SU().cdChooserHint }), list,
+      el('div', { class: 'bar' }, [el('button', { type: 'button', class: 'btn', id: 'zc-default', text: SU().boardDefault, onclick: function () { try { localStorage.removeItem('minyan-countdown'); } catch (e) {} close(); render(); } }), el('button', { type: 'button', class: 'btn', id: 'zc-cancel', text: SU().cancel, onclick: close }),
+        el('button', { type: 'button', class: 'btn primary', id: 'zc-save', text: SU().save, onclick: function () { var sel = COUNTDOWN_KEYS.filter(function (k) { return boxes[k] && boxes[k].checked; }); try { localStorage.setItem('minyan-countdown', JSON.stringify(sel)); } catch (e) {} close(); render(); } })])]));
     ov.addEventListener('click', function (ev) { if (ev.target === ov) close(); });
     document.body.appendChild(ov);
   }
@@ -120,7 +120,7 @@
   function fmtCountdown(ms) { return engine.fmtCountdown(ms); }
   /* the board's labels in Hebrew or Yiddish: General -> Board labels sets the default (the lobby screen and door displays always use it); each phone may pick its own */
   var STR = {
-    he: { zmanimOf: 'זמני ', remindMe: 'תזכורת', minutesBefore: 'דקות לפני', before: 'לפני', todayOnly: 'היום בלבד', thatDayOnly: 'באותו יום בלבד', everyDay: 'כל יום', everyDayAt: 'כל יום בשעה זו', remNote: 'התראה במכשיר זה, גם כשהאפליקציה סגורה.', cancel: 'ביטול', setRem: 'קביעת תזכורת', setting: 'קובע…', remSet: 'התזכורת נקבעה: ', remFail: 'לא ניתן לקבוע את התזכורת: ', minBefore: ' דק׳ לפני ', todayOnlyP: ' (היום בלבד)',
+    he: { uiLangLabel: 'שפת ההגדרות', sameAsBoard: 'כמו הלוח', zmanimOf: 'זמני ', remindMe: 'תזכורת', minutesBefore: 'דקות לפני', before: 'לפני', todayOnly: 'היום בלבד', thatDayOnly: 'באותו יום בלבד', everyDay: 'כל יום', everyDayAt: 'כל יום בשעה זו', remNote: 'התראה במכשיר זה, גם כשהאפליקציה סגורה.', cancel: 'ביטול', setRem: 'קביעת תזכורת', setting: 'קובע…', remSet: 'התזכורת נקבעה: ', remFail: 'לא ניתן לקבוע את התזכורת: ', minBefore: ' דק׳ לפני ', todayOnlyP: ' (היום בלבד)',
       picks: { first: 'המנין הראשון של היום', last: 'המנין האחרון של היום', 'before:shema': 'המנין האחרון לפני סוף זמן ק״ש', 'before:tefilla': 'המנין האחרון לפני סוף זמן תפילה', 'before:chatzos': 'המנין האחרון לפני חצות', 'before:sunset': 'המנין האחרון לפני השקיעה', 'before:tzeis': 'המנין האחרון לפני צאת הכוכבים' }, pickWith: function (label, name) { return label.replace('המנין', 'מנין ' + name); },
       remTitle: 'תזכורות בטלפון', remHint: 'התראה לפני המנינים או הזמנים שתבחרו, גם כשהאפליקציה סגורה. אפשר גם ללחוץ על כל מנין בלוח, או על כל זמן ברשימה, כדי לקבוע לו תזכורת.', zmanimGroup: 'זמנים', remove: 'הסרת התזכורת', noRems: 'עדיין אין תזכורות.', addRem: '+ תזכורת', maxRems: 'עד 10 תזכורות', dailyAt: ' הלוח היומי כל בוקר בשעה ', remUpdate: 'עדכון התזכורות', remOn: 'הפעלת תזכורות', remOff: 'כיבוי התזכורות', remAtLeast: 'הוסיפו לפחות תזכורת אחת.', turningOn: 'מפעיל…', remsOn: 'התזכורות פועלות במכשיר זה.', remOnFail: 'לא ניתן להפעיל תזכורות: ',
       settings: 'הגדרות', close: 'סגירה', display: 'תצוגה', displayHint: 'הבחירות נשמרות במכשיר זה; המסכים בבית המדרש נשארים כפי שקבע הגבאי.', bigNumber: 'המספר הגדול במשבצות', startWord: 'התחלה', look: 'מראה', labels: 'שפת הכיתובים', cdBox: 'תיבת הזמן הבא', cdHint: 'לאילו זמנים היא סופרת לאחור.', chooseZmanim: 'בחירת הזמנים…', installSec: 'התקנה כאפליקציה', checkUpdates: 'בדיקת עדכונים', upToDate: 'מעודכן. גרסה חדשה נטענת מעצמה כשהיא מגיעה.', checkFail: 'לא ניתן לבדוק כעת.', done: 'סיום',
@@ -129,7 +129,7 @@
       installFirst: 'כדי לקבל תזכורות באייפון או באייפד, הוסיפו תחילה את הלוח למסך הבית: בספארי לחצו על שיתוף, ואז „הוסף למסך הבית”, ופתחו אותו מהסמל.', noPush: 'דפדפן זה אינו יכול לקבל התראות. השתמשו בכרום, או באפליקציה המותקנת.',
       today: 'היום', tomorrow: 'מחר', tonight: 'בערב', nextMinyan: 'מנין הבא', nextZman: 'הזמן הבא', zmanim: 'זמני היום', none: 'אין מנינים רשומים', showEarlier: 'הצג את הקודמים', badgeNext: 'הבא', badgeNow: 'עכשיו', board: 'לוח ', special: 'לוח מיוחד', noMinyanim: 'לא רשומים מנינים לימים הקרובים.', fastStart: 'תחילת הצום', fastEnd: 'צאת הצום', motzaeiShabbos: 'מוצאי שבת', motzaeiYT: 'מוצאי יום טוב', omerTonight: 'הלילה סופרים', omer: 'ספירת העומר', laomer: ' לעומר', clock: 'השעה', timesBy: 'הזמנים לפי ', chul: 'לוח חוץ לארץ', eretz: 'לוח ארץ ישראל', parsha: ' פרשת ',
       days: Cal.DAY_NAMES, types: {}, minyanim: function (name) { return 'מניני ' + name; } },
-    en: { zmanimOf: 'Zmanim for ', remindMe: 'Remind me', minutesBefore: 'Minutes before', before: 'Before', todayOnly: 'Today only', thatDayOnly: 'That day only', everyDay: 'Every day', everyDayAt: 'Every day at this time', remNote: 'A notification on this device, even when the app is closed.', cancel: 'Cancel', setRem: 'Set reminder', setting: 'Setting…', remSet: 'Reminder set: ', remFail: 'Could not set the reminder: ', minBefore: ' min before ', todayOnlyP: ' (today only)',
+    en: { uiLangLabel: 'Settings language', sameAsBoard: 'Same as the board', zmanimOf: 'Zmanim for ', remindMe: 'Remind me', minutesBefore: 'Minutes before', before: 'Before', todayOnly: 'Today only', thatDayOnly: 'That day only', everyDay: 'Every day', everyDayAt: 'Every day at this time', remNote: 'A notification on this device, even when the app is closed.', cancel: 'Cancel', setRem: 'Set reminder', setting: 'Setting…', remSet: 'Reminder set: ', remFail: 'Could not set the reminder: ', minBefore: ' min before ', todayOnlyP: ' (today only)',
       picks: { first: 'First minyan of the day', last: 'Last minyan of the day', 'before:shema': 'Last minyan before sof zman Shema', 'before:tefilla': 'Last minyan before sof zman tefilla', 'before:chatzos': 'Last minyan before chatzos', 'before:sunset': 'Last minyan before sunset', 'before:tzeis': 'Last minyan before nightfall' }, pickWith: function (label, name) { return label.replace('minyan', name); },
       remTitle: 'Reminders on your phone', remHint: 'A notification before the minyanim or zmanim you pick, even when the app is closed. Tap any minyan on the board, or any zman in the list, to set a reminder for it.', zmanimGroup: 'Zmanim', remove: 'Remove this reminder', noRems: 'No reminders yet.', addRem: '+ Reminder', maxRems: 'Up to 10 reminders', dailyAt: ' The day\'s board every morning at ', remUpdate: 'Update reminders', remOn: 'Turn on reminders', remOff: 'Turn off reminders', remAtLeast: 'Add at least one reminder.', turningOn: 'Turning on…', remsOn: 'Reminders are on for this device.', remOnFail: 'Could not turn on reminders: ',
       settings: 'Settings', close: 'Close', display: 'Display', displayHint: 'Your choices stay on this device; the screens in the shul keep the gabbai\'s.', bigNumber: 'Big number on the tiles', startWord: 'start', look: 'Look', labels: 'Language', cdBox: 'The next-zman box', cdHint: 'Which zmanim it counts down to.', chooseZmanim: 'Choose the zmanim…', installSec: 'Install as an app', checkUpdates: 'Check for updates', upToDate: 'Up to date. A newer version reloads by itself when it arrives.', checkFail: 'Could not check right now.', done: 'Done',
@@ -140,7 +140,7 @@
       days: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Shabbos'], types: { weekday: 'Weekday schedule', sunday: 'Sunday schedule', friday: 'Erev Shabbos schedule', shabbos: 'Shabbos schedule', yomtov: 'Yom Tov schedule', erev_yomtov: 'Erev Yom Tov schedule', chol_hamoed: 'Chol Hamoed schedule', rosh_chodesh: 'Rosh Chodesh schedule', fast: 'Fast day schedule', chanukah: 'Chanukah schedule', purim: 'Purim schedule', yomkippur: 'Yom Kippur schedule' },
       minyanim: function (name) { return ({ 'שחרית': 'Shacharis', 'מנחה': 'Mincha', 'מעריב': 'Maariv' }[name] || name) + ' minyanim'; },
       zmanNames: { alos: 'Alos hashachar', sunrise: 'Sunrise (netz)', shema: 'Sof zman Shema', tefilla: 'Sof zman tefilla', chatzos: 'Chatzos', minchag: 'Mincha gedola', plag: 'Plag hamincha', candles: 'Candle lighting', sunset: 'Sunset (shkiah)', tzeis: 'Nightfall (tzeis)', tzeis60: '60 minutes after sunset', tzeis72: 'Rabbeinu Tam (72)' } },
-    yi: { zmanimOf: 'זמנים פון ', remindMe: 'דערמאנונג', minutesBefore: 'מינוט פריער', before: 'פאר', todayOnly: 'נאר היינט', thatDayOnly: 'נאר יענעם טאג', everyDay: 'יעדן טאג', everyDayAt: 'יעדן טאג אין דער צייט', remNote: 'א מעלדונג אויף דעם מכשיר, אויך ווען די אַפּ איז פארמאכט.', cancel: 'אפשטעלן', setRem: 'שטעלן א דערמאנונג', setting: 'שטעלט…', remSet: 'די דערמאנונג איז געשטעלט: ', remFail: 'די דערמאנונג האט זיך נישט געלאזט שטעלן: ', minBefore: ' מינוט פאר ', todayOnlyP: ' (נאר היינט)',
+    yi: { uiLangLabel: 'שפראך פון די איינשטעלונגען', sameAsBoard: 'ווי דער לוח', zmanimOf: 'זמנים פון ', remindMe: 'דערמאנונג', minutesBefore: 'מינוט פריער', before: 'פאר', todayOnly: 'נאר היינט', thatDayOnly: 'נאר יענעם טאג', everyDay: 'יעדן טאג', everyDayAt: 'יעדן טאג אין דער צייט', remNote: 'א מעלדונג אויף דעם מכשיר, אויך ווען די אַפּ איז פארמאכט.', cancel: 'אפשטעלן', setRem: 'שטעלן א דערמאנונג', setting: 'שטעלט…', remSet: 'די דערמאנונג איז געשטעלט: ', remFail: 'די דערמאנונג האט זיך נישט געלאזט שטעלן: ', minBefore: ' מינוט פאר ', todayOnlyP: ' (נאר היינט)',
       picks: { first: 'דער ערשטער מנין פון טאג', last: 'דער לעצטער מנין פון טאג', 'before:shema': 'דער לעצטער מנין פאר סוף זמן ק״ש', 'before:tefilla': 'דער לעצטער מנין פאר סוף זמן תפילה', 'before:chatzos': 'דער לעצטער מנין פאר חצות', 'before:sunset': 'דער לעצטער מנין פאר שקיעה', 'before:tzeis': 'דער לעצטער מנין פאר צאת הכוכבים' }, pickWith: function (label, name) { return label.replace('מנין', name); },
       remTitle: 'דערמאנונגען אויפן טעלעפאן', remHint: 'א מעלדונג פאר די מנינים אדער זמנים וואס איר קלויבט אויס, אויך ווען די אַפּ איז פארמאכט. מען קען אויך דריקן אויף יעדן מנין אויפן לוח, אדער אויף יעדן זמן אין דער ליסטע, צו שטעלן א דערמאנונג.', zmanimGroup: 'זמנים', remove: 'אראפנעמען די דערמאנונג', noRems: 'נאך נישטא קיין דערמאנונגען.', addRem: '+ דערמאנונג', maxRems: 'ביז 10 דערמאנונגען', dailyAt: ' דער טעגליכער לוח יעדן אינדערפרי ', remUpdate: 'דערמאנונגען אפדעיטן', remOn: 'דערמאנונגען אנצינדן', remOff: 'דערמאנונגען פארלעשן', remAtLeast: 'לייגט צו כאטש איין דערמאנונג.', turningOn: 'צינדט אן…', remsOn: 'די דערמאנונגען זענען אן אויף דעם מכשיר.', remOnFail: 'די דערמאנונגען האבן זיך נישט געלאזט אנצינדן: ',
       settings: 'איינשטעלונגען', close: 'פארמאכן', display: 'אויסזען', displayHint: 'די ברירות בלייבן אויף דעם מכשיר; די שירעמס אין שול בלייבן ווי דער גבאי האט געשטעלט.', bigNumber: 'די גרויסע נומער אויף די קעסטלעך', startWord: 'אנהייב', look: 'קאלירן', labels: 'שפראך', cdBox: 'די קעסטל הזמן הבא', cdHint: 'צו וועלכע זמנים זי ציילט.', chooseZmanim: 'אויסקלויבן די זמנים…', installSec: 'אינסטאלירן ווי אן אַפּ', checkUpdates: 'זוכן אפדעיטס', upToDate: 'אפדעיטעד. א נייע ווערסיע לאדט זיך אליין ווען זי קומט אן.', checkFail: 'מען קען יעצט נישט נאכקוקן.', done: 'פארטיג',
@@ -148,18 +148,22 @@
       today: 'היינט', tomorrow: 'מארגן', tonight: 'ביינאכט', nextMinyan: 'מנין הבא', nextZman: 'הזמן הבא', zmanim: 'היינטיגע זמנים', none: 'קיין מנינים נישט איינגעשריבן', showEarlier: 'ווייז די פריערדיגע', badgeNext: 'הבא', badgeNow: 'יעצט', board: 'לוח ', special: 'ספעציעלער לוח', noMinyanim: 'קיין מנינים נישט איינגעשריבן פאר די קומענדיגע טעג.', fastStart: 'אנהייב תענית', fastEnd: 'סוף תענית', motzaeiShabbos: 'מוצאי שבת', motzaeiYT: 'מוצאי יום טוב', omerTonight: 'היינט ביינאכט ציילט מען', omer: 'ספירת העומר', laomer: ' לעומר', clock: 'די שעה', timesBy: 'די זמנים לויט ', chul: 'לוח חוץ לארץ', eretz: 'לוח ארץ ישראל', parsha: ' פרשת ',
       days: ['זונטאג', 'מאנטאג', 'דינסטאג', 'מיטוואך', 'דאנערשטאג', 'פרייטאג', 'שבת קודש'], types: { weekday: 'וואכן טעג', sunday: 'זונטאג', friday: 'ערב שבת', shabbos: 'שבת', yomtov: 'יום טוב', erev_yomtov: 'ערב יום טוב', chol_hamoed: 'חול המועד', rosh_chodesh: 'ראש חודש', fast: 'תענית', chanukah: 'חנוכה', purim: 'פורים', yomkippur: 'יום כיפור' }, minyanim: function (name) { return name + ' מנינים'; } }
   };
-  var LANGS = ['he', 'yi', 'en'];
-  function langDefault() { return LANGS.indexOf(cfg.lang) > 0 ? cfg.lang : 'he'; }
+  var LANGS = ['he', 'yi']; /* the board's labels */
+  function langDefault() { return cfg.lang === 'yi' ? 'yi' : 'he'; }
   function langMode() {
     var view = currentView(); if (view.kind === 'display' || view.kind === 'room') return langDefault();
     var v = null; try { v = localStorage.getItem('minyan-lang'); } catch (e) {}
     return LANGS.indexOf(v) >= 0 ? v : langDefault();
   }
-  /* a zman's name in the board's language (English has its own; Hebrew and Yiddish share the calendar's) */
-  function zmanName(k) { var L = S(); return (L.zmanNames && L.zmanNames[k]) || Cal.ZMAN_NAMES[k] || k; }
+  /* the sheets (Settings, reminders, the install guide) may be in English while the board itself keeps its Hebrew or Yiddish */
+  function uiLang() { var v = null; try { v = localStorage.getItem('minyan-ui-lang'); } catch (e) {} return v === 'en' ? 'en' : langMode(); }
+  /* a zman's name in the given strings' language (English has its own; Hebrew and Yiddish share the calendar's) */
+  function zmanName(k, L) { L = L || S(); return (L.zmanNames && L.zmanNames[k]) || Cal.ZMAN_NAMES[k] || k; }
   /* the board's own sheets read left to right in English, right to left otherwise */
-  function sheetDir() { return langMode() === 'en' ? 'ltr' : 'rtl'; }
-  function S() { var m = langMode(); if (m === 'he' || !STR[m]) return STR.he; if (!ui.strCache || ui.strCache.m !== m) ui.strCache = { m: m, s: Object.assign({}, STR.he, STR[m]) }; return ui.strCache.s; }
+  function sheetDir() { return uiLang() === 'en' ? 'ltr' : 'rtl'; }
+  function strs(m) { if (m === 'he' || !STR[m]) return STR.he; ui.strCache = ui.strCache || {}; if (!ui.strCache[m]) ui.strCache[m] = Object.assign({}, STR.he, STR[m]); return ui.strCache[m]; }
+  function S() { return strs(langMode()); }   /* the board's labels */
+  function SU() { return strs(uiLang()); }    /* the sheets */
   function applyLang() { if (typeof document === 'undefined') return; var st = document.documentElement.style, L = S(); st.setProperty('--badge-next', '"' + L.badgeNext + '"'); st.setProperty('--badge-now', '"' + L.badgeNow + '"'); }
   function dayLine(info, rd) { var p = Cal.parshaOfWeek(rd, !!cfg.israel); return S().days[info.dow] + (p ? S().parsha + p : ''); }
   function typeLabel(s) { if (s.override) return S().special + (s.override.label ? ': ' + s.override.label : ''); return S().board + (S().types[s.type] || TYPE_NAME[s.type] || s.type); }
@@ -554,62 +558,63 @@
   function isoOf(rd) { return MinyanEngine.isoDate(rd); }
   function canSetReminders() { return pushConfigured() && !$('#app').classList.contains('display') && !ui.roomFilter; }
   function describeReminder(r) {
-    if (r.zman) return r.lead + S().minBefore + zmanName(r.zman) + (r.once ? S().todayOnlyP : '');
+    if (r.zman) return r.lead + SU().minBefore + zmanName(r.zman, SU()) + (r.once ? SU().todayOnlyP : '');
     var t = tefillos().filter(function (x) { return x.id === r.tefilla; })[0], name = t ? t.name : r.tefilla;
-    return r.lead + S().minBefore + (r.time != null ? name + ' ' + fmtTime(r.time) : S().pickWith(S().picks[r.pick || 'first'] || '', name)) + (r.ref === 'milestone' && t && t.milestone ? ' (' + t.milestone + ')' : '') + (r.once ? S().todayOnlyP : '');
+    return r.lead + SU().minBefore + (r.time != null ? name + ' ' + fmtTime(r.time) : SU().pickWith(SU().picks[r.pick || 'first'] || '', name)) + (r.ref === 'milestone' && t && t.milestone ? ' (' + t.milestone + ')' : '') + (r.once ? SU().todayOnlyP : '');
   }
   /* a minyan tile on the board opens a small "remind me" box */
   function makeTappable(tile, e) {
-    tile.classList.add('tap'); tile.setAttribute('role', 'button'); tile.setAttribute('tabindex', '0'); tile.setAttribute('title', S().setRemTitle);
+    tile.classList.add('tap'); tile.setAttribute('role', 'button'); tile.setAttribute('tabindex', '0'); tile.setAttribute('title', SU().setRemTitle);
     tile.addEventListener('click', function () { openReminder(e); });
     tile.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); openReminder(e); } });
   }
   function openReminder(e) {
-    if (isIOS() && !isStandalone()) { toast(S().installFirst, 9000); return; }
-    if (!pushSupported()) { toast(S().noPush, 7000); return; }
+    if (isIOS() && !isStandalone()) { toast(SU().installFirst, 9000); return; }
+    if (!pushSupported()) { toast(SU().noPush, 7000); return; }
     preparePush().catch(function () {}); /* ready before "Set reminder" is tapped */
     var old = $('#rem-overlay'); if (old) old.remove();
-    var what = e.zman ? zmanName(e.zman) + ' ' + fmtTime(e.min) : e.tefilla.name + (e.room ? ' – ' + e.room : '') + ' ' + fmtTime(e.start), dayIso = isoOf(e.rd), isToday = dayIso === isoOf(Cal.nowInTz(Date.now(), loc().tz).rd);
+    var what = e.zman ? zmanName(e.zman, SU()) + ' ' + fmtTime(e.min) : e.tefilla.name + (e.room ? ' – ' + e.room : '') + ' ' + fmtTime(e.start), dayIso = isoOf(e.rd), isToday = dayIso === isoOf(Cal.nowInTz(Date.now(), loc().tz).rd);
     var lead = el('input', { type: 'number', min: '1', max: '180', value: '10', class: 'mins', inputmode: 'numeric', id: 'rem-lead' });
     var once = el('input', { type: 'radio', name: 'rem-when', value: 'once', id: 'rem-once' }), daily = el('input', { type: 'radio', name: 'rem-when', value: 'daily', id: 'rem-daily' });
     once.checked = true;
     /* for a minyan with a milestone: count to the start or to הודו, as this phone's big number says unless changed here */
     var refStart = el('input', { type: 'radio', name: 'rem-ref', value: 'start', id: 'rem-ref-start' }), refMs = el('input', { type: 'radio', name: 'rem-ref', value: 'milestone', id: 'rem-ref-ms' });
     (bigMode() === 'milestone' ? refMs : refStart).checked = true;
-    var refRow = (!e.zman && e.tefilla.milestone) ? el('div', { class: 'push-row' }, [el('span', { class: 'push-lbl', text: S().before }), el('label', { for: 'rem-ref-start' }, [refStart, ' ' + startLabel(e.tefilla) + ' ' + fmtTime(e.start)]), el('label', { for: 'rem-ref-ms' }, [refMs, ' ' + e.tefilla.milestone + ' ' + fmtTime(e.milestone)])]) : null;
+    var refRow = (!e.zman && e.tefilla.milestone) ? el('div', { class: 'push-row' }, [el('span', { class: 'push-lbl', text: SU().before }), el('label', { for: 'rem-ref-start' }, [refStart, ' ' + startLabel(e.tefilla) + ' ' + fmtTime(e.start)]), el('label', { for: 'rem-ref-ms' }, [refMs, ' ' + e.tefilla.milestone + ' ' + fmtTime(e.milestone)])]) : null;
     var msg = el('div', { class: 'hint', id: 'rem-msg' }), ov = el('div', { class: 'overlay modal', id: 'rem-overlay', dir: sheetDir() });
     function close() { ov.remove(); }
-    var setB = el('button', { type: 'button', class: 'btn primary', id: 'rem-set', text: S().setRem, onclick: function () {
+    var setB = el('button', { type: 'button', class: 'btn primary', id: 'rem-set', text: SU().setRem, onclick: function () {
       var prefs = pushPrefs(), ld = Math.max(1, Math.min(180, +lead.value || 10)), r = e.zman ? { zman: e.zman, lead: ld } : { tefilla: e.tefilla.id, time: e.start, lead: ld };
       if (once.checked) r.once = dayIso;
       if (refRow && refMs.checked) r.ref = 'milestone';
       prefs.reminders = (prefs.reminders || []).filter(function (x) { return e.zman ? x.zman !== e.zman : !(x.tefilla === r.tefilla && x.time === r.time); }).concat([r]).slice(-10);
-      setB.disabled = true; msg.textContent = S().setting;
-      subscribePush(prefs).then(function () { close(); ui.remDraft = null; toast(S().remSet + describeReminder(r), 6000); render(); },
-        function (err) { setB.disabled = false; msg.textContent = S().remFail + (err && err.message || err); });
+      setB.disabled = true; msg.textContent = SU().setting;
+      subscribePush(prefs).then(function () { close(); ui.remDraft = null; toast(SU().remSet + describeReminder(r), 6000); render(); },
+        function (err) { setB.disabled = false; msg.textContent = SU().remFail + (err && err.message || err); });
     } });
     ov.appendChild(el('div', { class: 'panel small' }, [
-      el('h2', { text: S().remindMe }),
+      el('h2', { text: SU().remindMe }),
       el('div', { class: 'rem-what', dir: 'rtl', text: what }),
-      el('div', { class: 'push-row' }, [el('label', { for: 'rem-lead', class: 'push-lbl', text: S().minutesBefore }), lead]),
+      el('div', { class: 'push-row' }, [el('label', { for: 'rem-lead', class: 'push-lbl', text: SU().minutesBefore }), lead]),
       refRow,
-      el('div', { class: 'push-row' }, [el('label', { for: 'rem-once' }, [once, ' ' + (isToday ? S().todayOnly : S().thatDayOnly)]), el('label', { for: 'rem-daily' }, [daily, ' ' + (e.zman ? S().everyDay : S().everyDayAt)])]),
-      el('p', { class: 'hint', text: S().remNote }),
+      el('div', { class: 'push-row' }, [el('label', { for: 'rem-once' }, [once, ' ' + (isToday ? SU().todayOnly : SU().thatDayOnly)]), el('label', { for: 'rem-daily' }, [daily, ' ' + (e.zman ? SU().everyDay : SU().everyDayAt)])]),
+      el('p', { class: 'hint', text: SU().remNote }),
       msg,
-      el('div', { class: 'bar' }, [el('button', { type: 'button', class: 'btn', id: 'rem-cancel', text: S().cancel, onclick: close }), setB])]));
+      el('div', { class: 'bar' }, [el('button', { type: 'button', class: 'btn', id: 'rem-cancel', text: SU().cancel, onclick: close }), setB])]));
     ov.addEventListener('click', function (ev) { if (ev.target === ov) close(); });
     document.body.appendChild(ov);
     lead.focus();
   }
-  function pushPanel() {
+  function pushPanel(L) {
+    L = L || S();
     if (!pushConfigured()) return null;
-    var st = pushState(), box = el('section', { class: 'side', id: 'push-panel' }, [el('h3', { text: S().remTitle })]);
-    if (isIOS() && !isStandalone()) { box.appendChild(el('p', { class: 'hint', text: S().installFirst })); return box; }
-    if (!pushSupported()) { box.appendChild(el('p', { class: 'hint', text: S().noPush })); return box; }
+    var st = pushState(), box = el('section', { class: 'side', id: 'push-panel' }, [el('h3', { text: L.remTitle })]);
+    if (isIOS() && !isStandalone()) { box.appendChild(el('p', { class: 'hint', text: L.installFirst })); return box; }
+    if (!pushSupported()) { box.appendChild(el('p', { class: 'hint', text: L.noPush })); return box; }
     preparePush().catch(function () {}); /* ready before the first tap */
     var prefs = pushPrefs(), today = scheduleFor(Cal.nowInTz(Date.now(), loc().tz).rd), tfs = tefillos().filter(function (t) { return t.kind !== 'event'; });
     if (!tfs.length) return null;
-    box.appendChild(el('p', { class: 'hint', text: S().remHint }));
+    box.appendChild(el('p', { class: 'hint', text: L.remHint }));
     /* the rows being edited survive the board's minute-by-minute refresh */
     var draft = ui.remDraft || { list: prefs.reminders.map(function (r) { return { tefilla: r.zman ? 'z:' + r.zman : r.tefilla, time: r.time == null ? null : +r.time, pick: r.pick || 'first', lead: +r.lead || 10, once: r.once || null, ref: r.ref === 'milestone' ? 'milestone' : 'start' }; }),
       daily: prefs.daily != null, dailyAt: prefs.daily != null ? pad2(Math.floor(prefs.daily / 60)) + ':' + pad2(prefs.daily % 60) : '06:00' };
@@ -618,14 +623,14 @@
     function rowEl(r) {
       var tSel = el('select', { 'aria-label': 'Tefilla or zman' });
       tfs.forEach(function (t) { tSel.appendChild(el('option', { value: t.id, text: t.name })); });
-      var zg = el('optgroup', { label: S().zmanimGroup }); ZMAN_KEYS.forEach(function (k) { if (zmanHidden(k)) return; zg.appendChild(el('option', { value: 'z:' + k, text: zmanName(k) })); }); tSel.appendChild(zg);
+      var zg = el('optgroup', { label: L.zmanimGroup }); ZMAN_KEYS.forEach(function (k) { if (zmanHidden(k)) return; zg.appendChild(el('option', { value: 'z:' + k, text: zmanName(k, L) })); }); tSel.appendChild(zg);
       tSel.value = r.tefilla; if (tSel.selectedIndex < 0) { tSel.value = tfs[0].id; r.tefilla = tfs[0].id; }
       var wSel = el('select', { 'aria-label': 'Which minyan' });
       function fillWhich() {
         wSel.textContent = '';
         wSel.hidden = tSel.value.indexOf('z:') === 0; if (wSel.hidden) return; /* a zman is its own target */
         var t = tfs.filter(function (x) { return x.id === tSel.value; })[0] || tfs[0];
-        picksFor(t).forEach(function (p) { wSel.appendChild(el('option', { value: 'p:' + p, text: S().picks[p] })); });
+        picksFor(t).forEach(function (p) { wSel.appendChild(el('option', { value: 'p:' + p, text: L.picks[p] })); });
         (today.byTefilla[t.id] || []).forEach(function (x) { wSel.appendChild(el('option', { value: 't:' + x.start, text: fmtTime(x.start) + (x.room ? ' ' + x.room : '') })); });
         wSel.value = r.time != null ? 't:' + r.time : 'p:' + r.pick;
         if (wSel.selectedIndex < 0) { wSel.appendChild(el('option', { value: 't:' + r.time, text: fmtTime(r.time) })); wSel.value = 't:' + r.time; }
@@ -644,30 +649,30 @@
       wSel.addEventListener('change', function () { var v = wSel.value; if (v.charAt(0) === 't') { r.time = +v.slice(2); r.pick = 'first'; } else { r.time = null; r.pick = v.slice(2); } });
       var lead = el('input', { type: 'number', min: '1', max: '180', value: String(r.lead), class: 'mins', inputmode: 'numeric', 'aria-label': 'Minutes before' });
       lead.addEventListener('input', function () { r.lead = Math.max(1, Math.min(180, +lead.value || 10)); });
-      var when = el('select', { 'aria-label': 'Every day or today only' }, [el('option', { value: 'daily', text: S().everyDay }), el('option', { value: 'today', text: S().todayOnly })]);
+      var when = el('select', { 'aria-label': 'Every day or today only' }, [el('option', { value: 'daily', text: L.everyDay }), el('option', { value: 'today', text: L.todayOnly })]);
       when.value = r.once ? 'today' : 'daily';
       when.addEventListener('change', function () { r.once = when.value === 'today' ? isoOf(Cal.nowInTz(Date.now(), loc().tz).rd) : null; });
-      var del = el('button', { type: 'button', class: 'btn small', text: '×', title: S().remove, 'aria-label': S().remove, onclick: function () { list.splice(list.indexOf(r), 1); renderRows(); } });
-      return el('div', { class: 'rem-row' }, [tSel, wSel, el('span', { class: 'rem-lead' }, [lead, S().minBefore]), refSel, when, del]);
+      var del = el('button', { type: 'button', class: 'btn small', text: '×', title: L.remove, 'aria-label': L.remove, onclick: function () { list.splice(list.indexOf(r), 1); renderRows(); } });
+      return el('div', { class: 'rem-row' }, [tSel, wSel, el('span', { class: 'rem-lead' }, [lead, L.minBefore]), refSel, when, del]);
     }
-    function renderRows() { rows.textContent = ''; list.forEach(function (r) { rows.appendChild(rowEl(r)); }); if (!list.length) rows.appendChild(el('div', { class: 'hint', text: S().noRems })); }
+    function renderRows() { rows.textContent = ''; list.forEach(function (r) { rows.appendChild(rowEl(r)); }); if (!list.length) rows.appendChild(el('div', { class: 'hint', text: L.noRems })); }
     renderRows();
-    var addB = el('button', { type: 'button', class: 'btn small', id: 'rem-add', text: S().addRem, onclick: function () { if (list.length >= 10) { toast(S().maxRems); return; } list.push({ tefilla: tfs[0].id, time: null, pick: 'first', lead: 10, once: null, ref: bigMode() }); renderRows(); } });
+    var addB = el('button', { type: 'button', class: 'btn small', id: 'rem-add', text: L.addRem, onclick: function () { if (list.length >= 10) { toast(L.maxRems); return; } list.push({ tefilla: tfs[0].id, time: null, pick: 'first', lead: 10, once: null, ref: bigMode() }); renderRows(); } });
     var daily = el('input', { type: 'checkbox', id: 'push-daily' }); daily.checked = draft.daily;
     daily.addEventListener('change', function () { draft.daily = daily.checked; });
     var dailyAt = el('input', { type: 'time', id: 'push-daily-at', value: draft.dailyAt });
     dailyAt.addEventListener('change', function () { draft.dailyAt = dailyAt.value; });
     var msg = el('div', { class: 'hint', id: 'push-msg' });
-    var saveB = el('button', { class: 'btn primary small', id: 'push-save', text: st ? S().remUpdate : S().remOn, onclick: function () {
+    var saveB = el('button', { class: 'btn primary small', id: 'push-save', text: st ? L.remUpdate : L.remOn, onclick: function () {
       var reminders = list.map(function (r) { var o = r.tefilla.indexOf('z:') === 0 ? { zman: r.tefilla.slice(2), lead: r.lead } : { tefilla: r.tefilla, time: r.time, lead: r.lead }; if (!o.zman && r.time == null) o.pick = r.pick; if (!o.zman && r.ref === 'milestone') o.ref = 'milestone'; if (r.once) o.once = r.once; return o; });
       var d = daily.checked ? (function () { var m = /^(\d{2}):(\d{2})$/.exec(dailyAt.value); return m ? +m[1] * 60 + +m[2] : 6 * 60; })() : null;
-      if (!reminders.length && d == null) { msg.textContent = S().remAtLeast; return; }
-      saveB.disabled = true; msg.textContent = S().turningOn;
-      subscribePush({ reminders: reminders, daily: d }).then(function () { ui.remDraft = null; msg.textContent = S().remsOn; render(); }, function (e) { saveB.disabled = false; msg.textContent = S().remOnFail + (e && e.message || e); });
+      if (!reminders.length && d == null) { msg.textContent = L.remAtLeast; return; }
+      saveB.disabled = true; msg.textContent = L.turningOn;
+      subscribePush({ reminders: reminders, daily: d }).then(function () { ui.remDraft = null; msg.textContent = L.remsOn; render(); }, function (e) { saveB.disabled = false; msg.textContent = L.remOnFail + (e && e.message || e); });
     } });
     var form = el('div', { class: 'col' }, [rows, el('div', { class: 'tabs' }, [addB]),
-      el('div', { class: 'push-row' }, [el('label', { for: 'push-daily', class: 'push-lbl' }, [daily, S().dailyAt]), dailyAt]),
-      el('div', { class: 'tabs' }, [saveB, st ? el('button', { class: 'btn small', id: 'push-off', text: S().remOff, onclick: function () { ui.remDraft = null; unsubscribePush().then(function () { render(); }); } }) : null]),
+      el('div', { class: 'push-row' }, [el('label', { for: 'push-daily', class: 'push-lbl' }, [daily, L.dailyAt]), dailyAt]),
+      el('div', { class: 'tabs' }, [saveB, st ? el('button', { class: 'btn small', id: 'push-off', text: L.remOff, onclick: function () { ui.remDraft = null; unsubscribePush().then(function () { render(); }); } }) : null]),
       msg]);
     box.appendChild(form);
     return box;
@@ -675,7 +680,7 @@
   /* The service-worker registration and the push key are fetched ahead of time, so that subscribing can start inside the user's tap:
      Safari shows the notification prompt from subscribe() itself and refuses it once the tap has "expired". */
   function preparePush() {
-    if (!pushSupported()) return Promise.reject(new Error(S().noPush));
+    if (!pushSupported()) return Promise.reject(new Error(SU().noPush));
     if (!ui.pushPrep) ui.pushPrep = Promise.all([
       navigator.serviceWorker.ready,
       fetch(notifyBase() + '/push/key').then(function (r) { if (!r.ok) throw new Error('The reminder service did not answer (' + r.status + ')'); return r.text(); })
@@ -719,30 +724,30 @@
     function step(k, text, icon) { return el('li', null, [el('span', { class: 'stepn', text: String(k) }), icon ? svgIcon(icon) : null, el('span', { text: text })]); }
     function copyRow() {
       var url = location.href.split('#')[0].replace(/admin\.html$/, '');
-      return el('div', { class: 'copyrow' }, [el('code', { text: url }), el('button', { type: 'button', class: 'btn small', text: S().copyAddr, onclick: function () {
-        (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(url) : Promise.reject()).then(function () { toast(S().copied); }, function () { toast(url, 8000); });
+      return el('div', { class: 'copyrow' }, [el('code', { text: url }), el('button', { type: 'button', class: 'btn small', text: SU().copyAddr, onclick: function () {
+        (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(url) : Promise.reject()).then(function () { toast(SU().copied); }, function () { toast(url, 8000); });
       } })]);
     }
     if (inArtifact) return out;
-    if (isStandalone()) { out.push(el('div', { class: 'installed' }, [el('span', { class: 'okmark', text: '✓' }), el('span', { text: S().installed })])); return out; }
+    if (isStandalone()) { out.push(el('div', { class: 'installed' }, [el('span', { class: 'okmark', text: '✓' }), el('span', { text: SU().installed })])); return out; }
     if (deferredInstall) {
-      out.push(el('p', { class: 'hint', text: S().oneTap }));
-      out.push(el('button', { type: 'button', class: 'btn primary', text: S().installApp, onclick: function () { installApp(); closeSheet(); } }));
+      out.push(el('p', { class: 'hint', text: SU().oneTap }));
+      out.push(el('button', { type: 'button', class: 'btn primary', text: SU().installApp, onclick: function () { installApp(); closeSheet(); } }));
       return out;
     }
     if (ios && safari) {
-      out.push(el('p', { class: 'hint', text: S().iosSafari }));
-      out.push(el('ol', { class: 'guide' }, [step(1, S().iosStep1, 'share'), step(2, S().iosStep2, 'plus'), step(3, S().iosStep3, 'home')]));
+      out.push(el('p', { class: 'hint', text: SU().iosSafari }));
+      out.push(el('ol', { class: 'guide' }, [step(1, SU().iosStep1, 'share'), step(2, SU().iosStep2, 'plus'), step(3, SU().iosStep3, 'home')]));
     } else if (ios) {
-      out.push(el('p', { class: 'hint', text: S().iosOther }));
+      out.push(el('p', { class: 'hint', text: SU().iosOther }));
       out.push(copyRow());
-      out.push(el('ol', { class: 'guide' }, [step(1, S().iosOther1, 'link'), step(2, S().iosOther2, 'share')]));
+      out.push(el('ol', { class: 'guide' }, [step(1, SU().iosOther1, 'link'), step(2, SU().iosOther2, 'share')]));
     } else if (android) {
-      out.push(el('p', { class: 'hint', text: S().android }));
-      out.push(el('ol', { class: 'guide' }, [step(1, S().and1, 'menu'), step(2, S().and2, 'plus'), step(3, S().and3, 'home')]));
+      out.push(el('p', { class: 'hint', text: SU().android }));
+      out.push(el('ol', { class: 'guide' }, [step(1, SU().and1, 'menu'), step(2, SU().and2, 'plus'), step(3, SU().and3, 'home')]));
     } else {
-      out.push(el('p', { class: 'hint', text: S().desktop }));
-      out.push(el('ol', { class: 'guide' }, [step(1, S().desk1, 'install'), step(2, S().desk2(cfg.name || 'לוח המנינים'), 'plus')]));
+      out.push(el('p', { class: 'hint', text: SU().desktop }));
+      out.push(el('ol', { class: 'guide' }, [step(1, SU().desk1, 'install'), step(2, SU().desk2(cfg.name || 'לוח המנינים'), 'plus')]));
     }
     return out;
   }
@@ -755,32 +760,37 @@
     function keep(key, value, def) { try { if (value === def) localStorage.removeItem(key); else localStorage.setItem(key, value); } catch (e) {} render(); }
     var disp = [], msT = tefillos().filter(function (t) { return t.milestone && t.kind !== 'event'; })[0];
     if (msT) { /* the milestone (הודו) as the big number instead of the start */
-      var bigSel = el('select', { id: 'big-time', 'aria-label': 'Which time is the big number' }, [el('option', { value: 'start', text: startLabel(msT) + ' (' + S().startWord + ')' }), el('option', { value: 'milestone', text: msT.milestone })]);
+      var bigSel = el('select', { id: 'big-time', 'aria-label': 'Which time is the big number' }, [el('option', { value: 'start', text: startLabel(msT) + ' (' + SU().startWord + ')' }), el('option', { value: 'milestone', text: msT.milestone })]);
       bigSel.value = bigMode();
       bigSel.addEventListener('change', function () { try { localStorage.setItem('minyan-big', bigSel.value); } catch (e) {} render(); });
-      disp.push(srow(S().bigNumber, bigSel, 'big-time'));
+      disp.push(srow(SU().bigNumber, bigSel, 'big-time'));
     }
     var lookSel = el('select', { id: 'look', 'aria-label': 'Look of the board' }, LOOKS.map(function (l) { return el('option', { value: l[0], text: l[1] }); }));
     lookSel.value = lookMode();
     lookSel.addEventListener('change', function () { keep('minyan-look', lookSel.value, lookDefault()); });
-    disp.push(srow(S().look, lookSel, 'look'));
-    var langSel = el('select', { id: 'lang', 'aria-label': 'Language of the labels' }, [el('option', { value: 'he', text: 'עברית' }), el('option', { value: 'yi', text: 'יידיש' }), el('option', { value: 'en', text: 'English' })]);
+    disp.push(srow(SU().look, lookSel, 'look'));
+    var langSel = el('select', { id: 'lang', 'aria-label': 'Language of the labels' }, [el('option', { value: 'he', text: 'עברית' }), el('option', { value: 'yi', text: 'יידיש' })]);
     langSel.value = langMode();
     langSel.addEventListener('change', function () { keep('minyan-lang', langSel.value, langDefault()); });
-    disp.push(srow(S().labels, langSel, 'lang'));
+    disp.push(srow(SU().labels, langSel, 'lang'));
+    /* English for the sheets only: the board keeps its Hebrew or Yiddish */
+    var uiSel = el('select', { id: 'ui-lang', 'aria-label': 'Language of the settings' }, [el('option', { value: '', text: SU().sameAsBoard }), el('option', { value: 'en', text: 'English' })]);
+    uiSel.value = uiLang() === 'en' ? 'en' : '';
+    uiSel.addEventListener('change', function () { try { if (uiSel.value === 'en') localStorage.setItem('minyan-ui-lang', 'en'); else localStorage.removeItem('minyan-ui-lang'); } catch (e) {} render(); close(); openSettings(); });
+    disp.push(srow(SU().uiLangLabel, uiSel, 'ui-lang'));
     var sheet = el('div', { class: 'panel sheet' }, [
-      el('div', { class: 'sheet-head' }, [el('h2', { text: S().settings }), el('button', { type: 'button', class: 'btn icon', text: '✕', 'aria-label': S().close, onclick: close })]),
-      section(S().display, S().displayHint, disp),
-      section(S().cdBox, S().cdHint, [el('button', { type: 'button', class: 'btn small', id: 'zc-open', text: S().chooseZmanim, onclick: openCountdownChooser })])]);
-    var pp = pushPanel(); if (pp) { pp.classList.add('inset'); sheet.appendChild(pp); }
+      el('div', { class: 'sheet-head' }, [el('h2', { text: SU().settings }), el('button', { type: 'button', class: 'btn icon', text: '✕', 'aria-label': SU().close, onclick: close })]),
+      section(SU().display, SU().displayHint, disp),
+      section(SU().cdBox, SU().cdHint, [el('button', { type: 'button', class: 'btn small', id: 'zc-open', text: SU().chooseZmanim, onclick: openCountdownChooser })])]);
+    var pp = pushPanel(SU()); if (pp) { pp.classList.add('inset'); sheet.appendChild(pp); }
     var app = installGuide(close);
-    app.push(el('button', { type: 'button', class: 'btn small', id: 'check-updates', text: S().checkUpdates, onclick: function () {
+    app.push(el('button', { type: 'button', class: 'btn small', id: 'check-updates', text: SU().checkUpdates, onclick: function () {
       var p = ('serviceWorker' in navigator) ? navigator.serviceWorker.getRegistration().then(function (r) { return r ? r.update() : null; }) : Promise.resolve();
-      p.then(function () { return loadRemote(); }).then(function () { toast(S().upToDate); }, function () { toast(S().checkFail); });
+      p.then(function () { return loadRemote(); }).then(function () { toast(SU().upToDate); }, function () { toast(SU().checkFail); });
     } }));
-    var appSec = section(S().installSec, '', app); appSec.id = 'sset-app';
+    var appSec = section(SU().installSec, '', app); appSec.id = 'sset-app';
     sheet.appendChild(appSec);
-    sheet.appendChild(el('div', { class: 'bar' }, [el('button', { type: 'button', class: 'btn primary', id: 'set-done', text: S().done, onclick: close })]));
+    sheet.appendChild(el('div', { class: 'bar' }, [el('button', { type: 'button', class: 'btn primary', id: 'set-done', text: SU().done, onclick: close })]));
     ov.appendChild(sheet);
     ov.addEventListener('click', function (ev) { if (ev.target === ov) close(); });
     document.body.appendChild(ov);
@@ -1052,7 +1062,7 @@
     var lookRow2 = el('div', { class: 'fields' }, [field('Civil date on the board and the weekly sheet', fDateFmt), field('Big number on the tiles, by default (everyone may switch it on their own phone)', fBig), field('Minutes a minyan stays marked "now" after it starts (then it is dimmed, and the lobby screen hides it)', fNowMins), field('Lobby screen: seconds per sponsor box (they take turns when there is more than one)', fSponsorSecs)]);
     var fPalette = el('select', { id: 'f-palette' }, [el('option', { value: 'shul', text: 'Shul: light stone, brass, charcoal, burgundy' }), el('option', { value: 'classic', text: 'Classic: parchment and navy' }), el('option', { value: 'contrast', text: 'High contrast: black on white, larger type' })]);
     fPalette.value = lookDefault.call(null) && isLook(d.palette) ? d.palette : 'shul';
-    var fLang = el('select', { id: 'f-lang' }, [el('option', { value: 'he', text: 'Hebrew (היום, מחר, מנין הבא…)' }), el('option', { value: 'yi', text: 'Yiddish (היינט, מארגן, זונטאג…)' }), el('option', { value: 'en', text: 'English (Today, Tomorrow, Next minyan…)' })]); fLang.value = d.lang === 'yi' ? 'yi' : 'he';
+    var fLang = el('select', { id: 'f-lang' }, [el('option', { value: 'he', text: 'Hebrew (היום, מחר, מנין הבא…)' }), el('option', { value: 'yi', text: 'Yiddish (היינט, מארגן, זונטאג…)' })]); fLang.value = d.lang === 'yi' ? 'yi' : 'he';
     cLook.body.appendChild(el('div', { class: 'fields' }, [field('Colors: the look everyone gets unless they pick another in the footer; the lobby screen and door displays always use it', fPalette), field('Board labels: the language everyone gets unless they pick another in the footer', fLang)]));
     cLook.body.appendChild(lookRow2);
     var fDispSize = el('select', { id: 'f-display-size' }, [['85', 'Smaller (85%)'], ['100', 'Normal (100%)'], ['115', 'Larger (115%)'], ['130', 'Largest (130%)'], ['150', 'Giant (150%)']].map(function (o) { return el('option', { value: o[0], text: o[1] }); }));
