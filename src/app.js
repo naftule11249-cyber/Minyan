@@ -200,7 +200,7 @@
 
     var banner = engine.activeBanner(now);
     if (banner) root.appendChild(el('div', { class: 'banner', role: 'status' }, [el('div', { class: 'banner-inner', text: banner.text.trim() })]));
-    var strip = sponsorsStrip(rd);
+    var strip = sponsorsStrip(rd, lobby); /* the hallway keeps a frame for a sponsor line that has not been filled in */
     if (strip && !lobby) root.appendChild(strip); /* on the lobby screen the sponsor box sits in the side column, under the zmanim */
     var up = upcoming(now, rd);
     var main = el('main'), colA = el('div', { class: 'col' }), colB = el('div', { class: 'col' });
@@ -236,16 +236,21 @@
       /* the hallway screen: shacharis on one side, the rest on the other, the clock and the sponsors down the middle */
       main.className = 'wall';
       var colR = el('div', { class: 'wcol' }), colM = el('div', { class: 'wcol mid' }), colL = el('div', { class: 'wcol' });
-      colM.appendChild(analogClock(now));
-      colM.appendChild(next);
-      var cards = wallSections(sched, now, up);
-      if (!cards.length && up) cards = wallSections(up.sched, now, up, true); /* nothing left today: tomorrow's lists */
-      cards.forEach(function (c, i) { (i === 0 ? colR : colL).appendChild(c); });
+      var items = wallSections(sched, now, up);
+      if (!items.length && up) items = wallSections(up.sched, now, up, true); /* nothing left today: tomorrow's lists */
+      if (items.length) colR.appendChild(wallCard(items[0].title, items[0].nodes)); /* the first tefilla of the day keeps a frame to itself */
+      colR.appendChild(next);
+      if (items.length > 1) { /* the rest of the day shares one frame, each tefilla named above its own tiles */
+        var rest = items.slice(1), blocks = [];
+        rest.forEach(function (it) { blocks.push(el('div', { class: 'sub', text: it.sub })); blocks = blocks.concat(it.nodes); });
+        colL.appendChild(wallCard(S().minyanim(rest.map(function (it) { return it.t.name; }).join(' ')), blocks));
+      }
       /* once the day's zmanim have all passed, the card shows tomorrow's */
       var zInfo = info, zz = z, zRd = rd, zTitle = null;
       if (!nz) { zRd = rd + 1; zInfo = Cal.dayInfo(zRd, !!cfg.israel); zz = zmanimFor(zRd); nz = nextZman(zInfo, zz, zRd, now); zTitle = S().zmanimOf + S().tomorrow; }
-      colM.appendChild(wallZmanim(zInfo, zz, zRd, now, nz, zTitle)); /* the middle: the clock, the next minyan, the day's zmanim */
-      if (strip) colR.appendChild(strip); /* the sponsor boxes fill the room under the first column */
+      colL.appendChild(wallZmanim(zInfo, zz, zRd, now, nz, zTitle));
+      colM.appendChild(analogClock(now, false)); /* the time with seconds is in the top bar */
+      if (strip) colM.appendChild(strip);
       main.appendChild(colR); main.appendChild(colM); main.appendChild(colL);
       root.appendChild(main);
       if (keepOv) root.appendChild(keepOv);
@@ -377,14 +382,18 @@
   }
   /* ---------- the hallway screen (?view=display): one card per tefilla, tiles in columns, nothing to scroll ---------- */
   /* A card per tefilla. A repeating line ("every 10 minutes from … to …") shows its next minyan as a tile and the rest as one line. */
+  function wallCard(title, nodes) {
+    var sec = el('section', { class: 'tefilla' }, [el('h3', null, [title])]);
+    nodes.forEach(function (n) { if (n) sec.appendChild(n); });
+    return sec;
+  }
   function wallSections(s, now, up, force) {
     var out = [];
     tefillaLists(s, now, !force).forEach(function (x) {
       var t = x.t, list = x.list.filter(function (e) { return force || entryState(e, now, up) !== 'past'; }), counts = {};
       if (!list.length) return;
       list.forEach(function (e) { if (e.series) counts[e.series.id] = (counts[e.series.id] || 0) + 1; });
-      var sec = el('section', { class: 'tefilla' }), grid = el('div', { class: 'grid' }), opened = {}, runs = [];
-      sec.appendChild(el('h3', null, [sectionTitle(x)]));
+      var nodes = [], grid = el('div', { class: 'grid' }), opened = {}, runs = [];
       list.forEach(function (e) {
         var sid = e.series && e.series.id;
         if (sid && counts[sid] >= 3) { /* a run of three or more: the next one as a tile, the rest as a line */
@@ -393,15 +402,15 @@
         }
         grid.appendChild(wallTile(e, t, entryState(e, now, up)));
       });
-      sec.appendChild(grid);
+      nodes.push(grid);
       runs.forEach(function (r) {
         if (r.items.length < 2) { r.items.forEach(function (e) { grid.appendChild(wallTile(e, t, entryState(e, now, up))); }); return; }
         var first = r.items[0], last = r.items[r.items.length - 1];
-        sec.appendChild(el('div', { class: 'runline' }, [
+        nodes.push(el('div', { class: 'runline' }, [
           el('span', { class: 'num', text: S().runLine(r.s.every, fmtTime(first.start), fmtTime(last.start)) }),
           r.s.rooms && r.s.rooms.length ? el('span', { class: 'rooms', text: r.s.rooms.join(' · ') }) : null]));
       });
-      out.push(sec);
+      out.push({ t: t, title: sectionTitle(x), sub: t.name + (x.fromTomorrow ? ' – ' + S().tomorrow + ', ' + S().days[x.tomorrow.info.dow] : ''), nodes: nodes });
     });
     return out;
   }
@@ -545,9 +554,9 @@
     return el('section', { class: 'side' }, [el('h3', { text: title || L.zmanim }), ul]);
   }
   /* Sponsor boxes (פרנס החודש and friends) in a framed strip under the header */
-  function sponsorsStrip(rd) {
+  function sponsorsStrip(rd, includeEmpty) {
     var items = [];
-    engine.activeNotices(rd).forEach(function (n) {
+    engine.activeNotices(rd, includeEmpty).forEach(function (n) {
       items.push(el('section', { class: 'sponsor' }, [
         el('div', { class: 'frame' }),
         el('h2', { class: 't', text: n.title || '' }),
@@ -555,7 +564,7 @@
     });
     if (ui.sponsorTimer) { clearInterval(ui.sponsorTimer); ui.sponsorTimer = null; }
     if (!items.length) return null;
-    var rotate = $('#app').classList.contains('display') && items.length > 1;
+    var rotate = $('#app').classList.contains('room') && items.length > 1; /* a door tablet shows one at a time; the hallway screen has a column for them all */
     if (!rotate) return el('div', { class: 'sponsors' }, [el('div', { class: 'sponsors-inner' }, items)]);
     /* lobby / door screens: one sponsor at a time, cycling with a fade; the index survives the minute-by-minute re-render */
     var idx = (ui.sponsorIndex || 0) % items.length, secs = Math.max(2, +cfg.sponsorSeconds || 8);
@@ -851,18 +860,18 @@
       ui.aclock.h.setAttribute('transform', 'rotate(' + ((p.hh % 12) * 30 + p.mm * 0.5) + ' 100 100)');
       ui.aclock.m.setAttribute('transform', 'rotate(' + (p.mm * 6 + p.ss * 0.1) + ' 100 100)');
       ui.aclock.s.setAttribute('transform', 'rotate(' + (p.ss * 6) + ' 100 100)');
-      ui.aclock.t.textContent = h + ':' + pad2(p.mm) + ':' + pad2(p.ss);
+      if (ui.aclock.t) ui.aclock.t.textContent = h + ':' + pad2(p.mm) + ':' + pad2(p.ss);
     }
   }
   /* the lobby screen's round clock: an SVG face whose hands updateClock turns every second */
-  function analogClock(now) {
+  function analogClock(now, withDigital) {
     var wrap = el('div', { class: 'aclock', 'aria-hidden': 'true' }), svg = '', i, a;
     for (i = 0; i < 60; i++) svg += '<line class="tick' + (i % 5 ? '' : ' major') + '" x1="100" y1="' + (i % 5 ? 9 : 6) + '" x2="100" y2="' + (i % 5 ? 13 : 16) + '" transform="rotate(' + (i * 6) + ' 100 100)"/>';
     for (i = 1; i <= 12; i++) { a = i * Math.PI / 6; svg += '<text x="' + (100 + 73 * Math.sin(a)).toFixed(1) + '" y="' + (100 - 73 * Math.cos(a)).toFixed(1) + '">' + i + '</text>'; }
     wrap.innerHTML = '<svg viewBox="0 0 200 200"><circle class="face" cx="100" cy="100" r="97"/><circle class="rim" cx="100" cy="100" r="91"/>' + svg +
       '<line class="hand hour" x1="100" y1="112" x2="100" y2="52"/><line class="hand minute" x1="100" y1="114" x2="100" y2="30"/><line class="hand second" x1="100" y1="118" x2="100" y2="24"/><circle class="cap" cx="100" cy="100" r="5"/></svg>';
-    var digital = el('div', { class: 'atime num' });
-    wrap.appendChild(digital);
+    var digital = withDigital === false ? null : el('div', { class: 'atime num' });
+    if (digital) wrap.appendChild(digital);
     ui.aclock = { h: wrap.querySelector('.hour'), m: wrap.querySelector('.minute'), s: wrap.querySelector('.second'), t: digital };
     updateClock(now);
     return wrap;

@@ -20,7 +20,7 @@ const { chromium } = require('playwright');
   const geo = await page.evaluate(() => { const f = document.getElementById('tv'), s = document.getElementById('stage').getBoundingClientRect(); return { w: +f.width, h: +f.height, scale: +(/scale\(([\d.]+)\)/.exec(f.style.transform) || [0, 0])[1], stageW: Math.round(s.width), fits: s.right <= window.innerWidth + 1 }; });
   ok('the frame is a 1920×1080 TV scaled to the phone\'s width (about 42%), inside the screen', [geo.w, geo.h, geo.scale > 0.38 && geo.scale < 0.46, geo.fits], [1920, 1080, true, true]);
   ok('inside the frame the lobby renders at TV size: the round clock and the sections, no redirect loop', [await frame.locator('.aclock svg').count(), await frame.locator('.wall section.tefilla').count() >= 2, await frame.locator('html').evaluate(h => h.classList.contains('lobby'))], [1, true, true]);
-  ok('digital time runs inside the frame', /^\d{1,2}:\d{2}:\d{2}$/.test((await frame.locator('.aclock .atime').textContent()).trim()), true);
+  ok('the running time, with seconds, shows in the frame\'s top bar', [/^\d{1,2}:\d{2}$/.test((await frame.locator('.top .clock .hm').textContent()).trim()), /^\d{2}$/.test((await frame.locator('.top .clock .ss').textContent()).trim())], [true, true]);
   await page.selectOption('#size', '3840x2160'); await page.waitForTimeout(300);
   ok('4K choice: the frame becomes 3840×2160, still fits', await page.evaluate(() => { const f = document.getElementById('tv'), s = document.getElementById('stage').getBoundingClientRect(); return [+f.width, +f.height, s.right <= window.innerWidth + 1]; }), [3840, 2160, true]);
   await page.screenshot({ path: 'test/shot-tv-preview.png' });

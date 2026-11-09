@@ -25,16 +25,16 @@ const { chromium } = require('playwright');
   /* morning */
   let { ctx, page } = await open('?view=display');
   const deg = async sel => +(/rotate\(([\d.]+)/.exec(await page.locator(sel).getAttribute('transform') || '') || [0, -1])[1];
-  ok('three columns; the round clock sits in the middle one, with the next-minyan box', [await page.locator('main.wall > .wcol').count(), await page.locator('.wall .wcol.mid .aclock svg').count(), await page.locator('.wall .wcol.mid section.next').count()], [3, 1, 1]);
+  ok('three columns: the round clock and the sponsor frames down the middle, the next-minyan panel under the first tefilla', [await page.locator('main.wall > .wcol').count(), await page.locator('.wall .wcol.mid .aclock svg').count(), await page.locator('.wall .wcol.mid .sponsor').count(), await page.locator('main.wall > .wcol').first().locator('> section.next').count()], [3, 1, 3, 1]);
   const sec0 = Math.round(await deg('.aclock .second'));
   ok('hands point at 7:50 (a second or two after the page opened)', [Math.round(await deg('.aclock .hour')), Math.round(await deg('.aclock .minute')), sec0 >= 0 && sec0 <= 40], [235, 300, true]);
-  ok('digital time under the face', /^7:50:0\d$/.test(await page.locator('.aclock .atime').textContent()), true);
+  ok('the running time, with seconds, is in the top bar', [/^7:50$/.test(await page.locator('.top .clock .hm').textContent()), /^0\d$/.test(await page.locator('.top .clock .ss').textContent()), await page.locator('.aclock .atime').count()], [true, true, 0]);
   await page.waitForTimeout(1200);
   ok('the second hand moves', Math.round(await deg('.aclock .second')) > sec0, true);
-  ok('no shul name and no digital clock in the header: the round clock carries the time', [await page.locator('.top .shul').count(), await page.locator('.top .clock').isVisible().catch(() => false)], [0, false]);
+  ok('the header carries the day, the date and the label, not the shul\'s name again', [await page.locator('.top .shul').count(), await page.locator('.top .dayline').textContent(), await page.locator('.top .chip').first().textContent()], [0, 'יום שלישי פרשת תולדות', 'ראש חודש כסלו']);
   ok('everything fits: no scrolling, no column overflowing, every card and tile on the screen', await fits(page), { noScroll: true, columnsFit: true, cardsInside: true, tilesInside: true, columns: 3 });
   const titles = await page.locator('main.wall section.tefilla h3').allTextContents();
-  ok('a card per tefilla plus the zmanim card', [titles.length, /שחרית/.test(titles.join('|')), /מנחה/.test(titles.join('|')), /מעריב/.test(titles.join('|')), titles.indexOf('זמני היום') >= 0], [4, true, true, true, true]);
+  ok('one frame for the first tefilla, one for the rest of the day, one for the zmanim', [titles, await page.locator('.wall .sub').allTextContents()], [['מניני שחרית', 'מניני מנחה מעריב', 'זמני היום'], ['מנחה', 'מעריב']]);
   const shacharis = page.locator('main.wall > .wcol').first().locator('section.tefilla').first();
   ok('shacharis stands alone in the first column, every minyan still ahead shown as a tile, the one that just started first', [await shacharis.locator('h3').textContent(), await shacharis.locator('.tile').count() >= 10, await shacharis.locator('.tile .time').first().textContent()], ['מניני שחרית', true, '7:45']);
   ok('nothing is paged away', await page.locator('.pg').count(), 0);
@@ -48,7 +48,7 @@ const { chromium } = require('playwright');
 
   /* afternoon and night */
   ({ ctx, page } = await open('?view=display', Date.UTC(2026, 10, 10, 19, 20)));
-  ok('2:20 PM: shacharis keeps its column and names tomorrow, mincha and maariv fill the other, nothing clipped', [(await page.locator('main.wall section.tefilla h3').allTextContents()).map(t => t.replace(/[●○ ]+$/, '')), (await fits(page)).columnsFit], [['מניני שחרית – מחר, יום רביעי', 'זמני היום', 'מניני מנחה', 'מניני מעריב'], true]);
+  ok('2:20 PM: shacharis keeps its frame and names tomorrow, mincha and maariv share the other, nothing clipped', [(await page.locator('main.wall section.tefilla h3').allTextContents()).map(t => t.replace(/[●○ ]+$/, '')), (await fits(page)).columnsFit], [['מניני שחרית – מחר, יום רביעי', 'מניני מנחה מעריב', 'זמני היום'], true]);
   await ctx.close();
   ({ ctx, page } = await open('?view=display', Date.UTC(2026, 10, 11, 2, 10)));
   ok('9:10 PM: the zmanim card turns to tomorrow and still counts down', [await page.locator('.zcard h3').textContent(), await page.locator('.wall .ztile.now').count()], ['זמני מחר', 1]);

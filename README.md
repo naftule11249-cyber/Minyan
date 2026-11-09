@@ -176,13 +176,13 @@ Same address, different screens (the `#` forms also work on the claude.ai page):
 
 ## The hallway screen on a TV
 
-`index.html?view=display` is built for a wall TV, watched from a distance. It is laid out in three columns and never scrolls:
+`index.html?view=display` is laid out like a shul's printed board, in three columns that never scroll:
 
-- **The first tefilla of the day** (שחרית) keeps the first column to itself, every minyan still ahead as a tile with its room, its time and its הודו. The sponsor boxes sit under it.
-- **The middle** holds the round clock with the time under it, the next-minyan box with its countdown, and the day's zmanim as tiles. The one being counted down to is marked and carries the countdown; once the day's zmanim have passed, the card turns to tomorrow's. The zmanim it counts down to are the ones picked in General.
-- **The rest of the day** (מנחה, מעריב) fills the last column. A repeating line is written as one line, "כל 10 דק׳ · 6:15–7:55" with its rooms, instead of a tile for each minyan, so a long Maariv list stays readable.
-- **It scales with the screen.** Text, tiles and the clock are sized from the screen's width and height, so a 60-inch TV and a 32-inch one show the same layout, and a 4K TV shown at full resolution is simply twice as sharp. The screen then measures itself and takes the largest size that fits the day, so a crowded morning shrinks a little by itself. General → "Hallway screen (TV)" caps that size, and `&size=80` in the address does it for one screen.
-- A minyan that has started stays up, marked עכשיו, for 20 minutes (General → "Minutes a minyan stays marked now"), then it drops off. The header carries the day, the date and any label such as ראש חודש; the shul's name is not repeated there.
+- **The top bar** carries the day and the parsha on one side, the Hebrew and civil date with any label (ראש חודש, ערב שבת…) and the running clock with seconds on the other. The shul's name is not repeated there.
+- **The first tefilla of the day** (שחרית) has a frame to itself, every minyan still ahead as a tile with its room, its time and its הודו; the next one is marked, and one that has just begun is marked עכשיו for 20 minutes (General → "Minutes a minyan stays marked now"). Under that frame is the next-minyan panel with its countdown.
+- **The middle** holds the big round clock and the sponsor frames (פרנס החודש and the like) stacked under it. A notice with a title and no text keeps its empty frame on this screen, as on a printed board; on the website and the phone it only appears once it has text.
+- **The rest of the day** (מנחה, מעריב) shares one frame, each tefilla named above its own tiles. A repeating line is written as one line with its rooms, "כל 10 דק׳ · 6:15–7:55", instead of a tile for each minyan, so a long Maariv list stays readable. Under it the day's zmanim are tiles; the one being counted down to is marked and carries the countdown, the ones already passed stay in view dimmed, and once the day's are over the frame turns to tomorrow's.
+- **It sizes itself to the TV.** Everything is measured from the screen's width and height, so a 60-inch TV and a 32-inch one show the same board and a 4K TV at full resolution is simply twice as sharp; the screen then takes the largest size that fits the day, so a crowded morning shrinks a little by itself. General → "Hallway screen (TV)" caps that size and `&size=80` in the address caps one screen.
 
 ## Another day's minyanim
 
