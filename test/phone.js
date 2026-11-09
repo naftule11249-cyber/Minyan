@@ -17,7 +17,7 @@ const { chromium } = require('playwright');
   ok('phone: tabs instead of tiles', [await page.locator('.ttabs button').count() >= 3, await page.locator('.tile').count()], [true, 0]);
   ok('phone: the next minyan\'s tefilla is the open tab', await page.locator('.ttabs button[aria-selected="true"]').textContent(), 'שחרית');
   const times = async () => page.locator('.row .time').allTextContents();
-  ok('phone: six past minyanim folded, 9:15 (now) first', [(await times())[0], await page.locator('.foldbtn').textContent()], ['9:15', 'הצג את הקודמים (6)']);
+  ok('phone: three of the six past minyanim folded, the last three stay, 8:30 first', [(await times())[0], await page.locator('.foldbtn').textContent()], ['8:30', 'הצג את הקודמים (3)']);
   ok('phone: next and now badges', [await page.locator('.row.next .badge').textContent(), await page.locator('.row.now .badge').textContent()], ['הבא', 'עכשיו']);
   await page.click('.foldbtn'); await page.waitForTimeout(200);
   ok('phone: unfolded shows 7:30 first and no fold button', [(await times())[0], await page.locator('.foldbtn').count()], ['7:30', 0]);

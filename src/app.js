@@ -77,9 +77,9 @@
   function countdownKeys() { var v = null; try { v = JSON.parse(localStorage.getItem('minyan-countdown') || 'null'); } catch (e) {} return Array.isArray(v) ? v : countdownKeysOf(cfg); }
   function openCountdownChooser() {
     var old = $('#zc-overlay'); if (old) old.remove();
-    var cur = countdownKeys(), boxes = {}, ov = el('div', { class: 'overlay modal', id: 'zc-overlay', dir: 'rtl' });
+    var cur = countdownKeys(), boxes = {}, ov = el('div', { class: 'overlay modal', id: 'zc-overlay', dir: sheetDir() });
     function close() { ov.remove(); }
-    var list = el('div', { class: 'col' }, COUNTDOWN_KEYS.filter(function (k) { return !zmanHidden(k); }).map(function (k) { var c = el('input', { type: 'checkbox', id: 'zc-' + k }); c.checked = cur.indexOf(k) >= 0; boxes[k] = c; return el('label', { for: 'zc-' + k, class: 'push-row' }, [c, ' ' + Cal.ZMAN_NAMES[k]]); }));
+    var list = el('div', { class: 'col' }, COUNTDOWN_KEYS.filter(function (k) { return !zmanHidden(k); }).map(function (k) { var c = el('input', { type: 'checkbox', id: 'zc-' + k }); c.checked = cur.indexOf(k) >= 0; boxes[k] = c; return el('label', { for: 'zc-' + k, class: 'push-row' }, [c, ' ' + zmanName(k)]); }));
     ov.appendChild(el('div', { class: 'panel small' }, [el('h2', { text: S().cdTitle }), el('p', { class: 'hint', text: S().cdChooserHint }), list,
       el('div', { class: 'bar' }, [el('button', { type: 'button', class: 'btn', id: 'zc-default', text: S().boardDefault, onclick: function () { try { localStorage.removeItem('minyan-countdown'); } catch (e) {} close(); render(); } }), el('button', { type: 'button', class: 'btn', id: 'zc-cancel', text: S().cancel, onclick: close }),
         el('button', { type: 'button', class: 'btn primary', id: 'zc-save', text: S().save, onclick: function () { var sel = COUNTDOWN_KEYS.filter(function (k) { return boxes[k] && boxes[k].checked; }); try { localStorage.setItem('minyan-countdown', JSON.stringify(sel)); } catch (e) {} close(); render(); } })])]));
@@ -120,7 +120,7 @@
   function fmtCountdown(ms) { return engine.fmtCountdown(ms); }
   /* the board's labels in Hebrew or Yiddish: General -> Board labels sets the default (the lobby screen and door displays always use it); each phone may pick its own */
   var STR = {
-    he: { remindMe: 'תזכורת', minutesBefore: 'דקות לפני', before: 'לפני', todayOnly: 'היום בלבד', thatDayOnly: 'באותו יום בלבד', everyDay: 'כל יום', everyDayAt: 'כל יום בשעה זו', remNote: 'התראה במכשיר זה, גם כשהאפליקציה סגורה.', cancel: 'ביטול', setRem: 'קביעת תזכורת', setting: 'קובע…', remSet: 'התזכורת נקבעה: ', remFail: 'לא ניתן לקבוע את התזכורת: ', minBefore: ' דק׳ לפני ', todayOnlyP: ' (היום בלבד)',
+    he: { zmanimOf: 'זמני ', remindMe: 'תזכורת', minutesBefore: 'דקות לפני', before: 'לפני', todayOnly: 'היום בלבד', thatDayOnly: 'באותו יום בלבד', everyDay: 'כל יום', everyDayAt: 'כל יום בשעה זו', remNote: 'התראה במכשיר זה, גם כשהאפליקציה סגורה.', cancel: 'ביטול', setRem: 'קביעת תזכורת', setting: 'קובע…', remSet: 'התזכורת נקבעה: ', remFail: 'לא ניתן לקבוע את התזכורת: ', minBefore: ' דק׳ לפני ', todayOnlyP: ' (היום בלבד)',
       picks: { first: 'המנין הראשון של היום', last: 'המנין האחרון של היום', 'before:shema': 'המנין האחרון לפני סוף זמן ק״ש', 'before:tefilla': 'המנין האחרון לפני סוף זמן תפילה', 'before:chatzos': 'המנין האחרון לפני חצות', 'before:sunset': 'המנין האחרון לפני השקיעה', 'before:tzeis': 'המנין האחרון לפני צאת הכוכבים' }, pickWith: function (label, name) { return label.replace('המנין', 'מנין ' + name); },
       remTitle: 'תזכורות בטלפון', remHint: 'התראה לפני המנינים או הזמנים שתבחרו, גם כשהאפליקציה סגורה. אפשר גם ללחוץ על כל מנין בלוח, או על כל זמן ברשימה, כדי לקבוע לו תזכורת.', zmanimGroup: 'זמנים', remove: 'הסרת התזכורת', noRems: 'עדיין אין תזכורות.', addRem: '+ תזכורת', maxRems: 'עד 10 תזכורות', dailyAt: ' הלוח היומי כל בוקר בשעה ', remUpdate: 'עדכון התזכורות', remOn: 'הפעלת תזכורות', remOff: 'כיבוי התזכורות', remAtLeast: 'הוסיפו לפחות תזכורת אחת.', turningOn: 'מפעיל…', remsOn: 'התזכורות פועלות במכשיר זה.', remOnFail: 'לא ניתן להפעיל תזכורות: ',
       settings: 'הגדרות', close: 'סגירה', display: 'תצוגה', displayHint: 'הבחירות נשמרות במכשיר זה; המסכים בבית המדרש נשארים כפי שקבע הגבאי.', bigNumber: 'המספר הגדול במשבצות', startWord: 'התחלה', look: 'מראה', labels: 'שפת הכיתובים', cdBox: 'תיבת הזמן הבא', cdHint: 'לאילו זמנים היא סופרת לאחור.', chooseZmanim: 'בחירת הזמנים…', installSec: 'התקנה כאפליקציה', checkUpdates: 'בדיקת עדכונים', upToDate: 'מעודכן. גרסה חדשה נטענת מעצמה כשהיא מגיעה.', checkFail: 'לא ניתן לבדוק כעת.', done: 'סיום',
@@ -129,7 +129,18 @@
       installFirst: 'כדי לקבל תזכורות באייפון או באייפד, הוסיפו תחילה את הלוח למסך הבית: בספארי לחצו על שיתוף, ואז „הוסף למסך הבית”, ופתחו אותו מהסמל.', noPush: 'דפדפן זה אינו יכול לקבל התראות. השתמשו בכרום, או באפליקציה המותקנת.',
       today: 'היום', tomorrow: 'מחר', tonight: 'בערב', nextMinyan: 'מנין הבא', nextZman: 'הזמן הבא', zmanim: 'זמני היום', none: 'אין מנינים רשומים', showEarlier: 'הצג את הקודמים', badgeNext: 'הבא', badgeNow: 'עכשיו', board: 'לוח ', special: 'לוח מיוחד', noMinyanim: 'לא רשומים מנינים לימים הקרובים.', fastStart: 'תחילת הצום', fastEnd: 'צאת הצום', motzaeiShabbos: 'מוצאי שבת', motzaeiYT: 'מוצאי יום טוב', omerTonight: 'הלילה סופרים', omer: 'ספירת העומר', laomer: ' לעומר', clock: 'השעה', timesBy: 'הזמנים לפי ', chul: 'לוח חוץ לארץ', eretz: 'לוח ארץ ישראל', parsha: ' פרשת ',
       days: Cal.DAY_NAMES, types: {}, minyanim: function (name) { return 'מניני ' + name; } },
-    yi: { remindMe: 'דערמאנונג', minutesBefore: 'מינוט פריער', before: 'פאר', todayOnly: 'נאר היינט', thatDayOnly: 'נאר יענעם טאג', everyDay: 'יעדן טאג', everyDayAt: 'יעדן טאג אין דער צייט', remNote: 'א מעלדונג אויף דעם מכשיר, אויך ווען די אַפּ איז פארמאכט.', cancel: 'אפשטעלן', setRem: 'שטעלן א דערמאנונג', setting: 'שטעלט…', remSet: 'די דערמאנונג איז געשטעלט: ', remFail: 'די דערמאנונג האט זיך נישט געלאזט שטעלן: ', minBefore: ' מינוט פאר ', todayOnlyP: ' (נאר היינט)',
+    en: { zmanimOf: 'Zmanim for ', remindMe: 'Remind me', minutesBefore: 'Minutes before', before: 'Before', todayOnly: 'Today only', thatDayOnly: 'That day only', everyDay: 'Every day', everyDayAt: 'Every day at this time', remNote: 'A notification on this device, even when the app is closed.', cancel: 'Cancel', setRem: 'Set reminder', setting: 'Setting…', remSet: 'Reminder set: ', remFail: 'Could not set the reminder: ', minBefore: ' min before ', todayOnlyP: ' (today only)',
+      picks: { first: 'First minyan of the day', last: 'Last minyan of the day', 'before:shema': 'Last minyan before sof zman Shema', 'before:tefilla': 'Last minyan before sof zman tefilla', 'before:chatzos': 'Last minyan before chatzos', 'before:sunset': 'Last minyan before sunset', 'before:tzeis': 'Last minyan before nightfall' }, pickWith: function (label, name) { return label.replace('minyan', name); },
+      remTitle: 'Reminders on your phone', remHint: 'A notification before the minyanim or zmanim you pick, even when the app is closed. Tap any minyan on the board, or any zman in the list, to set a reminder for it.', zmanimGroup: 'Zmanim', remove: 'Remove this reminder', noRems: 'No reminders yet.', addRem: '+ Reminder', maxRems: 'Up to 10 reminders', dailyAt: ' The day\'s board every morning at ', remUpdate: 'Update reminders', remOn: 'Turn on reminders', remOff: 'Turn off reminders', remAtLeast: 'Add at least one reminder.', turningOn: 'Turning on…', remsOn: 'Reminders are on for this device.', remOnFail: 'Could not turn on reminders: ',
+      settings: 'Settings', close: 'Close', display: 'Display', displayHint: 'Your choices stay on this device; the screens in the shul keep the gabbai\'s.', bigNumber: 'Big number on the tiles', startWord: 'start', look: 'Look', labels: 'Language', cdBox: 'The next-zman box', cdHint: 'Which zmanim it counts down to.', chooseZmanim: 'Choose the zmanim…', installSec: 'Install as an app', checkUpdates: 'Check for updates', upToDate: 'Up to date. A newer version reloads by itself when it arrives.', checkFail: 'Could not check right now.', done: 'Done',
+      cdTitle: 'Countdown zmanim', cdChooserHint: 'The next-zman box counts down to the nearest of these. Your choice stays on this device.', boardDefault: 'Board default', save: 'Save', footerSettings: '⚙ Settings', edit: 'Edit', installApp: 'Install the app', setRemTitle: 'Set a reminder',
+      installed: 'Installed. You are using the app, so reminders can reach this device.', oneTap: 'One tap puts the board on this device as an app, with its own icon, and lets reminders through.', iosSafari: 'On iPhone and iPad the app is added from Safari. Reminders work only from the installed app.', iosStep1: 'Tap the Share button, the square with an arrow, at the bottom of Safari.', iosStep2: 'Scroll down and tap "Add to Home Screen".', iosStep3: 'Tap Add, then open the board from its new icon.', iosOther: 'On iPhone and iPad only Safari can add the app. Open this address in Safari first:', copyAddr: 'Copy the address', copied: 'Copied. Paste it in Safari.', iosOther1: 'Paste the address in Safari and open it.', iosOther2: 'Tap Share, then "Add to Home Screen", then Add.', android: 'On Android, in Chrome:', and1: 'Tap the ⋮ menu at the top right.', and2: 'Tap "Add to Home screen" or "Install app".', and3: 'Tap Install. The board gets its own icon.', desktop: 'On a computer, in Chrome or Edge:', desk1: 'Click the install icon at the right end of the address bar, a screen with an arrow, or open the ⋮ menu.', desk2: function (name) { return 'Choose "Install ' + name + '".'; },
+      installFirst: 'To get reminders on iPhone or iPad, add the board to your home screen first: in Safari tap Share, then "Add to Home Screen", and open it from that icon.', noPush: 'This browser cannot receive notifications. Use Chrome, or the installed app.',
+      today: 'Today', tomorrow: 'Tomorrow', tonight: 'tonight', nextMinyan: 'Next minyan', nextZman: 'Next zman', zmanim: 'Today\'s zmanim', none: 'No minyanim listed', showEarlier: 'Show earlier', badgeNext: 'Next', badgeNow: 'Now', board: '', special: 'Special schedule', noMinyanim: 'No minyanim are listed for the coming days.', fastStart: 'Fast begins', fastEnd: 'Fast ends', motzaeiShabbos: 'Shabbos ends', motzaeiYT: 'Yom Tov ends', omerTonight: 'Tonight we count', omer: 'Sefiras HaOmer', laomer: ' la\'omer', clock: 'The time', timesBy: 'Times for ', chul: 'Diaspora calendar', eretz: 'Eretz Yisroel calendar', parsha: ' · Parshas ',
+      days: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Shabbos'], types: { weekday: 'Weekday schedule', sunday: 'Sunday schedule', friday: 'Erev Shabbos schedule', shabbos: 'Shabbos schedule', yomtov: 'Yom Tov schedule', erev_yomtov: 'Erev Yom Tov schedule', chol_hamoed: 'Chol Hamoed schedule', rosh_chodesh: 'Rosh Chodesh schedule', fast: 'Fast day schedule', chanukah: 'Chanukah schedule', purim: 'Purim schedule', yomkippur: 'Yom Kippur schedule' },
+      minyanim: function (name) { return ({ 'שחרית': 'Shacharis', 'מנחה': 'Mincha', 'מעריב': 'Maariv' }[name] || name) + ' minyanim'; },
+      zmanNames: { alos: 'Alos hashachar', sunrise: 'Sunrise (netz)', shema: 'Sof zman Shema', tefilla: 'Sof zman tefilla', chatzos: 'Chatzos', minchag: 'Mincha gedola', plag: 'Plag hamincha', candles: 'Candle lighting', sunset: 'Sunset (shkiah)', tzeis: 'Nightfall (tzeis)', tzeis60: '60 minutes after sunset', tzeis72: 'Rabbeinu Tam (72)' } },
+    yi: { zmanimOf: 'זמנים פון ', remindMe: 'דערמאנונג', minutesBefore: 'מינוט פריער', before: 'פאר', todayOnly: 'נאר היינט', thatDayOnly: 'נאר יענעם טאג', everyDay: 'יעדן טאג', everyDayAt: 'יעדן טאג אין דער צייט', remNote: 'א מעלדונג אויף דעם מכשיר, אויך ווען די אַפּ איז פארמאכט.', cancel: 'אפשטעלן', setRem: 'שטעלן א דערמאנונג', setting: 'שטעלט…', remSet: 'די דערמאנונג איז געשטעלט: ', remFail: 'די דערמאנונג האט זיך נישט געלאזט שטעלן: ', minBefore: ' מינוט פאר ', todayOnlyP: ' (נאר היינט)',
       picks: { first: 'דער ערשטער מנין פון טאג', last: 'דער לעצטער מנין פון טאג', 'before:shema': 'דער לעצטער מנין פאר סוף זמן ק״ש', 'before:tefilla': 'דער לעצטער מנין פאר סוף זמן תפילה', 'before:chatzos': 'דער לעצטער מנין פאר חצות', 'before:sunset': 'דער לעצטער מנין פאר שקיעה', 'before:tzeis': 'דער לעצטער מנין פאר צאת הכוכבים' }, pickWith: function (label, name) { return label.replace('מנין', name); },
       remTitle: 'דערמאנונגען אויפן טעלעפאן', remHint: 'א מעלדונג פאר די מנינים אדער זמנים וואס איר קלויבט אויס, אויך ווען די אַפּ איז פארמאכט. מען קען אויך דריקן אויף יעדן מנין אויפן לוח, אדער אויף יעדן זמן אין דער ליסטע, צו שטעלן א דערמאנונג.', zmanimGroup: 'זמנים', remove: 'אראפנעמען די דערמאנונג', noRems: 'נאך נישטא קיין דערמאנונגען.', addRem: '+ דערמאנונג', maxRems: 'ביז 10 דערמאנונגען', dailyAt: ' דער טעגליכער לוח יעדן אינדערפרי ', remUpdate: 'דערמאנונגען אפדעיטן', remOn: 'דערמאנונגען אנצינדן', remOff: 'דערמאנונגען פארלעשן', remAtLeast: 'לייגט צו כאטש איין דערמאנונג.', turningOn: 'צינדט אן…', remsOn: 'די דערמאנונגען זענען אן אויף דעם מכשיר.', remOnFail: 'די דערמאנונגען האבן זיך נישט געלאזט אנצינדן: ',
       settings: 'איינשטעלונגען', close: 'פארמאכן', display: 'אויסזען', displayHint: 'די ברירות בלייבן אויף דעם מכשיר; די שירעמס אין שול בלייבן ווי דער גבאי האט געשטעלט.', bigNumber: 'די גרויסע נומער אויף די קעסטלעך', startWord: 'אנהייב', look: 'קאלירן', labels: 'שפראך', cdBox: 'די קעסטל הזמן הבא', cdHint: 'צו וועלכע זמנים זי ציילט.', chooseZmanim: 'אויסקלויבן די זמנים…', installSec: 'אינסטאלירן ווי אן אַפּ', checkUpdates: 'זוכן אפדעיטס', upToDate: 'אפדעיטעד. א נייע ווערסיע לאדט זיך אליין ווען זי קומט אן.', checkFail: 'מען קען יעצט נישט נאכקוקן.', done: 'פארטיג',
@@ -137,12 +148,17 @@
       today: 'היינט', tomorrow: 'מארגן', tonight: 'ביינאכט', nextMinyan: 'מנין הבא', nextZman: 'הזמן הבא', zmanim: 'היינטיגע זמנים', none: 'קיין מנינים נישט איינגעשריבן', showEarlier: 'ווייז די פריערדיגע', badgeNext: 'הבא', badgeNow: 'יעצט', board: 'לוח ', special: 'ספעציעלער לוח', noMinyanim: 'קיין מנינים נישט איינגעשריבן פאר די קומענדיגע טעג.', fastStart: 'אנהייב תענית', fastEnd: 'סוף תענית', motzaeiShabbos: 'מוצאי שבת', motzaeiYT: 'מוצאי יום טוב', omerTonight: 'היינט ביינאכט ציילט מען', omer: 'ספירת העומר', laomer: ' לעומר', clock: 'די שעה', timesBy: 'די זמנים לויט ', chul: 'לוח חוץ לארץ', eretz: 'לוח ארץ ישראל', parsha: ' פרשת ',
       days: ['זונטאג', 'מאנטאג', 'דינסטאג', 'מיטוואך', 'דאנערשטאג', 'פרייטאג', 'שבת קודש'], types: { weekday: 'וואכן טעג', sunday: 'זונטאג', friday: 'ערב שבת', shabbos: 'שבת', yomtov: 'יום טוב', erev_yomtov: 'ערב יום טוב', chol_hamoed: 'חול המועד', rosh_chodesh: 'ראש חודש', fast: 'תענית', chanukah: 'חנוכה', purim: 'פורים', yomkippur: 'יום כיפור' }, minyanim: function (name) { return name + ' מנינים'; } }
   };
-  function langDefault() { return cfg.lang === 'yi' ? 'yi' : 'he'; }
+  var LANGS = ['he', 'yi', 'en'];
+  function langDefault() { return LANGS.indexOf(cfg.lang) > 0 ? cfg.lang : 'he'; }
   function langMode() {
     var view = currentView(); if (view.kind === 'display' || view.kind === 'room') return langDefault();
     var v = null; try { v = localStorage.getItem('minyan-lang'); } catch (e) {}
-    return v === 'yi' || v === 'he' ? v : langDefault();
+    return LANGS.indexOf(v) >= 0 ? v : langDefault();
   }
+  /* a zman's name in the board's language (English has its own; Hebrew and Yiddish share the calendar's) */
+  function zmanName(k) { var L = S(); return (L.zmanNames && L.zmanNames[k]) || Cal.ZMAN_NAMES[k] || k; }
+  /* the board's own sheets read left to right in English, right to left otherwise */
+  function sheetDir() { return langMode() === 'en' ? 'ltr' : 'rtl'; }
   function S() { var m = langMode(); if (m === 'he' || !STR[m]) return STR.he; if (!ui.strCache || ui.strCache.m !== m) ui.strCache = { m: m, s: Object.assign({}, STR.he, STR[m]) }; return ui.strCache.s; }
   function applyLang() { if (typeof document === 'undefined') return; var st = document.documentElement.style, L = S(); st.setProperty('--badge-next', '"' + L.badgeNext + '"'); st.setProperty('--badge-now', '"' + L.badgeNow + '"'); }
   function dayLine(info, rd) { var p = Cal.parshaOfWeek(rd, !!cfg.israel); return S().days[info.dow] + (p ? S().parsha + p : ''); }
@@ -216,17 +232,21 @@
     var nz = nextZman(info, z, rd, now);
     if (nz) {
       ui.zcountMs = nz.ms; ui.zcount = el('div', { class: 'count num', text: fmtCountdown(nz.ms - now) });
-      var zb = el('section', { class: 'next zman' + (nz.ms - now < 30 * 60000 ? ' urgent' : ''), /* 'urgent', not 'soon': .soon is the next-three strip's box */ 'aria-live': 'polite' }, [el('h2', { text: S().nextZman }), el('div', { class: 'what', text: Cal.ZMAN_NAMES[nz.key] }), el('div', { class: 'time num', text: fmtTime(nz.min) }), ui.zcount,
+      var zb = el('section', { class: 'next zman' + (nz.ms - now < 30 * 60000 ? ' urgent' : ''), /* 'urgent', not 'soon': .soon is the next-three strip's box */ 'aria-live': 'polite' }, [el('h2', { text: S().nextZman }), el('div', { class: 'what', text: zmanName(nz.key) }), el('div', { class: 'time num', text: fmtTime(nz.min) }), ui.zcount,
         el('button', { type: 'button', class: 'gear', 'aria-label': 'Choose the countdown zmanim', title: 'Choose zmanim', text: '⚙', onclick: function (ev) { ev.stopPropagation(); openCountdownChooser(); } })]);
-      if (lobby) { var later = laterZmanim(info, z, rd, nz.ms, 3); if (later.length) zb.appendChild(el('div', { class: 'soon-row' }, later.map(function (x) { return el('div', { class: 'soon' }, [el('div', { class: 'time num', text: fmtTime(x.min) }), el('div', { class: 'room', text: Cal.ZMAN_NAMES[x.key] })]); }))); } /* the lobby: the zmanim after it, as small cards */
+      if (lobby) { var later = laterZmanim(info, z, rd, nz.ms, 3); if (later.length) zb.appendChild(el('div', { class: 'soon-row' }, later.map(function (x) { return el('div', { class: 'soon' }, [el('div', { class: 'time num', text: fmtTime(x.min) }), el('div', { class: 'room', text: zmanName(x.key) })]); }))); } /* the lobby: the zmanim after it, as small cards */
       if (canTap) makeTappable(zb, { zman: nz.key, rd: rd, min: nz.min }); /* tap the zman to be reminded before it */
       (lobbyTop || colA).appendChild(zb);
     }
     var sections = (view.kind === 'board' && isPhone()) ? phoneSections : daySections;
     if (ui.lastRenderDay !== rd) ui.showPast = false;
-    var secToday = sections(sched, now, up, true), secTomo = up && up.daysAhead > 0 && !(up.daysAhead === 1 && ui.todayAllSwitched) ? sections(up.sched, now, up, false) : null; /* tomorrow is already shown section by section once today is over */
+    /* the board: a row of day chips (today, tomorrow, the five days after) to look at another day's minyanim; the lists and the zmanim panel follow it */
+    if (ui.lastRenderDay !== rd) ui.dayOffset = 0;
+    var off = view.kind === 'board' ? Math.max(0, Math.min(6, ui.dayOffset || 0)) : 0, showRd = rd + off, showSched = off ? scheduleFor(showRd) : sched;
+    if (view.kind === 'board') colA.appendChild(dayChips(rd, off));
+    var secToday = sections(showSched, now, up, off === 0), secTomo = !off && up && up.daysAhead > 0 && !(up.daysAhead === 1 && ui.todayAllSwitched) ? sections(up.sched, now, up, false) : null; /* tomorrow is already shown section by section once today is over */
     if (lobby) colA.appendChild(lobbySections([secToday, secTomo])); else { colA.appendChild(secToday); if (secTomo) colA.appendChild(secTomo); }
-    colB.appendChild(zmanimPanel(info, z));
+    colB.appendChild(off ? zmanimPanel(Cal.dayInfo(showRd, !!cfg.israel), zmanimFor(showRd), S().zmanimOf + (off === 1 ? S().tomorrow : S().days[Cal.dayInfo(showRd, !!cfg.israel).dow])) : zmanimPanel(info, z));
     if (lobby && strip) colB.appendChild(strip);
     if (view.kind === 'board') {
       var sms = smsPanel();
@@ -274,6 +294,7 @@
     root.appendChild(bar);
     ui.countdown = null; ui.countdownMs = 0; ui.lastRenderDay = rd0; ui.lastMinute = Math.floor(now / 60000);
   }
+  var KEEP_PAST = 3; /* on the board, this many of the most recent past minyanim stay in view (dimmed); older ones fold behind a button */
   /* How long a minyan that has started stays marked "now" (cfg.nowMinutes, default 20). After that it is dimmed, and the lobby screen hides it. */
   function nowWindowMs() { var m = cfg.nowMinutes; m = (m == null || m === '') ? 20 : +m; return (isNaN(m) || m < 0 ? 20 : m) * 60000; }
   /* per tefilla: today's list, or tomorrow's once all of today's minyanim are over (after chatzos for Shacharis) */
@@ -291,6 +312,16 @@
   function sectionTitle(x) { return x.t.kind === 'event' ? x.t.name : S().minyanim(x.t.name) + (x.fromTomorrow ? ' – ' + S().tomorrow + ', ' + S().days[x.tomorrow.info.dow] : ''); }
   function entryState(e, now, up) { if (up && sameEntry(e, up.entry)) return 'next'; if (e.ms <= now) return now - e.ms < nowWindowMs() ? 'now' : 'past'; return ''; }
   function dayHead(s, isToday) { return el('div', { class: 'day-head' }, [el('h2', { text: isToday ? S().today : S().days[s.info.dow] + ' – ' + Cal.formatHeb(s.info.heb) }), el('span', { class: 'sub', text: typeLabel(s) })]); }
+  /* the board's day chips: today, tomorrow and the five days after, each with its Hebrew date; a tap shows that day's minyanim and zmanim */
+  function dayChips(rd, off) {
+    var row = el('div', { class: 'daychips board-days', role: 'tablist', 'aria-label': S().today + ' / ' + S().tomorrow }), k;
+    for (k = 0; k < 7; k++) (function (i) {
+      var d = rd + i, info = Cal.dayInfo(d, !!cfg.israel), name = i === 0 ? S().today : i === 1 ? S().tomorrow : S().days[info.dow];
+      row.appendChild(el('button', { type: 'button', role: 'tab', class: 'daychip' + (i === off ? ' on' : ''), 'aria-selected': String(i === off), onclick: function () { ui.dayOffset = i; render(); } }, [
+        el('span', { class: 'dc-day', text: name }), el('span', { class: 'dc-date', text: Cal.formatHeb(info.heb) })]));
+    })(k);
+    return row;
+  }
   /* tablets, the lobby screen and door displays: a grid of tiles per tefilla */
   function daySections(s, now, up, isToday) {
     var wrap = el('div', { class: 'col' }), canRemind = canSetReminders();
@@ -303,11 +334,11 @@
       else {
         var grid = el('div', { class: 'grid' }), onBoard = !$('#app').classList.contains('display');
         /* on the board, more than two past minyanim fold behind a button (the lobby screen hides them outright) */
-        var past = onBoard ? list.filter(function (e) { return entryState(e, now, up) === 'past'; }) : [], fold = onBoard && !ui.showPast && past.length > 2 && past.length < list.length;
-        if (fold) sec.appendChild(el('button', { type: 'button', class: 'btn small foldbtn', text: S().showEarlier + ' (' + past.length + ')', onclick: function () { ui.showPast = true; render(); } }));
+        var past = onBoard ? list.filter(function (e) { return entryState(e, now, up) === 'past'; }) : [], hidden = onBoard && !ui.showPast && past.length > KEEP_PAST && past.length < list.length ? past.slice(0, past.length - KEEP_PAST) : [], fold = hidden.length > 0; /* the last three past minyanim stay, dimmed */
+        if (fold) sec.appendChild(el('button', { type: 'button', class: 'btn small foldbtn', text: S().showEarlier + ' (' + hidden.length + ')', onclick: function () { ui.showPast = true; render(); } }));
         list.forEach(function (e) {
           var st = entryState(e, now, up), cls = 'tile' + (st ? ' ' + st : '') + (t.kind === 'event' ? ' event' : '');
-          if (fold && st === 'past') return;
+          if (fold && hidden.indexOf(e) >= 0) return;
           var tile = el('div', { class: cls }, [
             el('div', { class: 'room', text: e.room || t.name }),
             bigIsMilestone(t) ? el('div', { class: 'ms num pre', text: startLabel(t) + ' ' + fmtTime(e.start) }) : null, /* chronological: ברכות above, הודו big below */
@@ -380,20 +411,26 @@
       if (need <= r.have + 1 || scale <= 0.7) break;
       scale = Math.max(0.7, scale * H / (H + need - r.have) * 0.99); /* the whole screen scales, so the overflow shrinks in that proportion */
     }
-    /* tomorrow's sections, in order, as long as a row of each still fits; then the spare rows go where the most is left to show */
+    /* today's sections first: the spare rows go to the one with the most still to show, until they all fit or the height is used up;
+       only then tomorrow's sections, in order, as long as a row of each still fits, and then their spare rows */
     var shown = r.m.filter(function (x) { return x.main; }), used = r.heads + gapsFor(heads + shown.length) + shown.reduce(function (a, x) { return a + height(x); }, 0);
-    r.m.forEach(function (x) { if (x.main) return; var h = height(x) + r.gap; if (used + h <= r.have + 1) { used += h; shown.push(x); } else x.sec.hidden = true; });
-    for (;;) {
-      var best = null, bestCost = 0;
-      shown.forEach(function (x) {
-        if (x.rows <= x.k) return;
-        var cost = x.pad + Math.max(x.head, gridH(x, x.k + 1)) - height(x);
-        if (used + cost > r.have + 1) return;
-        if (!best || (x.main && !best.main) || (x.main === best.main && x.rows - x.k > best.rows - best.k)) { best = x; bestCost = cost; }
-      });
-      if (!best) break;
-      used += bestCost; best.k++;
+    function moreRows(cands) {
+      for (;;) {
+        var best = null, bestCost = 0;
+        cands.forEach(function (x) {
+          if (x.rows <= x.k) return;
+          var cost = x.pad + Math.max(x.head, gridH(x, x.k + 1)) - height(x);
+          if (used + cost > r.have + 1) return;
+          if (!best || x.rows - x.k > best.rows - best.k) { best = x; bestCost = cost; }
+        });
+        if (!best) break;
+        used += bestCost; best.k++;
+      }
     }
+    moreRows(shown);
+    var later = [];
+    r.m.forEach(function (x) { if (x.main) return; var h = height(x) + r.gap; if (used + h <= r.have + 1) { used += h; shown.push(x); later.push(x); } else x.sec.hidden = true; });
+    moreRows(later);
     /* a day heading (tomorrow's, when today is over) only ahead of a section that is shown */
     items.forEach(function (c, i) { if (c.classList.contains('day-head')) { var nxt = items[i + 1]; c.hidden = !nxt || nxt.hidden || !nxt.classList.contains('tefilla'); } });
     ui.pageIdx = ui.pageIdx || {};
@@ -427,11 +464,11 @@
     if (!x.list.length) sec.appendChild(el('div', { class: 'none', text: S().none }));
     else {
       var rows = el('div', { class: 'rows' }), past = x.list.filter(function (e) { return entryState(e, now, up) === 'past'; });
-      var fold = !ui.showPast && past.length > 2 && past.length < x.list.length;
-      if (fold) rows.appendChild(el('button', { type: 'button', class: 'btn small foldbtn', text: S().showEarlier + ' (' + past.length + ')', onclick: function () { ui.showPast = true; render(); } }));
+      var hidden = !ui.showPast && past.length > KEEP_PAST && past.length < x.list.length ? past.slice(0, past.length - KEEP_PAST) : [], fold = hidden.length > 0; /* the last three past minyanim stay, dimmed */
+      if (fold) rows.appendChild(el('button', { type: 'button', class: 'btn small foldbtn', text: S().showEarlier + ' (' + hidden.length + ')', onclick: function () { ui.showPast = true; render(); } }));
       x.list.forEach(function (e) {
         var st = entryState(e, now, up);
-        if (fold && st === 'past') return;
+        if (fold && hidden.indexOf(e) >= 0) return;
         var big = bigIsMilestone(t), row = el('div', { class: 'row' + (st ? ' ' + st : '') + (t.kind === 'event' ? ' event' : '') }, [
           el('div', { class: 'rtime' }, [el('span', { class: 'time num', text: fmtTime(big ? e.milestone : e.start) }), t.milestone ? el('span', { class: 'ms num', text: big ? startLabel(t) + ' ' + fmtTime(e.start) : t.milestone + ' ' + fmtTime(e.milestone) }) : null]),
           el('div', { class: 'rroom' }, [el('span', { class: 'room', text: e.room || t.name }), e.note ? el('span', { class: 'note', text: e.note }) : null]),
@@ -444,9 +481,9 @@
     wrap.appendChild(sec);
     return wrap;
   }
-  function zmanimPanel(info, z) {
+  function zmanimPanel(info, z, title) {
     var keys = ['alos', 'sunrise', 'shema', 'tefilla', 'chatzos', 'minchag', 'plag', 'candles', 'sunset', 'tzeis', 'tzeis60', 'tzeis72'];
-    var ul = el('ul', { class: 'zlist' }), rd = info.rd, nowMin = Cal.nowInTz(Date.now(), loc().tz).min, canRemind = canSetReminders(), nowMs = Date.now(), tz = loc().tz, zt = zmanimFor(rd + 1), L = S();
+    var ul = el('ul', { class: 'zlist' }), rd = info.rd, nowMin = title ? -1 : Cal.nowInTz(Date.now(), loc().tz).min, canRemind = !title && canSetReminders(), nowMs = Date.now(), tz = loc().tz, zt = zmanimFor(rd + 1), L = S(); /* another day's panel: no "passed" marks, no reminders */
     var h = info.heb, nightFast = (h.m === 7 && h.d === 10) || (h.m === 5 && info.fast); /* Yom Kippur and Tisha B'Av begin the evening before */
     if (info.fast && !nightFast) ul.appendChild(el('li', { class: 'hi' }, [el('span', { text: L.fastStart }), el('span', { class: 'z num', text: fmtTime(z.alos) })]));
     if (info.fast || info.yomKippur) ul.appendChild(el('li', { class: 'hi' }, [el('span', { text: L.fastEnd }), el('span', { class: 'z num', text: fmtTime(z.tzeis) })]));
@@ -464,11 +501,11 @@
       var hi = k === 'candles' || (k === 'tzeis' && (info.shabbos || info.yomtov)), v = z[k];
       /* a zman that has passed keeps today's time, dimmed; tapping it then sets a reminder for tomorrow's */
       var passed = !isNaN(v) && nowMs >= Cal.epochFromWall(rd, Math.round(v), tz) + 60000, nextDay = passed && !isNaN(zt[k]);
-      var li = el('li', { class: (hi ? 'hi' : '') + (passed ? ' past' : '') }, [el('span', { text: Cal.ZMAN_NAMES[k] }), el('span', { class: 'z num', text: fmtTime(v) })]);
+      var li = el('li', { class: (hi ? 'hi' : '') + (passed ? ' past' : '') }, [el('span', { text: zmanName(k) }), el('span', { class: 'z num', text: fmtTime(v) })]);
       if (canRemind && (nextDay || (!passed && !isNaN(v)))) makeTappable(li, nextDay ? { zman: k, rd: rd + 1, min: zt[k] } : { zman: k, rd: rd, min: v }); /* tap a zman to be reminded before it */
       ul.appendChild(li);
     });
-    return el('section', { class: 'side' }, [el('h3', { text: L.zmanim }), ul]);
+    return el('section', { class: 'side' }, [el('h3', { text: title || L.zmanim }), ul]);
   }
   /* Sponsor boxes (פרנס החודש and friends) in a framed strip under the header */
   function sponsorsStrip(rd) {
@@ -517,7 +554,7 @@
   function isoOf(rd) { return MinyanEngine.isoDate(rd); }
   function canSetReminders() { return pushConfigured() && !$('#app').classList.contains('display') && !ui.roomFilter; }
   function describeReminder(r) {
-    if (r.zman) return r.lead + S().minBefore + (Cal.ZMAN_NAMES[r.zman] || r.zman) + (r.once ? S().todayOnlyP : '');
+    if (r.zman) return r.lead + S().minBefore + zmanName(r.zman) + (r.once ? S().todayOnlyP : '');
     var t = tefillos().filter(function (x) { return x.id === r.tefilla; })[0], name = t ? t.name : r.tefilla;
     return r.lead + S().minBefore + (r.time != null ? name + ' ' + fmtTime(r.time) : S().pickWith(S().picks[r.pick || 'first'] || '', name)) + (r.ref === 'milestone' && t && t.milestone ? ' (' + t.milestone + ')' : '') + (r.once ? S().todayOnlyP : '');
   }
@@ -532,7 +569,7 @@
     if (!pushSupported()) { toast(S().noPush, 7000); return; }
     preparePush().catch(function () {}); /* ready before "Set reminder" is tapped */
     var old = $('#rem-overlay'); if (old) old.remove();
-    var what = e.zman ? (Cal.ZMAN_NAMES[e.zman] || e.zman) + ' ' + fmtTime(e.min) : e.tefilla.name + (e.room ? ' – ' + e.room : '') + ' ' + fmtTime(e.start), dayIso = isoOf(e.rd), isToday = dayIso === isoOf(Cal.nowInTz(Date.now(), loc().tz).rd);
+    var what = e.zman ? zmanName(e.zman) + ' ' + fmtTime(e.min) : e.tefilla.name + (e.room ? ' – ' + e.room : '') + ' ' + fmtTime(e.start), dayIso = isoOf(e.rd), isToday = dayIso === isoOf(Cal.nowInTz(Date.now(), loc().tz).rd);
     var lead = el('input', { type: 'number', min: '1', max: '180', value: '10', class: 'mins', inputmode: 'numeric', id: 'rem-lead' });
     var once = el('input', { type: 'radio', name: 'rem-when', value: 'once', id: 'rem-once' }), daily = el('input', { type: 'radio', name: 'rem-when', value: 'daily', id: 'rem-daily' });
     once.checked = true;
@@ -540,7 +577,7 @@
     var refStart = el('input', { type: 'radio', name: 'rem-ref', value: 'start', id: 'rem-ref-start' }), refMs = el('input', { type: 'radio', name: 'rem-ref', value: 'milestone', id: 'rem-ref-ms' });
     (bigMode() === 'milestone' ? refMs : refStart).checked = true;
     var refRow = (!e.zman && e.tefilla.milestone) ? el('div', { class: 'push-row' }, [el('span', { class: 'push-lbl', text: S().before }), el('label', { for: 'rem-ref-start' }, [refStart, ' ' + startLabel(e.tefilla) + ' ' + fmtTime(e.start)]), el('label', { for: 'rem-ref-ms' }, [refMs, ' ' + e.tefilla.milestone + ' ' + fmtTime(e.milestone)])]) : null;
-    var msg = el('div', { class: 'hint', id: 'rem-msg' }), ov = el('div', { class: 'overlay modal', id: 'rem-overlay', dir: 'rtl' });
+    var msg = el('div', { class: 'hint', id: 'rem-msg' }), ov = el('div', { class: 'overlay modal', id: 'rem-overlay', dir: sheetDir() });
     function close() { ov.remove(); }
     var setB = el('button', { type: 'button', class: 'btn primary', id: 'rem-set', text: S().setRem, onclick: function () {
       var prefs = pushPrefs(), ld = Math.max(1, Math.min(180, +lead.value || 10)), r = e.zman ? { zman: e.zman, lead: ld } : { tefilla: e.tefilla.id, time: e.start, lead: ld };
@@ -581,7 +618,7 @@
     function rowEl(r) {
       var tSel = el('select', { 'aria-label': 'Tefilla or zman' });
       tfs.forEach(function (t) { tSel.appendChild(el('option', { value: t.id, text: t.name })); });
-      var zg = el('optgroup', { label: S().zmanimGroup }); ZMAN_KEYS.forEach(function (k) { if (zmanHidden(k)) return; zg.appendChild(el('option', { value: 'z:' + k, text: Cal.ZMAN_NAMES[k] })); }); tSel.appendChild(zg);
+      var zg = el('optgroup', { label: S().zmanimGroup }); ZMAN_KEYS.forEach(function (k) { if (zmanHidden(k)) return; zg.appendChild(el('option', { value: 'z:' + k, text: zmanName(k) })); }); tSel.appendChild(zg);
       tSel.value = r.tefilla; if (tSel.selectedIndex < 0) { tSel.value = tfs[0].id; r.tefilla = tfs[0].id; }
       var wSel = el('select', { 'aria-label': 'Which minyan' });
       function fillWhich() {
@@ -711,7 +748,7 @@
   }
   function openSettings(goto) {
     var old = $('#set-overlay'); if (old) old.remove();
-    var ov = el('div', { class: 'overlay modal', id: 'set-overlay', dir: 'rtl' });
+    var ov = el('div', { class: 'overlay modal', id: 'set-overlay', dir: sheetDir() });
     function close() { ov.remove(); }
     function section(title, desc, kids) { return el('section', { class: 'sset' }, [el('h3', { text: title }), desc ? el('p', { class: 'hint', text: desc }) : null].concat(kids)); }
     function srow(label, ctl, forId) { return el('label', { class: 'srow', for: forId }, [el('span', { text: label }), ctl]); }
@@ -727,7 +764,7 @@
     lookSel.value = lookMode();
     lookSel.addEventListener('change', function () { keep('minyan-look', lookSel.value, lookDefault()); });
     disp.push(srow(S().look, lookSel, 'look'));
-    var langSel = el('select', { id: 'lang', 'aria-label': 'Language of the labels' }, [el('option', { value: 'he', text: 'עברית' }), el('option', { value: 'yi', text: 'יידיש' })]);
+    var langSel = el('select', { id: 'lang', 'aria-label': 'Language of the labels' }, [el('option', { value: 'he', text: 'עברית' }), el('option', { value: 'yi', text: 'יידיש' }), el('option', { value: 'en', text: 'English' })]);
     langSel.value = langMode();
     langSel.addEventListener('change', function () { keep('minyan-lang', langSel.value, langDefault()); });
     disp.push(srow(S().labels, langSel, 'lang'));
@@ -1015,7 +1052,7 @@
     var lookRow2 = el('div', { class: 'fields' }, [field('Civil date on the board and the weekly sheet', fDateFmt), field('Big number on the tiles, by default (everyone may switch it on their own phone)', fBig), field('Minutes a minyan stays marked "now" after it starts (then it is dimmed, and the lobby screen hides it)', fNowMins), field('Lobby screen: seconds per sponsor box (they take turns when there is more than one)', fSponsorSecs)]);
     var fPalette = el('select', { id: 'f-palette' }, [el('option', { value: 'shul', text: 'Shul: light stone, brass, charcoal, burgundy' }), el('option', { value: 'classic', text: 'Classic: parchment and navy' }), el('option', { value: 'contrast', text: 'High contrast: black on white, larger type' })]);
     fPalette.value = lookDefault.call(null) && isLook(d.palette) ? d.palette : 'shul';
-    var fLang = el('select', { id: 'f-lang' }, [el('option', { value: 'he', text: 'Hebrew (היום, מחר, מנין הבא…)' }), el('option', { value: 'yi', text: 'Yiddish (היינט, מארגן, זונטאג…)' })]); fLang.value = d.lang === 'yi' ? 'yi' : 'he';
+    var fLang = el('select', { id: 'f-lang' }, [el('option', { value: 'he', text: 'Hebrew (היום, מחר, מנין הבא…)' }), el('option', { value: 'yi', text: 'Yiddish (היינט, מארגן, זונטאג…)' }), el('option', { value: 'en', text: 'English (Today, Tomorrow, Next minyan…)' })]); fLang.value = d.lang === 'yi' ? 'yi' : 'he';
     cLook.body.appendChild(el('div', { class: 'fields' }, [field('Colors: the look everyone gets unless they pick another in the footer; the lobby screen and door displays always use it', fPalette), field('Board labels: the language everyone gets unless they pick another in the footer', fLang)]));
     cLook.body.appendChild(lookRow2);
     var fDispSize = el('select', { id: 'f-display-size' }, [['85', 'Smaller (85%)'], ['100', 'Normal (100%)'], ['115', 'Larger (115%)'], ['130', 'Largest (130%)'], ['150', 'Giant (150%)']].map(function (o) { return el('option', { value: o[0], text: o[1] }); }));

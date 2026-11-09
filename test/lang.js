@@ -15,9 +15,14 @@ const { chromium } = require('playwright');
   }
   let { ctx, page } = await open(400, 9, 22, '', 'yi');
   ok('yiddish: day line, today, next minyan', [await page.locator('.dayline').textContent(), await page.locator('.day-head h2').first().textContent(), await page.locator('section.next:not(.zman) h2').textContent()], ['זונטאג פרשת וירא', 'היינט', 'מנין הבא']);
-  ok('yiddish: section title, fold button, now badge', [await page.locator('section.tefilla h3').first().textContent(), await page.locator('.foldbtn').textContent(), await page.locator('.row.now .badge').textContent()], ['שחרית מנינים', 'ווייז די פריערדיגע (6)', 'יעצט']);
+  ok('yiddish: section title, fold button, now badge', [await page.locator('section.tefilla h3').first().textContent(), await page.locator('.foldbtn').textContent(), await page.locator('.row.now .badge').textContent()], ['שחרית מנינים', 'ווייז די פריערדיגע (3)', 'יעצט']);
   await page.click('#settings-open'); await page.waitForTimeout(200);
   ok('yiddish: board type label and settings switch', [await page.locator('.day-head .sub').first().textContent(), await page.locator('#lang').inputValue()], ['לוח זונטאג', 'yi']);
+  await ctx.close();
+  ({ ctx, page } = await open(1280, 9, 22, '', 'en'));
+  ok('english: day line, heading, next minyan, zmanim title, a zman name, a section title', [/^Sunday · Parshas /.test(await page.locator('.dayline').textContent()), await page.locator('.day-head h2').first().textContent(), await page.locator('section.next:not(.zman) h2').textContent(), await page.locator('.side h3').first().textContent(), (await page.locator('.zlist li span').first().textContent()), await page.locator('section.tefilla h3').first().textContent()], [true, 'Today', 'Next minyan', 'Today\'s zmanim', 'Alos hashachar', 'Shacharis minyanim']);
+  await page.click('#settings-open'); await page.waitForTimeout(200);
+  ok('english: the settings sheet and its language choice', [await page.locator('#set-overlay h2').first().textContent(), await page.locator('#lang option').allTextContents(), await page.locator('#lang').inputValue()], ['Settings', ['עברית', 'יידיש', 'English'], 'en']);
   await ctx.close();
   ({ ctx, page } = await open(1280, 13, 0, '?view=display', 'yi'));
   ok('lobby screen keeps the gabbai\'s Hebrew default', [(await page.locator('.dayline').textContent()).split(' ').slice(0, 2).join(' '), (await page.locator('section.tefilla h3').first().textContent()).replace(/[●○ ]+$/, '')], ['יום ראשון', 'מניני מנחה']);

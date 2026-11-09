@@ -18,9 +18,9 @@ const { chromium } = require('playwright');
     await ctx.close(); return { heads, firstSh, firstTime, dayHeads };
   }
   let r = await at(9, 25);
-  ok('morning: today\'s Shacharis (Sunday list: 19 minyanim, 6 past ones folded)', [/מחר/.test(r.heads[0]), r.firstSh], [false, 13]);
+  ok('morning: today\'s Shacharis (Sunday list: 19 minyanim, 3 of the 6 past ones folded)', [/מחר/.test(r.heads[0]), r.firstSh], [false, 16]);
   r = await at(13, 0);
-  ok('after chatzos: Shacharis section is tomorrow\'s, headed מחר', [/^מניני שחרית – מחר, יום שני$/.test(r.heads[0]), r.firstSh, r.firstTime], [true, 20, '6:20']);
+  ok('after chatzos: Shacharis section is tomorrow\'s, headed מחר', [/^מניני שחרית – מחר, יום שני$/.test(r.heads[0]), r.firstSh, r.firstTime], [true, 21, '6:20']); /* the weekday list as the shul publishes it: 21 rows since 9 Nov 2026 */
   ok('mincha and maariv still today\'s', r.heads.slice(1).every(h => !/מחר/.test(h)), true);
   r = await at(23, 50);
   ok('late night: Shacharis and Mincha show tomorrow, Maariv (12:00, 12:15 AM still ahead) stays today, one day block', [/מחר/.test(r.heads[0]), /מחר/.test(r.heads[1]), /מחר/.test(r.heads[2]), r.dayHeads.length], [true, true, false, 1]);

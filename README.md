@@ -183,15 +183,19 @@ Same address, different screens (the `#` forms also work on the claude.ai page):
 - **When even one row per tefilla does not fit** (a morning with Shacharis, Mincha and Maariv all ahead), the whole screen shrinks a little, never below 70%, rather than run off the bottom. Pick "Smaller" in General to see more minyanim at once, "Larger" when people stand far from the TV.
 - The sponsor box (פרנס החודש and the like) sits in the side column under the zmanim, and the header's digital clock gives way to the round one. The board and the door displays are not affected.
 
+## Another day's minyanim
+
+Above the lists the board has a row of day chips: היום, מחר and the five days after, each with its Hebrew date. A tap shows that day's full schedule, with its own heading (the day, its date and which list it follows: ראש חודש, ערב שבת…), and the side panel shows that day's zmanim. The next-minyan box and the countdowns stay live. The choice is not remembered: a reload, or the next day, returns to today. The lobby screen and door displays have no chips.
+
 ## On a phone
 
 The ⚙ in the header and the "Settings" button in the footer open one sheet with everything a person sets for themselves: the big number, the look, the labels, the countdown zmanim, reminders, "Check for updates" and an install guide with the steps for the device at hand (Safari on iPhone and iPad, Chrome on Android, a computer), or a one-tap Install button where the browser offers it; the footer's "Install the app" opens the same guide.
 
-Below 640px the board shows one tefilla at a time behind tabs (the tab of the next minyan opens first), each minyan as a row, with more than two past minyanim folded behind "הצג את הקודמים (N)". Tablets keep the tile grid, with the same fold for past minyanim; the lobby screen and door displays hide past minyanim outright. Under the next-minyan box, three small cards show the minyanim after it, tomorrow's first Shacharis included once the day runs out; they can be tapped for a reminder like a tile.
+Below 640px the board shows one tefilla at a time behind tabs (the tab of the next minyan opens first), each minyan as a row, with the last three past minyanim kept in view (dimmed) and the older ones folded behind a button. Tablets keep the tile grid, with the same fold for past minyanim; the lobby screen and door displays hide past minyanim outright. Under the next-minyan box, three small cards show the minyanim after it, tomorrow's first Shacharis included once the day runs out; they can be tapped for a reminder like a tile.
 
 ## Labels in Hebrew or Yiddish
 
-General → "Board labels" picks Hebrew (היום, מחר, מנין הבא, יום ראשון…) or Yiddish (היינט, מארגן, זונטאג…) for the board's own words; the headings מנין הבא and הזמן הבא stay in Hebrew in both; room names, tefillos and zmanim stay as entered. The lobby screen and door displays always use that choice; a "Labels" switch in the footer lets each phone pick its own.
+General → "Board labels" picks Hebrew (היום, מחר, מנין הבא, יום ראשון…), Yiddish or English (Today, Tomorrow, Next minyan, Sunday…; the zmanim and the sheets in English too) (היינט, מארגן, זונטאג…) for the board's own words; the headings מנין הבא and הזמן הבא stay in Hebrew in both; room names, tefillos and zmanim stay as entered. The lobby screen and door displays always use that choice; a "Labels" switch in the footer lets each phone pick its own.
 
 In the zmanim list, a zman that has passed keeps today's time, shown dimmed; tapping it sets a reminder for tomorrow's.
 

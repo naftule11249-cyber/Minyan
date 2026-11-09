@@ -591,7 +591,7 @@ var MinyanEngine = (function () {
 var MinyanSms = (function () {
   'use strict';
   var T = {
-    he: { next: 'המנין הבא', last: 'מנין העבר', then: 'אחריו', in_: 'בעוד', min: 'דק׳', hr: 'שע׳', today: 'היום', tomorrow: 'מחר', none: 'לא רשומים מנינים בימים הקרובים.',
+    he: { next: 'מנין הבא', last: 'מנין העבר', then: 'אחריו', in_: 'בעוד', min: 'דק׳', hr: 'שע׳', today: 'היום', tomorrow: 'מחר', none: 'לא רשומים מנינים בימים הקרובים.',
       left: 'נותרו', noneToday: 'אין עוד מנינים היום', zmanim: 'זמני היום', more: 'ועוד',
       help: 'שלחו אחת מהמילים: מנין, שחרית, מנחה, מעריב, היום, מחר, זמנים. להפסקה שלחו STOP.' },
     en: { next: 'Next minyan', last: 'Last minyan', then: 'Then', in_: 'in', min: 'min', hr: 'hr', today: 'Today', tomorrow: 'Tomorrow', none: 'No minyanim are listed for the coming days.',

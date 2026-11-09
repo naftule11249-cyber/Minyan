@@ -670,3 +670,12 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 #app.display:not(.room) .notice { padding: .6rem .8rem; border-radius: .6rem; }
 #app.display:not(.room) .notice + .notice { margin-top: .6rem; }
 #app.display:not(.room) .notice .t { font-size: 1.25rem; }
+
+/* the board's day chips (today, tomorrow, the days after), in the board's own colours */
+.board-days { padding: 0 2px 4px; }
+.board-days .daychip { min-width: 88px; padding: 8px 12px; border-color: var(--line); background: var(--panel); color: var(--ink); box-shadow: none; }
+.board-days .daychip .dc-date { color: var(--muted); font-size: .78rem; }
+.board-days .daychip.on { background: var(--band-2); color: var(--band-ink); border-color: var(--band-2); }
+.board-days .daychip.on .dc-date { color: var(--band-ink); opacity: .85; }
+.board-days .daychip:hover { border-color: var(--accent); }
+@media (max-width: 640px) { .board-days .daychip { min-width: 78px; padding: 7px 10px; } }

@@ -11,12 +11,12 @@ let fails = 0;
 function check(name, text, re) { const ok = re.test(text); if (!ok) fails++; console.log((ok ? 'ok   ' : 'FAIL ') + name + ': ' + text.replace(/\n/g, ' | ')); }
 const at = (h, m, d) => Cal.epochFromWall(Cal.rdFromGreg(2026, 10, d || 20), h * 60 + m, 'America/New_York');
 const R = (t, now) => MinyanSms.buildReply(cfg, t, now).text;
-check('he next', R('מנין', at(10, 59)), /^המנין הבא: שחרית – דברי יואל 11:00 \(הודו 11:10\), בעוד 1 דק׳\.\nאחריו: ברך משה 11:20/);
+check('he next', R('מנין', at(10, 59)), /^מנין הבא: שחרית – דברי יואל 11:00 \(הודו 11:10\), בעוד 1 דק׳\.\nאחריו: ברך משה 11:20/);
 check('en next, with the minyan that began 5 minutes ago still worth running for (Hodu 10:50)', R('next', at(10, 45)), /^Last minyan: Shacharis – .* 10:40 \(Hodu 10:50\)\.\nNext minyan: Shacharis – דברי יואל 11:00 \(Hodu 11:10\), in 15 min\.\nThen: /);
 /* the "last minyan" rule: a minyan that began leads the reply until 3 minutes before its הודו, then drops out */
-check('he: 10:40 minyan leads as מנין העבר at 10:41', R('מנין', at(10, 41)), /^מנין העבר: שחרית – .* 10:40 \(הודו 10:50\)\.\nהמנין הבא: שחרית – דברי יואל 11:00/);
+check('he: 10:40 minyan leads as מנין העבר at 10:41', R('מנין', at(10, 41)), /^מנין העבר: שחרית – .* 10:40 \(הודו 10:50\)\.\nמנין הבא: שחרית – דברי יואל 11:00/);
 check('still at 10:47 (3 minutes before Hodu)', R('מנין', at(10, 47)), /^מנין העבר: /);
-check('gone at 10:48 (less than 3 minutes before Hodu)', R('מנין', at(10, 48)), /^המנין הבא: /);
+check('gone at 10:48 (less than 3 minutes before Hodu)', R('מנין', at(10, 48)), /^מנין הבא: /);
 check('tefilla reply leads with it too, without the tefilla name', R('שחרית', at(10, 41)), /^מנין העבר: .* 10:40 \(הודו 10:50\)\.\nשחרית היום \(\d+ נותרו\): 11:00 דברי יואל/);
 check('mincha (Shemoneh Esrei 8 minutes in): 1:10 minyan leads at 1:12', R('mincha', at(13, 12)), /^Last minyan: ברך משה 1:10 \(Shemoneh Esrei 1:18\)\.\nMincha Today/);
 check('empty = next', R('', at(10, 30)), /^Next minyan/);
@@ -37,7 +37,7 @@ check('keyword punctuation', MinyanSms.keyword('Mincha?'), /^mincha$/);
   const he = JSON.parse(JSON.stringify(cfg)); he.smsLang = 'he';
   const H = (t, now) => MinyanSms.buildReply(he, t, now).text;
   check('לשון קודש always: an English "mincha" is answered in Hebrew', H('mincha', at(10, 0)), /^מנחה היום \(3 נותרו\): 1:10 ברך משה/);
-  check('לשון קודש always: "next" too', H('next', at(10, 45)), /^מנין העבר: שחרית – .* 10:40 \(הודו 10:50\)\.\nהמנין הבא: שחרית – דברי יואל 11:00 \(הודו 11:10\), בעוד 15 דק׳\./);
+  check('לשון קודש always: "next" too', H('next', at(10, 45)), /^מנין העבר: שחרית – .* 10:40 \(הודו 10:50\)\.\nמנין הבא: שחרית – דברי יואל 11:00 \(הודו 11:10\), בעוד 15 דק׳\./);
   check('…but HELP keeps the sender\'s language for the carrier wording', H('help', at(10, 0)), /^Text one of: next, shacharis/);
   check('…and a Hebrew עזרה gets the Hebrew help', H('עזרה', at(10, 0)), /^שלחו אחת מהמילים/);
   const en = JSON.parse(JSON.stringify(cfg)); en.smsLang = 'en';
