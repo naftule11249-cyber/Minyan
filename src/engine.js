@@ -165,9 +165,12 @@ var MinyanEngine = (function () {
       tefillos().forEach(function (t) {
         var list = [];
         var offset = (t.offset == null || t.offset === '') ? 0 : +t.offset;
-        dt.texts[t.id].text.split('\n').forEach(function (line) {
-          expand(parseLine(line, t), rd, dt.type).forEach(function (x) {
-            list.push({ tefilla: t, room: x.room, note: x.note, start: x.start, ms: Cal.epochFromWall(rd, x.start, tz), milestone: x.start + offset, rd: rd });
+        dt.texts[t.id].text.split('\n').forEach(function (line, li) {
+          var p = parseLine(line, t), items = expand(p, rd, dt.type);
+          /* a repeating line ("every 10 from … to …") marks its minyanim, so a screen can write the run as one line instead of a tile each */
+          var run = p && p.spec && p.spec.kind === 'series' && items.length ? { id: t.id + ':' + li, every: p.spec.every, rooms: p.rooms || [], from: items[0].start, to: items[items.length - 1].start, count: items.length } : null;
+          items.forEach(function (x) {
+            list.push({ tefilla: t, room: x.room, note: x.note, start: x.start, ms: Cal.epochFromWall(rd, x.start, tz), milestone: x.start + offset, rd: rd, series: run });
           });
         });
         list.sort(function (a, b) { return a.start - b.start || rank(a.room) - rank(b.room); });

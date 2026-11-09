@@ -167,21 +167,22 @@ Same address, different screens (the `#` forms also work on the claude.ai page):
 
 | View | Address | For |
 |---|---|---|
-| Lobby screen | `index.html?view=display` or `#display` | the TV in the lobby: no controls, nothing to scroll. A minyan is marked עכשיו for 20 minutes after it starts (General → "Minutes a minyan stays marked now"), then it drops off; on the normal board it is dimmed instead. See "The lobby screen on a TV" below |
+| Hallway screen | `index.html?view=display` or `#display` | the TV in the hallway: three columns, no controls, nothing to scroll. A minyan is marked עכשיו for 20 minutes after it starts (General → "Minutes a minyan stays marked now"), then it drops off; on the normal board it is dimmed instead. See "The hallway screen on a TV" below |
 | Door display | `index.html?room=ברך משה` or `#room1`, `#room2`… (order of the Rooms list) | a tablet at a room's door: that room's next minyan and its list |
 | Weekly sheet | `index.html?view=week` or `#week` | this week and next, Sunday to Shabbos, with candle lighting, Shabbos end and every minyan; Print button |
 | QR sign | `sign.html` | a printable sign with the site's QR code and the text number |
 | TV preview | `tv.html` | the hallway screen exactly as the TV renders it, scaled down to your phone or computer (1080p, 720p or 4K). Opening the lobby address on a phone lands here; the admin header has a TV link |
 | Text service page | `sms.html` | how the texting works (also the opt-in page for the carriers) |
 
-## The lobby screen on a TV
+## The hallway screen on a TV
 
-`index.html?view=display` is built for a wall TV, watched from a distance:
+`index.html?view=display` is built for a wall TV, watched from a distance. It is laid out in three columns and never scrolls:
 
-- **It scales with the screen.** Text, boxes and the round clock are sized from the screen's width and height, so a 60-inch TV and a 32-inch one show the same layout at the same proportion of the screen, and a 4K TV shown at full resolution is simply twice as sharp. General → "Hallway screen (TV) size" makes everything larger or smaller for every lobby screen (published like any other setting); `&size=120` in the address does it for one screen only.
-- **It never scrolls.** Under the header comes one row: the next-minyan box, a big round clock (with the digital time under it) and the next-zman box with the zmanim after it. The rest of the height goes to the tefillos, one row of tiles each; spare rows go to the tefilla with the most still to show. A tefilla with more minyanim than its rows pages through them every eight seconds (dots under its name show which page). Tomorrow's lists appear only when there is room for them, so at night the screen shows the last Maariv minyanim and tomorrow's Shacharis.
-- **When even one row per tefilla does not fit** (a morning with Shacharis, Mincha and Maariv all ahead), the whole screen shrinks a little, never below 70%, rather than run off the bottom. Pick "Smaller" in General to see more minyanim at once, "Larger" when people stand far from the TV.
-- The sponsor box (פרנס החודש and the like) sits in the side column under the zmanim, and the header's digital clock gives way to the round one. The board and the door displays are not affected.
+- **The first tefilla of the day** (שחרית) keeps the first column to itself, every minyan still ahead as a tile with its room, its time and its הודו. The sponsor boxes sit under it.
+- **The middle** holds the round clock with the time under it, the next-minyan box with its countdown, and the day's zmanim as tiles. The one being counted down to is marked and carries the countdown; once the day's zmanim have passed, the card turns to tomorrow's. The zmanim it counts down to are the ones picked in General.
+- **The rest of the day** (מנחה, מעריב) fills the last column. A repeating line is written as one line, "כל 10 דק׳ · 6:15–7:55" with its rooms, instead of a tile for each minyan, so a long Maariv list stays readable.
+- **It scales with the screen.** Text, tiles and the clock are sized from the screen's width and height, so a 60-inch TV and a 32-inch one show the same layout, and a 4K TV shown at full resolution is simply twice as sharp. The screen then measures itself and takes the largest size that fits the day, so a crowded morning shrinks a little by itself. General → "Hallway screen (TV)" caps that size, and `&size=80` in the address does it for one screen.
+- A minyan that has started stays up, marked עכשיו, for 20 minutes (General → "Minutes a minyan stays marked now"), then it drops off. The header carries the day, the date and any label such as ראש חודש; the shul's name is not repeated there.
 
 ## Another day's minyanim
 

@@ -26,8 +26,14 @@ const { chromium } = require('playwright');
   ok('Friday 13:00: candle lighting comes first', r.what, 'הדלקת נרות');
   r = await at(2026, 10, 25, 19, 0, '', DEF);
   ok('after shkia: no box', r.n, 0);
-  r = await at(2026, 10, 25, 9, 30, '#display', DEF);
-  ok('lobby screen shows it too', r.what, 'סוף זמן ק״ש');
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1920, height: 1080 }, locale: 'he', timezoneId: 'America/New_York', serviceWorkers: 'block' });
+    await ctx.addInitScript(({ fixed, pref }) => { const real = Date.now; const start = real(); Date.now = () => fixed + (real() - start); try { localStorage.setItem('minyan-countdown', JSON.stringify(pref)); } catch (e) {} }, { fixed: Date.UTC(2026, 9, 25, 13, 30), pref: DEF });
+    const page = await ctx.newPage();
+    await page.goto('http://localhost:8790/index.html?view=display', { waitUntil: 'networkidle' }); await page.waitForTimeout(500);
+    ok('the hallway screen marks the same zman on its tile, with the countdown on it', [await page.locator('.wall .ztile.now .room').textContent(), await page.locator('.wall .ztile.now .time').textContent(), /^00:2[89]:/.test(await page.locator('.wall .ztile.now .count').textContent())], ['סוף זמן ק״ש', '9:59', true]);
+    await ctx.close();
+  }
   r = await at(2026, 10, 25, 9, 30, '', ['chatzos']);
   ok('a device that picked only chatzos gets chatzos', [r.what, r.time], ['חצות', '12:40']);
   {
