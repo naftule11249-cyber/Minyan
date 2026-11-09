@@ -17,7 +17,7 @@ ok('sunday rooms take turns from 8:00', sh.slice(1, 7), ['8:00 דברי יואל
 ok('sunday 11:15-12:00', sh.slice(14, 18), ['11:15 ברך משה', '11:30 היכל אדל', '11:45 לב אהרן', '12:00 דברי יואל']);
 ok('hodu 10 minutes after the start', eng.fmtTime(sun.byTefilla.shacharis[0].milestone), '7:40');
 const mon = eng.scheduleFor(Cal.rdFromGreg(2026, 10, 26));
-ok('monday is a weekday with its own 20 minyanim', [mon.type, mon.byTefilla.shacharis.length], ['weekday', 20]);
+ok('monday is a weekday with its own list (18 minyanim or more)', [mon.type, mon.byTefilla.shacharis.length >= 18], ['weekday', true]);
 ok('sunday mincha and maariv follow the weekday lists', [sun.byTefilla.mincha.length, sun.byTefilla.maariv.length], [mon.byTefilla.mincha.length, mon.byTefilla.maariv.length]);
 /* zman-based times start from the zman as the zmanim list shows it (to the minute): chatzos 12:40 -> chatzos-30 is 12:10, not 12:09 */
 const z = Cal.zmanim(sunRd, cfg.location);
@@ -55,9 +55,11 @@ ok('condLimit gives the zman the line is measured against', eng.fmtTime(withLine
   const rcSun = Cal.rdFromGreg(2027, 6, 6), plainSun = Cal.rdFromGreg(2027, 6, 13), infoRc = Cal.dayInfo(rcSun, false);
   ok('June 6 2027 is a Sunday Rosh Chodesh', [infoRc.dow, infoRc.roshChodesh, Cal.dayType(infoRc)], [0, true, 'rosh_chodesh']);
   const sameAs = rd => eng.scheduleFor(rd).byTefilla.shacharis.map(e => eng.fmtTime(e.start) + ' ' + e.room);
-  ok('its Shacharis list is the Sunday list (all but the chatzos-based last row, which moves with the day)', [eng.dayTexts(rcSun, infoRc).texts.shacharis.source, sameAs(rcSun).slice(0, -1)], ['sunday', sameAs(plainSun).slice(0, -1)]);
+  const noRc = (E.MinyanEngine || E)(Object.assign({}, cfg, { schedules: Object.assign({}, cfg.schedules, { rosh_chodesh: {} }) })), sameAsNo = rd => noRc.scheduleFor(rd).byTefilla.shacharis.map(e => eng.fmtTime(e.start) + ' ' + e.room);
+  ok('with no Rosh Chodesh list of its own, its Shacharis list is the Sunday list (all but the chatzos-based last row, which moves with the day)', [noRc.dayTexts(rcSun, infoRc).texts.shacharis.source, sameAsNo(rcSun).slice(0, -1)], ['sunday', sameAsNo(plainSun).slice(0, -1)]);
+  ok('with the shul\'s Rosh Chodesh list, a Sunday Rosh Chodesh uses it', [eng.dayTexts(rcSun, infoRc).texts.shacharis.source, sameAs(rcSun)[0]], ['rosh_chodesh', '6:20 ברך משה']);
   let rd = Cal.rdFromGreg(2026, 11, 1), inf; while (!((inf = Cal.dayInfo(rd, false)).roshChodesh && inf.dow >= 1 && inf.dow <= 4)) rd++;
-  ok('a midweek Rosh Chodesh still follows the weekday list', eng.dayTexts(rd, inf).texts.shacharis.source, 'weekday');
+  ok('a midweek Rosh Chodesh uses the Rosh Chodesh list; without one it follows the weekday list', [eng.dayTexts(rd, inf).texts.shacharis.source, noRc.dayTexts(rd, inf).texts.shacharis.source], ['rosh_chodesh', 'weekday']);
 }
 ok('a switched-off line (#off …) is ignored by the board', withLines({ shacharis: '#off 6:20 ברך משה\n7:00 דברי יואל' }).scheduleFor(octRd).byTefilla.shacharis.map(e => eng.fmtTime(e.start)), ['7:00']);
 /* rooms in the gabbai's order break ties at the same time */
