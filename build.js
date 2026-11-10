@@ -33,15 +33,23 @@ const full = '<!doctype html><html lang="he"><head><meta charset="utf-8"><meta n
 fs.writeFileSync(path.join(dist, 'index.html'), full);
 const adminFull = full.replace('<title>' + esc(name) + '</title>', '<title>' + esc(name) + ' – Admin</title>').replace('<head>', '<head><meta name="robots" content="noindex,nofollow">');
 fs.writeFileSync(path.join(dist, 'admin.html'), adminFull);
-// a short way in to the back end: minyan.example.org/admin — a page that steps aside to admin.html, keeping ?pin= and the like
-fs.mkdirSync(path.join(dist, 'admin'), { recursive: true });
-fs.writeFileSync(path.join(dist, 'admin', 'index.html'), '<!doctype html><html lang="en"><head><meta charset="utf-8">' +
-  '<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">' +
-  '<title>' + esc(name) + ' \u2013 Admin</title><link rel="icon" href="../favicon.png">' +
-  '<meta http-equiv="refresh" content="0; url=../admin.html">' +
-  '<style>body{margin:0;display:grid;place-items:center;min-height:100vh;background:#e8e3da;color:#2b2622;font:16px -apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif}a{color:#7a2433}</style></head>' +
-  '<body><p>Opening the admin page\u2026 <a href="../admin.html">carry on</a></p>' +
-  '<script>location.replace("../admin.html" + location.search + location.hash);<\/script></body></html>');
+// short ways in: /admin for the back end, /screen for the TV itself, /tv for the preview on a phone.
+// Each is a folder with a page that steps aside to the real one, carrying anything the address already had.
+const shortcut = (folder, file, query, title) => {
+  const href = file + (query ? '?' + query : '');
+  fs.mkdirSync(path.join(dist, folder), { recursive: true });
+  fs.writeFileSync(path.join(dist, folder, 'index.html'), '<!doctype html><html lang="en"><head><meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">' +
+    '<title>' + esc(name) + ' \u2013 ' + esc(title) + '</title><link rel="icon" href="../favicon.png">' +
+    '<meta http-equiv="refresh" content="0; url=../' + esc(href) + '">' +
+    '<style>body{margin:0;display:grid;place-items:center;min-height:100vh;background:#e8e3da;color:#2b2622;font:16px -apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif}a{color:#7a2433}</style></head>' +
+    '<body><p>Opening\u2026 <a href="../' + href.replace(/&/g, '&amp;') + '">carry on</a></p><script>' +
+    '(function(){var own=' + JSON.stringify(query) + ',had=location.search.slice(1),q=[own,had].filter(Boolean).join("&");' +
+    'location.replace(' + JSON.stringify('../' + file) + ' + (q ? "?" + q : "") + location.hash);})();<\/script></body></html>');
+};
+shortcut('admin', 'admin.html', '', 'Admin');
+shortcut('screen', 'index.html', 'view=display&full=1', 'Hallway screen');
+shortcut('tv', 'tv.html', '', 'Hallway screen preview');
 for (const f of ['style.css', 'cal.js', 'engine.js', 'template.js', 'app.js', 'manifest.webmanifest']) fs.copyFileSync(path.join(__dirname, 'src', f), path.join(dist, f));
 fs.writeFileSync(path.join(dist, 'config.json'), json);
 fs.writeFileSync(path.join(dist, '.nojekyll'), '');

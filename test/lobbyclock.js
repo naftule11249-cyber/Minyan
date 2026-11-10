@@ -62,7 +62,14 @@ const { chromium } = require('playwright');
   const px = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize)), clock = (await page.locator('.aclock svg').boundingBox()).width;
   await ctx.close();
   ({ ctx, page } = await open('?view=display&size=80', Date.UTC(2026, 10, 11, 2, 10)));
-  ok('the size setting caps the screen: 80 makes it smaller (the screen already fills the TV on its own)', [(await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize))) < px, (await fits(page)).noScroll], [true, true]);
+  ok('the size setting never lets the screen grow past what fits', [(await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize))) <= px, (await fits(page)).noScroll], [true, true]);
+  await ctx.close();
+  /* at a quieter hour the fit is not the binding constraint, so the setting itself shows */
+  ({ ctx, page } = await open('?view=display', Date.UTC(2026, 10, 10, 19, 20)));
+  const pxQuiet = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize));
+  await ctx.close();
+  ({ ctx, page } = await open('?view=display&size=80', Date.UTC(2026, 10, 10, 19, 20)));
+  ok('the size setting caps the screen: 80 makes it smaller', [(await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize))) < pxQuiet, (await fits(page)).noScroll], [true, true]);
   await ctx.close();
   {
     const r = await open('?view=display', Date.UTC(2026, 10, 11, 2, 10), { width: 3840, height: 2160 });

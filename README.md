@@ -4,7 +4,7 @@ Published as **Cascade Zmanim**, a privately run service: the shul's name appear
 
 Shows the next minyan with a live countdown, every room's Shacharis / Mincha / Maariv
 minyanim (with the Hodu / Shemoneh Esrei time), the Hebrew date, the parsha of the week,
-holidays and today's zmanim. The board itself is in Hebrew and has no editing controls. The gabbai edits everything from a separate admin page in English: `/admin` on the self-hosted site — the short way in, or `admin.html` itself (PIN) — or the claude.ai link with `#admin` added (owner only).
+holidays and today's zmanim. The board itself is in Hebrew and has no editing controls. The gabbai edits everything from a separate admin page in English: `/admin` on the self-hosted site — one of three short ways in, `/screen` for the TV and `/tv` for the preview, or the pages themselves (PIN) — or the claude.ai link with `#admin` added (owner only).
 
 Three ways to use it, all from the same code:
 
@@ -167,11 +167,11 @@ Same address, different screens (the `#` forms also work on the claude.ai page):
 
 | View | Address | For |
 |---|---|---|
-| Hallway screen | `index.html?view=display` or `#display` | the TV in the hallway: three columns, no controls, nothing to scroll. A minyan is marked עכשיו for 20 minutes after it starts (General → "Minutes a minyan stays marked now"), then it drops off; on the normal board it is dimmed instead. See "The hallway screen on a TV" below |
+| Hallway screen | `/screen`, `index.html?view=display` or `#display` | the TV in the hallway: three columns, no controls, nothing to scroll. A minyan is marked עכשיו for 20 minutes after it starts (General → "Minutes a minyan stays marked now"), then it drops off; on the normal board it is dimmed instead. See "The hallway screen on a TV" below |
 | Door display | `index.html?room=ברך משה` or `#room1`, `#room2`… (order of the Rooms list) | a tablet at a room's door: that room's next minyan and its list |
 | Weekly sheet | `index.html?view=week` or `#week` | this week and next, Sunday to Shabbos, with candle lighting, Shabbos end and every minyan; Print button |
 | QR sign | `sign.html` | a printable sign with the site's QR code and the text number |
-| TV preview | `tv.html` | the hallway screen exactly as the TV renders it, scaled down to your phone or computer (1080p, 720p or 4K). Opening the lobby address on a phone lands here; the admin header has a TV link |
+| TV preview | `/tv` or `tv.html` | the hallway screen exactly as the TV renders it, scaled down to your phone or computer (1080p, 720p or 4K). Opening the lobby address on a phone lands here; the admin header has a TV link |
 | Text service page | `sms.html` | how the texting works (also the opt-in page for the carriers) |
 
 ## The hallway screen on a TV

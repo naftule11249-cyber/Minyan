@@ -654,12 +654,12 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 #app.display .wall .wcol.mid > *{ width: 100%; }
 #app.display .wall .wcol.mid .aclock{ margin-top: .2rem; }
 /* a card: the tefilla's name on a plaque at the top, its minyanim as tiles below */
-#app.display .wall .tefilla{ background: var(--w-frameBg, var(--panel)); border: 2px solid var(--w-frameLine, var(--line)); border-radius: 1rem; padding: 1.5rem .8rem 1.25rem; position: relative; min-height: 0;
+#app.display .wall .tefilla{ background: var(--w-frameBg, var(--panel)); border: 2px solid var(--w-frameLine, var(--line)); border-radius: 1rem; padding: 1.5rem .8rem 1.15rem; position: relative; min-height: 0;
   display: flex; flex-direction: column; justify-content: center; justify-content: safe center; } /* the card that fills the column holds its minyanim in the middle, not against the plaque */
 #app.display .wall .tefilla > h3{ position: absolute; top: -.85rem; inset-inline-start: 50%; transform: translateX(50%); margin: 0; white-space: nowrap;
   background: var(--panel-2); border: 2px solid var(--gold); border-radius: 999px; padding: .1rem 1.1rem; font-size: 1.45rem; color: var(--accent); }
 #app.display .wall .tefilla > h3 .pg{ font-family: var(--font-ui); font-size: .8rem; letter-spacing: .15em; color: var(--muted); margin-inline-start: .5rem; direction: ltr; }
-#app.display .wall .grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.25rem .7rem; align-content: space-evenly; flex: 1 1 auto; scroll-behavior: smooth; } /* a part-full last row sits in the middle; spare height in the card goes between the rows */
+#app.display .wall .grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.05rem .7rem; align-content: space-evenly; flex: 1 1 auto; scroll-behavior: smooth; } /* a part-full last row sits in the middle; spare height in the card goes between the rows */
 #app.display .wall .grid > .tile { flex: 1 1 8.4rem; max-width: 11rem; }
 #app.display .wall .grid > .ztile { flex: 1 1 9rem; max-width: 15rem; }
 #app.display .wall .tile { padding: .4rem .3rem .35rem; border-radius: .5rem; background: var(--w-tileBg, linear-gradient(180deg, var(--tile), var(--tile-2))); color: var(--w-tileInk, var(--tile-ink)); }
@@ -668,7 +668,7 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 #app.display .wall .tile .ms{ font-size: .85rem; }
 #app.display .wall .tile .note{ font-size: .85rem; }
 #app.display .wall .tile .mark { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); white-space: nowrap; background: var(--panel); border: 1px solid var(--gold); border-top: 0;
-  color: var(--accent); font-size: .78rem; font-weight: 700; padding: 0 .55rem .1rem; border-radius: 0 0 .5rem .5rem; } /* a tab growing out of the tile's own bottom edge, so it belongs to that tile and the tile stays the size of the rest */
+  color: var(--accent); font-size: .78rem; line-height: 1.15; font-weight: 700; padding: 0 .55rem .1rem; border-radius: 0 0 .5rem .5rem; } /* a tab growing out of the tile's own bottom edge, so it belongs to that tile and the tile stays the size of the rest */
 #app.display .wall .tile.next { background: var(--w-nextBg, linear-gradient(180deg, var(--live), var(--live-2))); color: var(--w-nextInk, #fff); }
 #app.display .wall .tile.next::after, #app.display .wall .tile.now::after{ font-size: .8rem; top: -.6rem; padding: .05rem .5rem; }
 /* how a tile reads at a glance: still to come, the next one, the one davening now, the one that just went, and the earlier ones */
