@@ -625,6 +625,7 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 #app.display .wall .tile .time{ font-size: 2.1rem; }
 #app.display .wall .tile .ms{ font-size: .85rem; }
 #app.display .wall .tile .note{ font-size: .85rem; }
+#app.display .wall .tile .mark { position: absolute; bottom: -.55rem; left: 50%; transform: translateX(-50%); white-space: nowrap; background: var(--panel); border: 1px solid var(--gold); color: var(--accent); font-size: .78rem; font-weight: 700; padding: .05rem .55rem; border-radius: 999px; } /* a pill on the edge, so a marked tile is no bigger than the rest */
 #app.display .wall .tile.next::after, #app.display .wall .tile.now::after{ font-size: .8rem; top: -.6rem; padding: .05rem .5rem; }
 /* how a tile reads at a glance: still to come, the next one, the one davening now, the one that just went, and the earlier ones */
 #app.display .wall .tile.past { display: block; opacity: .4; filter: saturate(.3); }
