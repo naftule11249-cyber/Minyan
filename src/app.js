@@ -598,7 +598,8 @@
       items.push(el('section', { class: 'sponsor' }, [
         el('div', { class: 'frame' }),
         el('h2', { class: 't', text: n.title || '' }),
-        el('div', { class: 'b', text: n.body.trim() })]));
+        (n.name || '').trim() ? el('div', { class: 'n', text: n.name.trim() }) : null,
+        el('div', { class: 'b', text: (n.body || '').trim() })]));
     });
     if (ui.sponsorTimer) { clearInterval(ui.sponsorTimer); ui.sponsorTimer = null; }
     if (!items.length) return null;
@@ -1473,14 +1474,93 @@
 
     /* notices */
     var np = el('div', { class: 'col' }), nList = el('div', { class: 'col' }), nRows = [];
-    function addNotice(n) {
-      var id = ++uid, r = { title: inp('n-title-' + id, n.title), body: el('textarea', { id: 'n-body-' + id, dir: 'auto' }), from: inp('n-from-' + id, n.from || '', { type: 'date' }), to: inp('n-to-' + id, n.to || '', { type: 'date' }) };
-      r.body.value = n.body || ''; r.body.style.minHeight = '70px';
-      var headT = el('span', { text: n.title || 'Notice' }); r.title.addEventListener('input', function () { headT.textContent = r.title.value.trim() || 'Notice'; });
-      r.wrap = el('div', { class: 'ovr' }, [el('div', { class: 'ohead' }, [headT, el('button', { type: 'button', class: 'btn small danger', text: 'Remove', onclick: function () { nRows.splice(nRows.indexOf(r), 1); r.wrap.remove(); } })]),
-        el('div', { class: 'fields' }, [field('Title', r.title), field('Text', r.body)]),
-        el('div', { class: 'fields' }, [field('Show from (blank = now)', r.from), field('Show until (blank = no end)', r.to)])]);
+    /* a Hebrew date beside a civil one: the three boxes write the civil date, and follow it when it is typed */
+  function hebPicker(input) {
+    var wrap = el('span', { class: 'hebpick' }), dSel = el('select', { 'aria-label': 'Hebrew day' }), mSel = el('select', { 'aria-label': 'Hebrew month' }), ySel = el('select', { 'aria-label': 'Hebrew year' }), shown = el('span', { class: 'hebshow' });
+    var thisY = Cal.hebFromRD(Cal.nowInTz(Date.now(), loc().tz).rd).y, quiet = false;
+    function fillYears() { ySel.textContent = ''; for (var y = thisY - 1; y <= thisY + 2; y++) ySel.appendChild(el('option', { value: String(y), text: Cal.formatHeb({ y: y, m: 7, d: 1 }).split(' ').slice(-1)[0] })); }
+    function fillMonths() {
+      var y = +ySel.value || thisY, last = Cal.hebLeap(y) ? 13 : 12, order = [7, 8, 9, 10, 11, 12, 13, 1, 2, 3, 4, 5, 6], cur = mSel.value;
+      mSel.textContent = '';
+      order.forEach(function (m) { if (m === 13 && last === 12) return; mSel.appendChild(el('option', { value: String(m), text: Cal.monthName(y, m) })); });
+      if (cur) mSel.value = cur;
+      if (mSel.selectedIndex < 0) mSel.selectedIndex = 0;
+    }
+    function fillDays() {
+      var y = +ySel.value || thisY, m = +mSel.value || 7, len = Cal.hebMonthLength(y, m), cur = dSel.value, i;
+      dSel.textContent = '';
+      for (i = 1; i <= len; i++) dSel.appendChild(el('option', { value: String(i), text: Cal.formatHeb({ y: y, m: m, d: i }).split(' ')[0] }));
+      if (cur && +cur <= len) dSel.value = cur; else dSel.selectedIndex = 0;
+    }
+    function fromInput() {
+      var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(input.value || '');
+      quiet = true;
+      var h = m ? Cal.hebFromRD(Cal.rdFromGreg(+m[1], +m[2], +m[3])) : Cal.hebFromRD(Cal.nowInTz(Date.now(), loc().tz).rd); /* no date yet: the boxes start at today, and nothing is written until one is changed */
+      ySel.value = String(h.y); fillMonths(); mSel.value = String(h.m); fillDays(); dSel.value = String(h.d);
+      shown.textContent = m ? Cal.formatHeb(h) : '';
+      quiet = false;
+    }
+    function toInput() {
+      if (quiet) return;
+      var y = +ySel.value, m = +mSel.value, d = +dSel.value, g = Cal.gregFromRD(Cal.rdFromHeb(y, m, d));
+      input.value = g.y + '-' + pad2(g.m) + '-' + pad2(g.d);
+      shown.textContent = Cal.formatHeb({ y: y, m: m, d: d });
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    fillYears(); fillMonths(); fillDays(); fromInput();
+    ySel.addEventListener('change', function () { fillMonths(); fillDays(); toInput(); });
+    mSel.addEventListener('change', function () { fillDays(); toInput(); });
+    dSel.addEventListener('change', toInput);
+    input.addEventListener('change', fromInput);
+    input.addEventListener('input', fromInput);
+    wrap.appendChild(dSel); wrap.appendChild(mSel); wrap.appendChild(ySel);
+    return { wrap: wrap, shown: shown, sync: fromInput };
+  }
+  /* Active today, still to come, or over: from the entry's own dates */
+  function noticeState(n) {
+    var today = MinyanEngine.isoDate(Cal.nowInTz(Date.now(), loc().tz).rd);
+    if (!(n.body || '').trim() && !(n.name || '').trim()) return { k: 'empty', t: 'ריק' };
+    if (n.from && today < n.from) return { k: 'soon', t: 'עוד לא' };
+    if (n.to && today > n.to) return { k: 'done', t: 'עבר' };
+    return { k: 'on', t: 'פעיל' };
+  }
+  function addNotice(n) {
+      var id = ++uid, r = { title: inp('n-title-' + id, n.title), name: inp('n-name-' + id, n.name || '', { dir: 'auto' }), body: el('textarea', { id: 'n-body-' + id, dir: 'auto' }), from: inp('n-from-' + id, n.from || '', { type: 'date' }), to: inp('n-to-' + id, n.to || '', { type: 'date' }) };
+      r.body.value = n.body || ''; r.body.style.minHeight = '64px';
+      var FRAMES = ['פרנס החודש', 'פרנס השבוע', 'פרנס היום', 'נר למאור לחודש', 'נר למאור'];
+      var frame = el('select', { id: 'n-frame-' + id }, FRAMES.map(function (f) { return el('option', { value: f, text: f }); }).concat([el('option', { value: '', text: 'אחר…' })]));
+      frame.value = FRAMES.indexOf(r.title.value) >= 0 ? r.title.value : '';
+      r.title.hidden = frame.value !== '';
+      frame.addEventListener('change', function () { r.title.hidden = frame.value !== ''; if (frame.value) { r.title.value = frame.value; } head(); markDirty(); if (!frame.value) r.title.focus(); });
+      r.title.addEventListener('input', head);
+      var num = el('span', { class: 'onum', text: '' }), headT = el('span', { class: 'otitle' }), chip = el('span', { class: 'ochip' });
+      function head() {
+        headT.textContent = (frame.value || r.title.value).trim() || 'ספונסר';
+        var st = noticeState({ title: r.title.value, name: r.name.value, body: r.body.value, from: r.from.value, to: r.to.value });
+        chip.textContent = st.t; chip.className = 'ochip ' + st.k;
+      }
+      [r.name, r.body, r.from, r.to].forEach(function (x) { x.addEventListener('input', head); x.addEventListener('change', head); });
+      function move(dir) {
+        var i = nRows.indexOf(r), j = i + dir;
+        if (j < 0 || j >= nRows.length) return;
+        nRows.splice(i, 1); nRows.splice(j, 0, r);
+        nList.textContent = ''; nRows.forEach(function (x, k) { nList.appendChild(x.wrap); x.num.textContent = (k + 1) + '.'; });
+        markDirty();
+      }
+      var hFrom = hebPicker(r.from), hTo = hebPicker(r.to);
+      r.num = num;
+      r.wrap = el('div', { class: 'ovr sponsor-row' }, [
+        el('div', { class: 'ohead' }, [num, headT, chip, el('span', { class: 'sp' }),
+          el('button', { type: 'button', class: 'btn small', text: '▲', title: 'Move up', 'data-nodirty': '1', onclick: function () { move(-1); } }),
+          el('button', { type: 'button', class: 'btn small', text: '▼', title: 'Move down', 'data-nodirty': '1', onclick: function () { move(1); } }),
+          el('button', { type: 'button', class: 'btn small danger', text: 'Remove', onclick: function () { nRows.splice(nRows.indexOf(r), 1); r.wrap.remove(); nRows.forEach(function (x, k) { x.num.textContent = (k + 1) + '.'; }); } })]),
+        el('div', { class: 'fields' }, [field('Which frame', frame, r.title), field('Name', r.name)]),
+        el('div', { class: 'fields' }, [field('Text under the name', r.body)]),
+        el('div', { class: 'fields' }, [
+          field('Show from (blank = right away)', r.from, el('div', { class: 'hebrow' }, [hFrom.wrap, hFrom.shown])),
+          field('Show until (blank = no end)', r.to, el('div', { class: 'hebrow' }, [hTo.wrap, hTo.shown]))])]);
       nRows.push(r); nList.appendChild(r.wrap);
+      num.textContent = nRows.length + '.'; head();
     }
     (d.notices.length ? d.notices : [{ title: 'פרנס החודש', body: '' }, { title: 'פרנס השבוע', body: '' }, { title: 'נר למאור', body: '' }]).forEach(addNotice);
     var bText = el('textarea', { id: 'banner-text', dir: 'auto', placeholder: 'e.g. אין מעריב בלב אהרן הערב' }), bFrom = inp('banner-from', (d.banner && d.banner.from) || '', { type: 'datetime-local' }), bUntil = inp('banner-until', (d.banner && d.banner.until) || '', { type: 'datetime-local' });
@@ -1488,9 +1568,9 @@
     var cBanner = card('Temporary banner', 'One line shown across the top of the board (and at the start of text replies). Give it a start time and it appears by itself; give it an end time and it disappears by itself. Blank means right away, or for good.');
     cBanner.body.appendChild(el('div', { class: 'fields' }, [field('Banner text', bText)]));
     cBanner.body.appendChild(el('div', { class: 'fields' }, [field('Show from (shul time; blank = right away)', bFrom), field('Show until (shul time; blank = until you clear it)', bUntil, el('button', { type: 'button', class: 'btn small', text: 'Clear banner', onclick: function () { bText.value = ''; bFrom.value = ''; bUntil.value = ''; } }))]));
-    var cNotices = card('Sponsors and announcements', 'Sponsor panels (פרנס החודש, פרנס השבוע, נר למאור) and announcements, shown in framed boxes at the top of the board. Give each one dates and it appears and disappears by itself; several entries with the same title form a queue. A notice with empty text is not shown.');
+    var cNotices = card('Sponsors and announcements (נדבנים)', 'Sponsor panels (פרנס החודש, פרנס השבוע, נר למאור) and announcements, shown in framed boxes at the top of the board. Give each one dates and it appears and disappears by itself; several entries with the same title form a queue. A notice with empty text is not shown.');
     cNotices.body.appendChild(nList);
-    cNotices.body.appendChild(el('div', null, [el('button', { type: 'button', class: 'btn', text: '+ Notice', onclick: function () { addNotice({ title: '', body: '' }); } })]));
+    cNotices.body.appendChild(el('div', null, [el('button', { type: 'button', class: 'btn', id: 'add-sponsor', text: '+ Sponsor', onclick: function () { addNotice({ title: 'פרנס היום', body: '' }); } })]));
     np.appendChild(cBanner); np.appendChild(cNotices);
     pages.notices = np;
 
@@ -1740,7 +1820,7 @@
         d.tefillos.forEach(function (tf) { var v = lines[t[0]][tf.id].value; if (v.trim()) o[tf.id] = v.replace(/\r/g, ''); });
         if (Object.keys(o).length) out.schedules[t[0]] = o;
       });
-      out.notices = nRows.map(function (r) { return { title: r.title.value.trim(), body: r.body.value.trim(), from: r.from.value, to: r.to.value }; }).filter(function (n) { return n.title || n.body; });
+      out.notices = nRows.map(function (r) { return { title: r.title.value.trim(), name: r.name.value.trim(), body: r.body.value.trim(), from: r.from.value, to: r.to.value }; }).filter(function (n) { return n.title || n.name || n.body; });
       out.banner = { text: bText.value.trim(), from: bFrom.value, until: bUntil.value };
       out.overrides = oRows.map(function (r) {
         var lines = {};
