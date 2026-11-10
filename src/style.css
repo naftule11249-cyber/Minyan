@@ -651,6 +651,7 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 #app.display .wall .tile.last::after { content: var(--badge-last, "עבר"); position: absolute; top: -.6rem; inset-inline-start: .5rem; background: var(--muted); color: #fff; font-size: .8rem; padding: .05rem .5rem; border-radius: 999px; }
 #app.display .wall .tile.prev { background: var(--w-nowBg, var(--live-soft)); color: var(--w-nowInk, var(--live-soft-ink)); opacity: 1; filter: none; display: block; }
 #app.display .wall .tile.prev::after { background: var(--live-2); }
+#app.display .wall .tile.prev .ms, #app.display .wall .tile.prev .note { color: inherit; } /* the הודו line follows the light-green tile's own ink, not the near-white one the dark tiles use */
 #app.display .wall .tile.now::after { background: var(--live-2); }
 #app.display .wall .runline.past { opacity: .45; }
 /* a repeating run, written as one line instead of a tile each */
