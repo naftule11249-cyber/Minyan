@@ -166,7 +166,11 @@
   function SU() { return strs(uiLang()); }    /* the sheets */
   function applyLang() { if (typeof document === 'undefined') return; var st = document.documentElement.style, L = S(); st.setProperty('--badge-next', '"' + L.badgeNext + '"'); st.setProperty('--badge-now', '"' + L.badgeNow + '"'); st.setProperty('--badge-last', '"' + (L.badgeLast || '') + '"'); }
   function dayLine(info, rd) { var p = Cal.parshaOfWeek(rd, !!cfg.israel); return S().days[info.dow] + (p ? S().parsha + p : ''); }
-  function typeLabel(s) { if (s.override) return S().special + (s.override.label ? ': ' + s.override.label : ''); return S().board + (S().types[s.type] || TYPE_NAME[s.type] || s.type); }
+  function typeLabel(s) {
+    if (s.override) return S().special + (s.override.label ? ': ' + s.override.label : '');
+    if (s.roll && s.roll.name) return S().board + s.roll.name;
+    return S().board + (S().types[s.type] || TYPE_NAME[s.type] || s.type);
+  }
 
   /* ---------- rendering ---------- */
   function render() {
@@ -1034,6 +1038,7 @@
     return el('label', { for: id }, [c, ' ' + label]);
   }
   var ICONS = {
+    rolls: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v16"/>',
     screen: '<rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/>',
     tv: '<rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/>',
     today: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><circle cx="12" cy="15.5" r="1.7" fill="currentColor" stroke="none"/>',
@@ -1085,7 +1090,7 @@
     d.location = d.location || {}; d.schedules = d.schedules || {}; d.overrides = d.overrides || []; d.notices = d.notices || [];
     d.tefillos = (d.tefillos && d.tefillos.length) ? d.tefillos : clone(TEFILLA_DEFAULTS);
     var todayRd = Cal.nowInTz(Date.now(), loc().tz).rd, todayInfo = Cal.dayInfo(todayRd, !!cfg.israel);
-    var tabs = [['today', 'This week', 'Move, cancel or add a minyan for today or for one of the next days; that day only.', 'Week'], ['general', 'General', 'Name, rooms, location, looks and the tefillos.'], ['schedule', 'Schedule', 'The regular minyanim for each kind of day.'], ['notices', 'Notices', 'Banner, sponsors and announcements on the board.'], ['screen', 'Hallway screen', 'The TV in the hallway: its colours, and which minyanim it shows.', 'Screen'], ['overrides', 'Special dates', 'A different schedule for one date or for a day every year.', 'Special']];
+    var tabs = [['today', 'This week', 'Move, cancel or add a minyan for today or for one of the next days; that day only.', 'Week'], ['general', 'General', 'Name, rooms, location, looks and the tefillos.'], ['schedule', 'Schedule', 'The regular minyanim for each kind of day.'], ['notices', 'Notices', 'Banner, sponsors and announcements on the board.'], ['rolls', 'Extra schedules', 'A named list that takes over for the days it covers: a season, a week, or one kind of day.', 'Extra'], ['screen', 'Hallway screen', 'The TV in the hallway: its colours, and which minyanim it shows.', 'Screen'], ['overrides', 'Special dates', 'A different schedule for one date or for a day every year.', 'Special']];
     if (mode !== 'artifact') tabs.push(['publish', 'Publish', 'What is waiting to go out, and the connection to the website.']);
     if (mode !== 'artifact') tabs.push(['send', 'Send', 'A notification, right now, to everyone who turned reminders on.']);
     tabs.push(['data', 'Backup', 'Previous versions and the settings as text.']);
@@ -1615,6 +1620,74 @@
     cNotices.body.appendChild(nList);
     cNotices.body.appendChild(el('div', null, [el('button', { type: 'button', class: 'btn', id: 'add-sponsor', text: '+ Sponsor', onclick: function () { addNotice({ title: 'פרנס היום', body: '' }); } })]));
     np.appendChild(cBanner); np.appendChild(cNotices);
+    /* extra schedules: named lists that take over for the days they cover */
+    var rp = el('div', { class: 'col', id: 'page-rolls' }), rollRows = [], rollList = el('div', { class: 'col' }), rollUid = 0;
+    var ROLL_TYPES = [['any', 'Any day']].concat(Cal.DAY_TYPES.map(function (t) { return [t[0], t[3]]; }));
+    function rollState(r) {
+      var today = MinyanEngine.isoDate(todayRd);
+      if (!r.active.checked) return { k: 'done', t: 'Off' };
+      if (r.from.value && today < r.from.value) return { k: 'soon', t: 'Not yet' };
+      if (r.to.value && today > r.to.value) return { k: 'done', t: 'Over' };
+      return { k: 'on', t: 'On' };
+    }
+    function addRoll(v) {
+      v = v || {};
+      var id = ++rollUid, r = {
+        name: inp('r-name-' + id, v.name || '', { dir: 'auto', placeholder: 'e.g. זומער שחרית' }),
+        type: el('select', { id: 'r-type-' + id }, ROLL_TYPES.map(function (t) { return el('option', { value: t[0], text: t[1] }); })),
+        priority: inp('r-pri-' + id, v.priority == null ? 1 : v.priority, { type: 'number', min: '0', max: '99', inputmode: 'numeric' }),
+        active: el('input', { type: 'checkbox', id: 'r-on-' + id }),
+        from: inp('r-from-' + id, v.from || '', { type: 'date' }),
+        to: inp('r-to-' + id, v.to || '', { type: 'date' }),
+        dows: [], lines: {}
+      };
+      r.type.value = ROLL_TYPES.some(function (t) { return t[0] === v.type; }) ? v.type : 'any';
+      r.active.checked = v.active !== false;
+      d.tefillos.forEach(function (tf) { r.lines[tf.id] = { value: (v.lines && v.lines[tf.id]) || '' }; });
+      var chip = el('span', { class: 'ochip' }), headT = el('span', { class: 'otitle' }), sub = el('span', { class: 'osub' });
+      function head() {
+        headT.textContent = r.name.value.trim() || 'Extra schedule';
+        var st = rollState(r); chip.textContent = st.t; chip.className = 'ochip ' + st.k;
+        var days = r.dows.filter(function (c) { return c.checked; }).map(function (c) { return Cal.DAY_SHORT[+c.value]; });
+        sub.textContent = (ROLL_TYPES.filter(function (t) { return t[0] === r.type.value; })[0] || ['', ''])[1] + (days.length && days.length < 7 ? ' · ' + days.join(' ') : '') + ' · ' + (r.priority.value || 0);
+      }
+      [r.name, r.priority, r.from, r.to].forEach(function (x) { x.addEventListener('input', head); x.addEventListener('change', head); });
+      r.type.addEventListener('change', head); r.active.addEventListener('change', head);
+      var dowRow = el('div', { class: 'chips-row' });
+      Cal.DAY_NAMES.forEach(function (nm, i) {
+        var c = el('input', { type: 'checkbox', id: 'r-dow-' + id + '-' + i, value: String(i) });
+        c.checked = !v.dows || !v.dows.length || v.dows.indexOf(i) >= 0;
+        c.addEventListener('change', head);
+        r.dows.push(c);
+        dowRow.appendChild(el('label', { class: 'dowpick', for: c.id }, [c, el('span', { text: Cal.DAY_SHORT[i] })]));
+      });
+      var hFrom = hebPicker(r.from), hTo = hebPicker(r.to);
+      var editors = el('div', { class: 'fields three' });
+      d.tefillos.forEach(function (tf, i) {
+        var store = r.lines[tf.id];
+        var sources = Cal.DAY_TYPES.map(function (o) { return { key: o[0], label: o[3], store: function () { return lines[o[0]][tf.id]; } }; });
+        var ed = minyanEditor(store, i, function () { return r.type.value === 'any' ? 'weekday' : r.type.value; }, sources);
+        editors.appendChild(el('div', { class: 'field tefcard' }, [el('label', { class: 'tefname', text: tf.name }), el('div', { class: 'hint', text: 'Empty: this tefilla keeps the day\'s usual list.' }), ed]));
+      });
+      var c = card('Extra schedule', '', { fold: true, cls: 'rollcard' });
+      var h3 = c.querySelector('.chead h3'); h3.textContent = ''; h3.appendChild(headT); h3.appendChild(chip); h3.appendChild(sub);
+      c.body.appendChild(el('div', { class: 'fields' }, [field('Name', r.name), field('Which days it covers', r.type), field('Priority (higher wins)', stepper(r.priority, 1))]));
+      c.body.appendChild(el('div', { class: 'field' }, [el('label', { text: 'Only on these days of the week' }), dowRow]));
+      c.body.appendChild(el('div', { class: 'fields' }, [
+        field('From (blank = always)', r.from, el('div', { class: 'hebrow' }, [hFrom.wrap, hFrom.shown])),
+        field('Until (blank = no end)', r.to, el('div', { class: 'hebrow' }, [hTo.wrap, hTo.shown]))]));
+      c.body.appendChild(el('div', { class: 'checks' }, [el('label', { for: r.active.id }, [r.active, ' On'])]));
+      c.body.appendChild(editors);
+      c.body.appendChild(el('div', { class: 'bar actions' }, [el('button', { type: 'button', class: 'btn small danger', text: 'Remove this schedule', onclick: function () { rollRows.splice(rollRows.indexOf(r), 1); c.remove(); } })]));
+      r.wrap = c; rollRows.push(r); rollList.appendChild(c); head();
+    }
+    (d.rolls || []).forEach(addRoll);
+    var cRolls = card('Extra schedules', 'Each one is a named list with its own minyanim. It takes over for the days it covers, and the one with the highest priority wins. A special date still beats them all, and a tefilla left empty keeps the day\'s usual list.');
+    cRolls.body.appendChild(rollList);
+    cRolls.body.appendChild(el('div', null, [el('button', { type: 'button', class: 'btn', id: 'add-roll', text: '+ Extra schedule', onclick: function () { addRoll({ type: 'weekday', priority: 1, active: true }); } })]));
+    rp.appendChild(cRolls);
+    pages.rolls = rp;
+
     pages.notices = np;
 
     /* the hallway screen: its colours, and which minyanim it shows */
@@ -1919,6 +1992,11 @@
       out.nextTemplate = fNextT.value.trim() === NEXT_TEMPLATE ? '' : fNextT.value;
       out.wallLook = {}; SWATCHES.forEach(function (sw) { if (wall[sw[0]]) out.wallLook[sw[0]] = wall[sw[0]]; });
       out.wallWindow = { mode: fWinMode.value, before: Math.max(10, Math.min(1440, +fWinBefore.value || 180)), after: Math.max(0, Math.min(240, +fWinAfter.value || 0)), neverEmpty: fWinKeep.checked };
+      out.rolls = rollRows.map(function (r) {
+        var dows = r.dows.filter(function (c) { return c.checked; }).map(function (c) { return +c.value; }), ln = {};
+        d.tefillos.forEach(function (tf) { if ((r.lines[tf.id].value || '').trim()) ln[tf.id] = r.lines[tf.id].value; });
+        return { name: r.name.value.trim(), type: r.type.value, priority: +r.priority.value || 0, active: r.active.checked, dows: dows.length === 7 ? [] : dows, from: r.from.value, to: r.to.value, lines: ln };
+      }).filter(function (r) { return r.name || Object.keys(r.lines).length; });
       out.notices = nRows.map(function (r) { return { title: r.title.value.trim(), name: r.name.value.trim(), body: r.body.value.trim(), from: r.from.value, to: r.to.value }; }).filter(function (n) { return n.title || n.name || n.body; });
       out.banner = { text: bText.value.trim(), from: bFrom.value, until: bUntil.value };
       out.overrides = oRows.map(function (r) {
@@ -1975,7 +2053,7 @@
       el('button', { type: 'button', class: 'btn ghost', 'data-nodirty': '1', onclick: function () { if (ui.adminDirty && !confirm('Lock without saving? The changes made here will be lost.')) return; pinOk = false; try { sessionStorage.removeItem('minyan-pin'); } catch (e) {} ui.adminDirty = false; closeOverlay(); showPin(); } }, [svgIcon('lock'), el('span', { text: 'Lock' })])]);
     var ghNow = mode === 'artifact' ? null : ghSettings();
     var footHint = mode === 'artifact' ? 'Save publishes a new version of this page for everyone who has the link.' : (ghConfigured(ghNow) ? 'Save keeps the changes on this device. Publish sends them to the website and the app.' : 'Save keeps the settings on this device only. Connect the website on the Publish tab to be able to publish.');
-    var main = el('div', { class: 'amain' }, [el('div', { class: 'ptitle' }, [pageTitle, pageDesc]), pages.today, pages.general, pages.schedule, pages.notices, pages.screen, pages.overrides, mode !== 'artifact' ? pages.publish : null, mode !== 'artifact' ? pages.send : null, pages.data,
+    var main = el('div', { class: 'amain' }, [el('div', { class: 'ptitle' }, [pageTitle, pageDesc]), pages.today, pages.general, pages.schedule, pages.rolls, pages.notices, pages.screen, pages.overrides, mode !== 'artifact' ? pages.publish : null, mode !== 'artifact' ? pages.send : null, pages.data,
       el('div', { class: 'bar afoot' }, [el('span', { class: 'hint', text: footHint }), saveBtn.cloneNode(true)])]);
     var pubBar = el('div', { class: 'pubbar' }); pubBar.hidden = true;
     function refreshPubBar() {
@@ -2089,6 +2167,18 @@
       out.push(f[1] + (f[0] === 'location' || f[0] === 'pinHash' || f[0] === 'pin' ? ' changed' : ': ' + (v == null || v === '' ? '(blank)' : typeof v === 'object' ? JSON.stringify(v) : String(v))));
     });
     if (!same(a.tefillos, b.tefillos)) out.push('Tefillos / categories changed');
+    /* extra schedules, by name */
+    (function () {
+      var ra = a.rolls || [], rb = b.rolls || [], names = {};
+      ra.concat(rb).forEach(function (r) { names[(r && r.name) || '(no name)'] = 1; });
+      Object.keys(names).forEach(function (n) {
+        function pick(l) { return l.filter(function (r) { return ((r && r.name) || '(no name)') === n; })[0]; }
+        var x = pick(ra), y = pick(rb);
+        if (!x && y) out.push('Extra schedule added: ' + n);
+        else if (x && !y) out.push('Extra schedule removed: ' + n);
+        else if (x && y && !same(x, y)) out.push('Extra schedule changed: ' + n + (x.active !== y.active ? (y.active ? ' (on)' : ' (off)') : ''));
+      });
+    })();
     Cal.DAY_TYPES.forEach(function (t) {
       var k = t[0], sa = (a.schedules || {})[k] || {}, sb = (b.schedules || {})[k] || {}, ids = {};
       Object.keys(sa).concat(Object.keys(sb)).forEach(function (id) { ids[id] = 1; });

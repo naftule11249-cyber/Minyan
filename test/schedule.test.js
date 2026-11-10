@@ -90,6 +90,27 @@ if (fails) { console.log(fails + ' FAILING'); process.exit(1); } else console.lo
   ok('a short run past midnight still works: 22:15 to 00:15 every 30', mkR('every 30 from 22:15 to 00:15 rooms ברך משה').scheduleFor(junRd).byTefilla.maariv.map(e => eng.fmtTime(e.start)), ['10:15', '10:45', '11:15', '11:45', '12:15']);
   ok('the shul\'s own June weekday has a sane Maariv list', mkR(cfg.schedules.weekday.maariv).scheduleFor(junRd).byTefilla.maariv.length < 40, true);
 }
+/* extra schedules: a named list that takes over for the days it covers, by priority */
+{
+  const roll = (rolls) => (E.MinyanEngine || E)(Object.assign({}, cfg, { rolls: rolls }));
+  const thu = Cal.rdFromGreg(2026, 11, 12), mon = Cal.rdFromGreg(2026, 11, 16), jul = Cal.rdFromGreg(2027, 7, 8);
+  const times = (e, rd) => e.scheduleFor(rd).byTefilla.shacharis.map(x => e.fmtTime(x.start)).join(' ');
+  const base = roll([]).scheduleFor(thu).byTefilla.shacharis.length;
+  ok('with no extra schedules nothing changes', [base >= 18, roll([]).scheduleFor(thu).roll], [true, null]);
+  const one = roll([{ name: 'זומער', type: 'weekday', priority: 1, active: true, lines: { shacharis: '5:30 ברך משה\n6:15 דברי יואל' } }]);
+  ok('an extra schedule takes over the tefilla it lists, and the rest of the day stays as it was', [times(one, thu), one.scheduleFor(thu).byTefilla.mincha.length, one.scheduleFor(thu).roll.name], ['5:30 6:15', 9, 'זומער']);
+  ok('the one with the higher priority wins', times(roll([{ name: 'low', type: 'weekday', priority: 1, active: true, lines: { shacharis: '6:30 ברך משה' } }, { name: 'high', type: 'weekday', priority: 5, active: true, lines: { shacharis: '5:55 לב אהרן' } }]), thu), '5:55');
+  const dated = roll([{ name: 'summer', type: 'weekday', priority: 9, active: true, from: '2027-06-01', to: '2027-08-31', lines: { shacharis: '5:30 ברך משה' } }]);
+  ok('its dates hold it back and let it through', [dated.scheduleFor(thu).byTefilla.shacharis.length, times(dated, jul)], [base, '5:30']);
+  const dows = roll([{ name: 'monday', type: 'weekday', priority: 9, active: true, dows: [1], lines: { shacharis: '6:45 ברך משה' } }]);
+  ok('only on the days of the week it names', [dows.scheduleFor(thu).byTefilla.shacharis.length, times(dows, mon)], [base, '6:45']);
+  ok('switched off, it does nothing', roll([{ name: 'off', type: 'weekday', priority: 9, active: false, lines: { shacharis: '4:00 ברך משה' } }]).scheduleFor(thu).byTefilla.shacharis.length, base);
+  ok('a special date still beats it', (function () {
+    const e = (E.MinyanEngine || E)(Object.assign({}, cfg, { rolls: [{ name: 'r', type: 'weekday', priority: 9, active: true, lines: { shacharis: '5:30 ברך משה' } }], overrides: [{ date: E.isoDate(thu), label: 'אסיפה', lines: { shacharis: '7:07 לב אהרן' } }] }));
+    return e.scheduleFor(thu).byTefilla.shacharis.map(x => e.fmtTime(x.start)).join(' ');
+  })(), '7:07');
+  ok('a schedule for any kind of day covers Shabbos too', times(roll([{ name: 'all', type: 'any', priority: 2, active: true, lines: { shacharis: '8:08 ברך משה' } }]), Cal.rdFromGreg(2026, 11, 14)), '8:08');
+}
 /* the temporary banner: from / until, shul time */
 {
   const mk = b => (E.MinyanEngine || E)(Object.assign({}, cfg, { banner: b }));

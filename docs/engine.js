@@ -141,13 +141,30 @@ var MinyanEngine = (function () {
     }
     /* a day type with no list of its own follows a more general one; Rosh Chodesh, Chanukah, a fast, Purim or Chol Hamoed that lands on a Sunday follows the Sunday list, not the weekday one */
     function fallbackFor(k, info) { var f = FALLBACK[k]; return f === 'weekday' && info.dow === 0 && k !== 'sunday' ? 'sunday' : f; }
+    /* An extra schedule: a named list that takes over for the days it covers. The one with the highest priority wins; a special date
+       still beats them all, and a tefilla the schedule says nothing about falls back to the day type's own list. */
+    function pickRoll(rd, info, type) {
+      var list = cfg.rolls || [], iso = isoDate(rd), best = null, i, r;
+      for (i = 0; i < list.length; i++) {
+        r = list[i];
+        if (!r || r.active === false) continue;
+        if (r.type && r.type !== 'any' && r.type !== type) continue;
+        if (r.from && iso < r.from) continue;
+        if (r.to && iso > r.to) continue;
+        if (r.dows && r.dows.length && r.dows.indexOf(info.dow) < 0) continue;
+        if (!r.lines || !Object.keys(r.lines).some(function (k) { return (r.lines[k] || '').trim(); })) continue;
+        if (!best || (+r.priority || 0) >= (+best.priority || 0)) best = r;
+      }
+      return best;
+    }
     function dayTexts(rd, info) {
       var type = Cal.dayType(info), iso = isoDate(rd);
-      var ovr = pickOverride(rd, info);
-      var out = { type: type, override: ovr, texts: {} };
+      var ovr = pickOverride(rd, info), roll = pickRoll(rd, info, type);
+      var out = { type: type, override: ovr, roll: roll, texts: {} };
       tefillos().forEach(function (t) {
         var text = null, src = null, k = type, s;
         if (ovr && ovr.lines && ovr.lines[t.id] && ovr.lines[t.id].trim()) { text = ovr.lines[t.id]; src = 'override'; }
+        if (text == null && roll && roll.lines && (roll.lines[t.id] || '').trim()) { text = roll.lines[t.id]; src = 'roll'; }
         while (text == null && k) {
           s = cfg.schedules && cfg.schedules[k];
           if (s && s[t.id] && s[t.id].trim()) { text = s[t.id]; src = k; } else k = fallbackFor(k, info);
@@ -177,7 +194,7 @@ var MinyanEngine = (function () {
         byT[t.id] = list; all = all.concat(list);
       });
       all.sort(function (a, b) { return a.start - b.start || rank(a.room) - rank(b.room); });
-      return { rd: rd, info: info, type: dt.type, override: dt.override, byTefilla: byT, all: all };
+      return { rd: rd, info: info, type: dt.type, override: dt.override, roll: dt.roll, byTefilla: byT, all: all };
     }
     /* All minyanim after nowMs within the next `days` days, in order. */
     function after(nowMs, nowRd, days, tefillaId) {

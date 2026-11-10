@@ -728,3 +728,10 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 .swpick input[type="checkbox"] { width: 18px; height: 18px; }
 @media (max-width: 640px) { .swhead { display: none; } .swatch { grid-template-columns: minmax(0, 1fr) auto auto; } }
 
+/* extra schedules: a folding card per named list */
+.rollcard .chead h3 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.rollcard .otitle { font-weight: 700; }
+.rollcard .osub { font-size: .85rem; font-weight: 500; color: var(--a-muted); }
+.dowpick { display: inline-flex; align-items: center; gap: 5px; background: var(--a-field); border: 1px solid var(--a-line); border-radius: 999px; padding: 4px 10px; font-size: .9rem; }
+.dowpick input { width: 16px; height: 16px; }
+

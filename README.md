@@ -184,6 +184,19 @@ Same address, different screens (the `#` forms also work on the claude.ai page):
 - **The rest of the day** (מנחה, מעריב) shares one frame, each tefilla named above its own tiles. A repeating line is written as one line with its rooms, "כל 10 דק׳ · 6:15–7:55", instead of a tile for each minyan, so a long Maariv list stays readable. Under it are the next three zmanim, large; the first of them is marked and carries the countdown, and once the day's are over they come from tomorrow.
 - **It sizes itself to the TV.** Everything is measured from the screen's width and height, so a 60-inch TV and a 32-inch one show the same board and a 4K TV at full resolution is simply twice as sharp; the screen then takes the largest size that fits the day, so a crowded morning shrinks a little by itself. General → "Hallway screen (TV)" caps that size and `&size=80` in the address caps one screen.
 
+## Extra schedules
+
+A tab of its own, for a schedule that is not one of the twelve day types: a season, a week, or one kind of day done differently. Each one is a card with:
+
+- **A name** (זומער שחרית, סליחות…), shown on the board in place of the day's usual label while it runs.
+- **Which days it covers**: any day, or one of the day types, and optionally only certain days of the week.
+- **From and until**, with a Hebrew date picker beside each civil box. Blank means always.
+- **A priority**: when two cover the same day, the higher number wins.
+- **An On switch**, so a schedule can be kept and switched off out of season.
+- **Its own minyanim per tefilla**, in the same editor as the Schedule tab, with "Copy from…" to start from a day type. A tefilla left empty keeps the day's usual list.
+
+A special date still beats an extra schedule, and an extra schedule beats the day type's own list.
+
 ## The Hallway screen tab
 
 The admin has a tab of its own for the TV:
