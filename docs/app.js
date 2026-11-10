@@ -120,7 +120,7 @@
   function fmtCountdown(ms) { return engine.fmtCountdown(ms); }
   /* the board's labels in Hebrew or Yiddish: General -> Board labels sets the default (the lobby screen and door displays always use it); each phone may pick its own */
   var STR = {
-    he: { runLine: function (every, a, b) { return 'כל ' + every + ' דק׳ · ' + a + '–' + b; }, uiLangLabel: 'שפת ההגדרות', sameAsBoard: 'כמו הלוח', zmanimOf: 'זמני ', remindMe: 'תזכורת', minutesBefore: 'דקות לפני', before: 'לפני', todayOnly: 'היום בלבד', thatDayOnly: 'באותו יום בלבד', everyDay: 'כל יום', everyDayAt: 'כל יום בשעה זו', remNote: 'התראה במכשיר זה, גם כשהאפליקציה סגורה.', cancel: 'ביטול', setRem: 'קביעת תזכורת', setting: 'קובע…', remSet: 'התזכורת נקבעה: ', remFail: 'לא ניתן לקבוע את התזכורת: ', minBefore: ' דק׳ לפני ', todayOnlyP: ' (היום בלבד)',
+    he: { lastTefilla: 'אחרון לתפילה', lastChatzos: 'אחרון לחצות', runLine: function (every, a, b) { return 'כל ' + every + ' דק׳ · ' + a + '–' + b; }, uiLangLabel: 'שפת ההגדרות', sameAsBoard: 'כמו הלוח', zmanimOf: 'זמני ', remindMe: 'תזכורת', minutesBefore: 'דקות לפני', before: 'לפני', todayOnly: 'היום בלבד', thatDayOnly: 'באותו יום בלבד', everyDay: 'כל יום', everyDayAt: 'כל יום בשעה זו', remNote: 'התראה במכשיר זה, גם כשהאפליקציה סגורה.', cancel: 'ביטול', setRem: 'קביעת תזכורת', setting: 'קובע…', remSet: 'התזכורת נקבעה: ', remFail: 'לא ניתן לקבוע את התזכורת: ', minBefore: ' דק׳ לפני ', todayOnlyP: ' (היום בלבד)',
       picks: { first: 'המנין הראשון של היום', last: 'המנין האחרון של היום', 'before:shema': 'המנין האחרון לפני סוף זמן ק״ש', 'before:tefilla': 'המנין האחרון לפני סוף זמן תפילה', 'before:chatzos': 'המנין האחרון לפני חצות', 'before:sunset': 'המנין האחרון לפני השקיעה', 'before:tzeis': 'המנין האחרון לפני צאת הכוכבים' }, pickWith: function (label, name) { return label.replace('המנין', 'מנין ' + name); },
       remTitle: 'תזכורות בטלפון', remHint: 'התראה לפני המנינים או הזמנים שתבחרו, גם כשהאפליקציה סגורה. אפשר גם ללחוץ על כל מנין בלוח, או על כל זמן ברשימה, כדי לקבוע לו תזכורת.', zmanimGroup: 'זמנים', remove: 'הסרת התזכורת', noRems: 'עדיין אין תזכורות.', addRem: '+ תזכורת', maxRems: 'עד 10 תזכורות', dailyAt: ' הלוח היומי כל בוקר בשעה ', remUpdate: 'עדכון התזכורות', remOn: 'הפעלת תזכורות', remOff: 'כיבוי התזכורות', remAtLeast: 'הוסיפו לפחות תזכורת אחת.', turningOn: 'מפעיל…', remsOn: 'התזכורות פועלות במכשיר זה.', remOnFail: 'לא ניתן להפעיל תזכורות: ',
       settings: 'הגדרות', close: 'סגירה', display: 'תצוגה', displayHint: 'הבחירות נשמרות במכשיר זה; המסכים בבית המדרש נשארים כפי שקבע הגבאי.', bigNumber: 'המספר הגדול במשבצות', startWord: 'התחלה', look: 'מראה', labels: 'שפת הכיתובים', cdBox: 'תיבת הזמן הבא', cdHint: 'לאילו זמנים היא סופרת לאחור.', chooseZmanim: 'בחירת הזמנים…', installSec: 'התקנה כאפליקציה', checkUpdates: 'בדיקת עדכונים', upToDate: 'מעודכן. גרסה חדשה נטענת מעצמה כשהיא מגיעה.', checkFail: 'לא ניתן לבדוק כעת.', done: 'סיום',
@@ -129,7 +129,7 @@
       installFirst: 'כדי לקבל תזכורות באייפון או באייפד, הוסיפו תחילה את הלוח למסך הבית: בספארי לחצו על שיתוף, ואז „הוסף למסך הבית”, ופתחו אותו מהסמל.', noPush: 'דפדפן זה אינו יכול לקבל התראות. השתמשו בכרום, או באפליקציה המותקנת.',
       today: 'היום', tomorrow: 'מחר', tonight: 'בערב', nextMinyan: 'מנין הבא', nextZman: 'הזמן הבא', zmanim: 'זמני היום', none: 'אין מנינים רשומים', showEarlier: 'הצג את הקודמים', badgeNext: 'הבא', badgeNow: 'עכשיו', badgeLast: 'עבר', board: 'לוח ', special: 'לוח מיוחד', noMinyanim: 'לא רשומים מנינים לימים הקרובים.', fastStart: 'תחילת הצום', fastEnd: 'צאת הצום', motzaeiShabbos: 'מוצאי שבת', motzaeiYT: 'מוצאי יום טוב', omerTonight: 'הלילה סופרים', omer: 'ספירת העומר', laomer: ' לעומר', clock: 'השעה', timesBy: 'הזמנים לפי ', chul: 'לוח חוץ לארץ', eretz: 'לוח ארץ ישראל', parsha: ' פרשת ',
       days: Cal.DAY_NAMES, types: {}, minyanim: function (name) { return 'מניני ' + name; } },
-    en: { runLine: function (every, a, b) { return 'every ' + every + ' min · ' + a + '–' + b; }, uiLangLabel: 'Settings language', sameAsBoard: 'Same as the board', zmanimOf: 'Zmanim for ', remindMe: 'Remind me', minutesBefore: 'Minutes before', before: 'Before', todayOnly: 'Today only', thatDayOnly: 'That day only', everyDay: 'Every day', everyDayAt: 'Every day at this time', remNote: 'A notification on this device, even when the app is closed.', cancel: 'Cancel', setRem: 'Set reminder', setting: 'Setting…', remSet: 'Reminder set: ', remFail: 'Could not set the reminder: ', minBefore: ' min before ', todayOnlyP: ' (today only)',
+    en: { lastTefilla: 'last for tefilla', lastChatzos: 'last before chatzos', runLine: function (every, a, b) { return 'every ' + every + ' min · ' + a + '–' + b; }, uiLangLabel: 'Settings language', sameAsBoard: 'Same as the board', zmanimOf: 'Zmanim for ', remindMe: 'Remind me', minutesBefore: 'Minutes before', before: 'Before', todayOnly: 'Today only', thatDayOnly: 'That day only', everyDay: 'Every day', everyDayAt: 'Every day at this time', remNote: 'A notification on this device, even when the app is closed.', cancel: 'Cancel', setRem: 'Set reminder', setting: 'Setting…', remSet: 'Reminder set: ', remFail: 'Could not set the reminder: ', minBefore: ' min before ', todayOnlyP: ' (today only)',
       picks: { first: 'First minyan of the day', last: 'Last minyan of the day', 'before:shema': 'Last minyan before sof zman Shema', 'before:tefilla': 'Last minyan before sof zman tefilla', 'before:chatzos': 'Last minyan before chatzos', 'before:sunset': 'Last minyan before sunset', 'before:tzeis': 'Last minyan before nightfall' }, pickWith: function (label, name) { return label.replace('minyan', name); },
       remTitle: 'Reminders on your phone', remHint: 'A notification before the minyanim or zmanim you pick, even when the app is closed. Tap any minyan on the board, or any zman in the list, to set a reminder for it.', zmanimGroup: 'Zmanim', remove: 'Remove this reminder', noRems: 'No reminders yet.', addRem: '+ Reminder', maxRems: 'Up to 10 reminders', dailyAt: ' The day\'s board every morning at ', remUpdate: 'Update reminders', remOn: 'Turn on reminders', remOff: 'Turn off reminders', remAtLeast: 'Add at least one reminder.', turningOn: 'Turning on…', remsOn: 'Reminders are on for this device.', remOnFail: 'Could not turn on reminders: ',
       settings: 'Settings', close: 'Close', display: 'Display', displayHint: 'Your choices stay on this device; the screens in the shul keep the gabbai\'s.', bigNumber: 'Big number on the tiles', startWord: 'start', look: 'Look', labels: 'Language', cdBox: 'The next-zman box', cdHint: 'Which zmanim it counts down to.', chooseZmanim: 'Choose the zmanim…', installSec: 'Install as an app', checkUpdates: 'Check for updates', upToDate: 'Up to date. A newer version reloads by itself when it arrives.', checkFail: 'Could not check right now.', done: 'Done',
@@ -140,7 +140,7 @@
       days: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Shabbos'], types: { weekday: 'Weekday schedule', sunday: 'Sunday schedule', friday: 'Erev Shabbos schedule', shabbos: 'Shabbos schedule', yomtov: 'Yom Tov schedule', erev_yomtov: 'Erev Yom Tov schedule', chol_hamoed: 'Chol Hamoed schedule', rosh_chodesh: 'Rosh Chodesh schedule', fast: 'Fast day schedule', chanukah: 'Chanukah schedule', purim: 'Purim schedule', yomkippur: 'Yom Kippur schedule' },
       minyanim: function (name) { return ({ 'שחרית': 'Shacharis', 'מנחה': 'Mincha', 'מעריב': 'Maariv' }[name] || name) + ' minyanim'; },
       zmanNames: { alos: 'Alos hashachar', sunrise: 'Sunrise (netz)', shema: 'Sof zman Shema', tefilla: 'Sof zman tefilla', chatzos: 'Chatzos', minchag: 'Mincha gedola', plag: 'Plag hamincha', candles: 'Candle lighting', sunset: 'Sunset (shkiah)', tzeis: 'Nightfall (tzeis)', tzeis60: '60 minutes after sunset', tzeis72: 'Rabbeinu Tam (72)' } },
-    yi: { runLine: function (every, a, b) { return 'יעדע ' + every + ' מינוט · ' + a + '–' + b; }, uiLangLabel: 'שפראך פון די איינשטעלונגען', sameAsBoard: 'ווי דער לוח', zmanimOf: 'זמנים פון ', remindMe: 'דערמאנונג', minutesBefore: 'מינוט פריער', before: 'פאר', todayOnly: 'נאר היינט', thatDayOnly: 'נאר יענעם טאג', everyDay: 'יעדן טאג', everyDayAt: 'יעדן טאג אין דער צייט', remNote: 'א מעלדונג אויף דעם מכשיר, אויך ווען די אַפּ איז פארמאכט.', cancel: 'אפשטעלן', setRem: 'שטעלן א דערמאנונג', setting: 'שטעלט…', remSet: 'די דערמאנונג איז געשטעלט: ', remFail: 'די דערמאנונג האט זיך נישט געלאזט שטעלן: ', minBefore: ' מינוט פאר ', todayOnlyP: ' (נאר היינט)',
+    yi: { lastTefilla: 'לעצטער פאר תפילה', lastChatzos: 'לעצטער פאר חצות', runLine: function (every, a, b) { return 'יעדע ' + every + ' מינוט · ' + a + '–' + b; }, uiLangLabel: 'שפראך פון די איינשטעלונגען', sameAsBoard: 'ווי דער לוח', zmanimOf: 'זמנים פון ', remindMe: 'דערמאנונג', minutesBefore: 'מינוט פריער', before: 'פאר', todayOnly: 'נאר היינט', thatDayOnly: 'נאר יענעם טאג', everyDay: 'יעדן טאג', everyDayAt: 'יעדן טאג אין דער צייט', remNote: 'א מעלדונג אויף דעם מכשיר, אויך ווען די אַפּ איז פארמאכט.', cancel: 'אפשטעלן', setRem: 'שטעלן א דערמאנונג', setting: 'שטעלט…', remSet: 'די דערמאנונג איז געשטעלט: ', remFail: 'די דערמאנונג האט זיך נישט געלאזט שטעלן: ', minBefore: ' מינוט פאר ', todayOnlyP: ' (נאר היינט)',
       picks: { first: 'דער ערשטער מנין פון טאג', last: 'דער לעצטער מנין פון טאג', 'before:shema': 'דער לעצטער מנין פאר סוף זמן ק״ש', 'before:tefilla': 'דער לעצטער מנין פאר סוף זמן תפילה', 'before:chatzos': 'דער לעצטער מנין פאר חצות', 'before:sunset': 'דער לעצטער מנין פאר שקיעה', 'before:tzeis': 'דער לעצטער מנין פאר צאת הכוכבים' }, pickWith: function (label, name) { return label.replace('מנין', name); },
       remTitle: 'דערמאנונגען אויפן טעלעפאן', remHint: 'א מעלדונג פאר די מנינים אדער זמנים וואס איר קלויבט אויס, אויך ווען די אַפּ איז פארמאכט. מען קען אויך דריקן אויף יעדן מנין אויפן לוח, אדער אויף יעדן זמן אין דער ליסטע, צו שטעלן א דערמאנונג.', zmanimGroup: 'זמנים', remove: 'אראפנעמען די דערמאנונג', noRems: 'נאך נישטא קיין דערמאנונגען.', addRem: '+ דערמאנונג', maxRems: 'ביז 10 דערמאנונגען', dailyAt: ' דער טעגליכער לוח יעדן אינדערפרי ', remUpdate: 'דערמאנונגען אפדעיטן', remOn: 'דערמאנונגען אנצינדן', remOff: 'דערמאנונגען פארלעשן', remAtLeast: 'לייגט צו כאטש איין דערמאנונג.', turningOn: 'צינדט אן…', remsOn: 'די דערמאנונגען זענען אן אויף דעם מכשיר.', remOnFail: 'די דערמאנונגען האבן זיך נישט געלאזט אנצינדן: ',
       settings: 'איינשטעלונגען', close: 'פארמאכן', display: 'אויסזען', displayHint: 'די ברירות בלייבן אויף דעם מכשיר; די שירעמס אין שול בלייבן ווי דער גבאי האט געשטעלט.', bigNumber: 'די גרויסע נומער אויף די קעסטלעך', startWord: 'אנהייב', look: 'קאלירן', labels: 'שפראך', cdBox: 'די קעסטל הזמן הבא', cdHint: 'צו וועלכע זמנים זי ציילט.', chooseZmanim: 'אויסקלויבן די זמנים…', installSec: 'אינסטאלירן ווי אן אַפּ', checkUpdates: 'זוכן אפדעיטס', upToDate: 'אפדעיטעד. א נייע ווערסיע לאדט זיך אליין ווען זי קומט אן.', checkFail: 'מען קען יעצט נישט נאכקוקן.', done: 'פארטיג',
@@ -200,7 +200,7 @@
 
     var banner = engine.activeBanner(now);
     if (banner) root.appendChild(el('div', { class: 'banner', role: 'status' }, [el('div', { class: 'banner-inner', text: banner.text.trim() })]));
-    var strip = sponsorsStrip(rd, lobby); /* the hallway keeps a frame for a sponsor line that has not been filled in */
+    var strip = sponsorsStrip(rd); /* a sponsor frame only when there is a sponsor that day */
     if (strip && !lobby) root.appendChild(strip); /* on the lobby screen the sponsor box sits in the side column, under the zmanim */
     var up = upcoming(now, rd);
     var main = el('main'), colA = el('div', { class: 'col' }), colB = el('div', { class: 'col' });
@@ -209,7 +209,9 @@
     if (up) {
       var e = up.entry, bigMs = bigIsMilestone(e.tefilla);
       ui.countdownMs = keyMs(e);
-      next.appendChild(el('div', { class: 'what', text: e.tefilla.name + (e.room ? ' – ' + e.room : '') }));
+      /* on the hallway screen the room stands on its own line, large: from across the room that is what people look for */
+      next.appendChild(lobby ? el('div', { class: 'what' }, [el('span', { class: 'tf', text: e.tefilla.name }), e.room ? el('span', { class: 'rm', text: e.room }) : null])
+        : el('div', { class: 'what', text: e.tefilla.name + (e.room ? ' – ' + e.room : '') }));
       if (bigMs) next.appendChild(el('div', { class: 'ms num pre', text: startLabel(e.tefilla) + ' ' + fmtTime(e.start) })); /* the start stays first: ברכות above, הודו big below */
       next.appendChild(el('div', { class: 'time num', text: fmtTime(bigMs ? e.milestone : e.start) }));
       if (e.tefilla.milestone && !bigMs) next.appendChild(el('div', { class: 'ms num', text: e.tefilla.milestone + ' ' + fmtTime(e.milestone) }));
@@ -319,6 +321,8 @@
   }
   var KEEP_PAST = 3; /* on the board, this many of the most recent past minyanim stay in view (dimmed); older ones fold behind a button */
   /* How long a minyan that has started stays marked "now" (cfg.nowMinutes, default 20). After that it is dimmed, and the lobby screen hides it. */
+  /* General → "Minutes from הודו to שמונה עשרה": a minyan reaches שמונה עשרה this long after its milestone */
+  function amidahMinutes() { var m = cfg.amidahMinutes; return m == null || m === '' || isNaN(+m) ? 15 : Math.max(0, +m); }
   function nowWindowMs() { var m = cfg.nowMinutes; m = (m == null || m === '') ? 20 : +m; return (isNaN(m) || m < 0 ? 20 : m) * 60000; }
   /* per tefilla: today's list, or tomorrow's once all of today's minyanim are over (after chatzos for Shacharis) */
   function tefillaLists(s, now, isToday) {
@@ -398,6 +402,16 @@
         /* a run shows its next minyan as a tile (its last one once the run is over) and the whole run as a line */
         if (!feature[e.series.id] || (feature[e.series.id].ms <= now && e.ms > now)) feature[e.series.id] = e;
       });
+      /* the last minyan that still says שמונה עשרה before סוף זמן תפילה, and the last before חצות */
+      var marks = {}, zz = zmanimFor(list[0].rd), am = amidahMinutes();
+      if (t.milestone) {
+        [['tefilla', S().lastTefilla], ['chatzos', S().lastChatzos]].forEach(function (pair) {
+          var lim = zz[pair[0]], best = null;
+          if (lim == null || isNaN(lim)) return;
+          list.forEach(function (e) { if ((e.milestone != null ? e.milestone : e.start) + am <= lim) best = e; });
+          if (best) marks[list.indexOf(best)] = marks[list.indexOf(best)] ? marks[list.indexOf(best)] + ' · ' + pair[1] : pair[1];
+        });
+      }
       var nodes = [], grid = el('div', { class: 'grid' }), opened = {}, runs = [];
       list.forEach(function (e) {
         var s0 = st(e), sid = e.series && e.series.id, keep = s0 === 'now' || s0 === 'next' || s0 === 'last'; /* these three always get a tile of their own */
@@ -405,11 +419,11 @@
           if (!opened[sid]) { opened[sid] = { s: e.series, items: [] }; runs.push(opened[sid]); }
           if (feature[sid] !== e) { opened[sid].items.push(e); return; }
         }
-        grid.appendChild(wallTile(e, t, s0));
+        grid.appendChild(wallTile(e, t, s0, marks[list.indexOf(e)]));
       });
       nodes.push(grid);
       runs.forEach(function (r) {
-        if (r.items.length < 2) { r.items.forEach(function (e) { grid.appendChild(wallTile(e, t, st(e))); }); return; }
+        if (r.items.length < 2) { r.items.forEach(function (e) { grid.appendChild(wallTile(e, t, st(e), marks[list.indexOf(e)])); }); return; }
         nodes.push(el('div', { class: 'runline' + (r.s.to <= Cal.nowInTz(now, loc().tz).min ? ' past' : '') }, [
           el('span', { class: 'num', text: S().runLine(r.s.every, fmtTime(r.s.from), fmtTime(r.s.to)) }),
           r.s.rooms && r.s.rooms.length ? el('span', { class: 'rooms', text: r.s.rooms.join(' · ') }) : null]));
@@ -418,13 +432,14 @@
     });
     return out;
   }
-  function wallTile(e, t, st) {
-    return el('div', { class: 'tile' + (st ? ' ' + st : '') + (t.kind === 'event' ? ' event' : '') }, [
+  function wallTile(e, t, st, mark) {
+    return el('div', { class: 'tile' + (st ? ' ' + st : '') + (mark ? ' marked' : '') + (t.kind === 'event' ? ' event' : '') }, [
       el('div', { class: 'room', text: e.room || t.name }),
       bigIsMilestone(t) ? el('div', { class: 'ms num pre', text: startLabel(t) + ' ' + fmtTime(e.start) }) : null,
       el('div', { class: 'time num', text: fmtTime(bigIsMilestone(t) ? e.milestone : e.start) }),
       t.milestone && !bigIsMilestone(t) ? el('div', { class: 'ms num', text: t.milestone + ' ' + fmtTime(e.milestone) }) : null,
-      e.note ? el('div', { class: 'note', text: e.note }) : null]);
+      e.note ? el('div', { class: 'note', text: e.note }) : null,
+      mark ? el('div', { class: 'mark', text: mark }) : null]);
   }
   /* the hallway screen: only the next three zmanim, large; the first of them carries the countdown. Once the day's are over they come
      from tomorrow, and a tomorrow one that fills the row late in the day is marked. */
@@ -577,9 +592,9 @@
     return el('section', { class: 'side' }, [el('h3', { text: title || L.zmanim }), ul]);
   }
   /* Sponsor boxes (פרנס החודש and friends) in a framed strip under the header */
-  function sponsorsStrip(rd, includeEmpty) {
+  function sponsorsStrip(rd) {
     var items = [];
-    engine.activeNotices(rd, includeEmpty).forEach(function (n) {
+    engine.activeNotices(rd).forEach(function (n) {
       items.push(el('section', { class: 'sponsor' }, [
         el('div', { class: 'frame' }),
         el('h2', { class: 't', text: n.title || '' }),

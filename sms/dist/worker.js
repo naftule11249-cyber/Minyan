@@ -463,11 +463,10 @@ var MinyanEngine = (function () {
     }
     function tefillos() { return (cfg.tefillos && cfg.tefillos.length) ? cfg.tefillos : TEFILLA_DEFAULTS; }
     /* sponsor notices that are on today: non-empty body, and inside their from/to dates when set */
-    function activeNotices(rd, includeEmpty) {
+    function activeNotices(rd) {
       var iso = isoDate(rd);
       return (cfg.notices || []).filter(function (n) {
-        if (!includeEmpty && !(n.body || '').trim()) return false;
-        if (includeEmpty && !(n.body || '').trim() && !(n.title || '').trim()) return false;
+        if (!(n.body || '').trim()) return false;
         if (n.from && iso < n.from) return false;
         if (n.to && iso > n.to) return false;
         return true;

@@ -591,17 +591,17 @@ html.lobby { font-size: max(11px, calc((0.62vw + 0.62vh) * var(--lobby-scale, 1)
 html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 #app.display:not(.room) { height: 100vh; display: flex; flex-direction: column; }
 #app.display:not(.room) .top { background: linear-gradient(180deg, var(--panel), var(--panel-2)); color: var(--ink); border-bottom: 2px solid var(--gold); }
-#app.display:not(.room) .top .inner { max-width: none; flex-wrap: nowrap; align-items: center; padding-block: .45rem .5rem; gap: 1.2rem; }
+#app.display:not(.room) .top .inner { max-width: none; flex-wrap: nowrap; align-items: center; padding-block: .75rem .8rem; gap: 2.4rem; }
 #app.display:not(.room) .top .logo { height: 2.4rem; max-width: 9rem; }
-#app.display:not(.room) .top .dayline { font-size: 1.9rem; color: var(--accent); }
-#app.display:not(.room) .top .dates { font-size: 1.15rem; color: var(--muted); opacity: 1; flex-wrap: nowrap; }
+#app.display:not(.room) .top .dayline { font-size: 2.1rem; color: var(--accent); white-space: nowrap; }
+#app.display:not(.room) .top .dates { font-size: 1.25rem; color: var(--muted); opacity: 1; flex-wrap: nowrap; gap: .1rem 1.2rem; }
 #app.display:not(.room) .top .chips { width: auto; flex-wrap: nowrap; }
-#app.display:not(.room) .chip { font-size: 1rem; padding: .1rem .7rem; background: var(--panel); border-color: var(--gold); color: var(--accent); }
+#app.display:not(.room) .chip { font-size: 1.1rem; padding: .15rem 1rem; background: var(--panel); border-color: var(--gold); color: var(--accent); }
 #app.display:not(.room) .top .clock { display: flex; width: auto; margin-inline-start: auto; color: var(--ink); margin-top: 0; }
-#app.display:not(.room) .top .clock .hm { font-size: 1.9rem; }
-#app.display:not(.room) .top .clock .ss { font-size: 1.25rem; }
+#app.display:not(.room) .top .clock .hm { font-size: 2.3rem; }
+#app.display:not(.room) .top .clock .ss { font-size: 1.5rem; opacity: .7; }
 #app.display:not(.room) .top .clock { gap: 0; }
-#app.display:not(.room) .top .clock .ss::before { content: ":"; font-size: 1.9rem; }
+#app.display:not(.room) .top .clock .ss::before { content: ":"; font-size: 2.3rem; opacity: .7; }
 #app.display:not(.room) .banner-inner { max-width: none; font-size: 1.3rem; padding-block: .5rem; }
 /* the three columns: shacharis, the middle (clock, next minyan, sponsors), the rest of the day */
 #app.display:not(.room) main.wall { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: 1fr 1.12fr 1fr; gap: 1rem; align-items: stretch;
@@ -617,7 +617,9 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 #app.display .wall .tefilla > h3{ position: absolute; top: -.85rem; inset-inline-start: 50%; transform: translateX(50%); margin: 0; white-space: nowrap;
   background: var(--panel-2); border: 2px solid var(--gold); border-radius: 999px; padding: .1rem 1.1rem; font-size: 1.45rem; color: var(--accent); }
 #app.display .wall .tefilla > h3 .pg{ font-family: var(--font-ui); font-size: .8rem; letter-spacing: .15em; color: var(--muted); margin-inline-start: .5rem; direction: ltr; }
-#app.display .wall .grid{ display: grid; grid-template-columns: repeat(auto-fill, minmax(8.2rem, 1fr)); gap: .55rem; align-content: start; scroll-behavior: smooth; }
+#app.display .wall .grid { display: flex; flex-wrap: wrap; justify-content: center; gap: .55rem; align-content: start; scroll-behavior: smooth; } /* a part-full last row sits in the middle */
+#app.display .wall .grid > .tile { flex: 1 1 8.4rem; max-width: 11rem; }
+#app.display .wall .grid > .ztile { flex: 1 1 9rem; max-width: 15rem; }
 #app.display .wall .tile{ padding: .4rem .3rem .35rem; border-radius: .5rem; }
 #app.display .wall .tile .room{ font-size: 1.15rem; }
 #app.display .wall .tile .time{ font-size: 2.1rem; }
@@ -638,7 +640,7 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 #app.display .wall .runline .num{ font-size: 1.3rem; font-weight: 700; }
 #app.display .wall .runline .rooms{ display: block; font-size: .95rem; color: var(--muted); }
 /* the zmanim, as tiles; the one being counted down to is marked */
-#app.display .wall .zcard .zgrid { grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: .6rem; } /* only the next few, so they can be large */
+#app.display .wall .zcard .zgrid { gap: .6rem; }
 #app.display .wall .ztile{ background: var(--panel-2); border: 1px solid var(--line); border-radius: .5rem; padding: .35rem .3rem; text-align: center; min-width: 0; }
 #app.display .wall .ztile .room{ font-size: 1.05rem; color: var(--muted); line-height: 1.15; }
 #app.display .wall .ztile .time{ font-size: 1.55rem; font-weight: 700; line-height: 1.1; }
@@ -652,14 +654,15 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 /* the next-minyan panel; the > keeps these off the tile that also carries the class "next" */
 #app.display .wall > .wcol > section.next { padding: .8rem 1rem .9rem; border-radius: 1rem; }
 #app.display .wall > .wcol > section.next > h2 { font-size: 1.7rem; }
-#app.display .wall > .wcol > section.next > .what { font-size: 1.35rem; }
+#app.display .wall > .wcol > section.next > .what { font-size: 1.3rem; color: var(--muted); display: grid; gap: .1rem; }
+#app.display .wall > .wcol > section.next > .what .rm { font-size: 2.6rem; line-height: 1.1; font-weight: 700; color: var(--accent); font-family: var(--font-display); }
 #app.display .wall > .wcol > section.next > .time { font-size: 4.8rem; margin-top: .1rem; }
 #app.display .wall > .wcol > section.next > .ms { font-size: 1.05rem; }
 #app.display .wall > .wcol > section.next > .count { font-size: 2.3rem; margin-top: .2rem; }
 #app.display .wall > .wcol > section.next > .when { font-size: 1.15rem; }
-#app.display .wall .wcol.mid .sponsors{ flex: 1 1 auto; min-height: 0; }
+#app.display .wall .wcol.mid .sponsors { flex: 0 1 auto; min-height: 0; } /* the frames take the room they need; they and the clock sit together in the middle */
 #app.display .wall .sponsors{ max-width: none; padding: 0; min-height: 0; }
-#app.display .wall .sponsors-inner { gap: .8rem; height: 100%; grid-template-columns: 1fr; grid-auto-rows: 1fr; } /* stacked down the middle, as on the printed board */
+#app.display .wall .sponsors-inner { gap: .8rem; grid-template-columns: 1fr; }
 #app.display .wall .sponsor{ display: flex; flex-direction: column; justify-content: center; }
 #app.display .wall .sponsor{ padding: .8rem 1rem 1rem; }
 #app.display .wall .sponsor{ padding: .6rem .9rem .8rem; }
@@ -669,7 +672,7 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 /* the round clock */
 #app.display .aclock{ display: none; }
 #app.display .wall .aclock{ display: grid; justify-items: center; align-content: center; gap: .2rem; }
-#app.display .aclock svg{ width: min(calc(27vh * var(--lobby-scale, 1)), 21rem, 24vw); height: auto; filter: drop-shadow(0 8px 18px rgba(0,0,0,.2)); }
+#app.display .aclock svg { width: min(calc(42vh * var(--lobby-scale, 1)), 30rem, 27vw); height: auto; filter: drop-shadow(0 10px 22px rgba(0,0,0,.22)); }
 #app.display .aclock .face{ fill: var(--panel); stroke: var(--gold); stroke-width: 5; }
 #app.display .aclock .rim{ fill: none; stroke: var(--line); stroke-width: 1; }
 #app.display .aclock .tick{ stroke: var(--muted); stroke-width: 1.5; }
