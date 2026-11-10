@@ -673,8 +673,8 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 /* the next-minyan panel; the > keeps these off the tile that also carries the class "next" */
 #app.display .wall > .wcol > section.next { padding: .8rem 1rem .9rem; border-radius: 1rem; }
 #app.display .wall > .wcol > section.next > h2 { font-size: 1.7rem; }
-#app.display .wall > .wcol > section.next > .what { font-size: 1.3rem; color: var(--muted); display: grid; gap: .1rem; }
-#app.display .wall > .wcol > section.next > .what .rm { font-size: 2.6rem; line-height: 1.1; font-weight: 700; color: var(--accent); font-family: var(--font-display); }
+#app.display .wall > .wcol > section.next > .tf { font-size: 1.3rem; color: var(--muted); }
+#app.display .wall > .wcol > section.next > .rm { font-size: 2.6rem; line-height: 1.1; font-weight: 700; color: var(--accent); font-family: var(--font-display); }
 #app.display .wall > .wcol > section.next > .time { font-size: 4.8rem; margin-top: .1rem; }
 #app.display .wall > .wcol > section.next > .ms { font-size: 1.05rem; }
 #app.display .wall > .wcol > section.next > .count { font-size: 2.3rem; margin-top: .2rem; }

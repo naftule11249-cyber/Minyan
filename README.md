@@ -189,6 +189,7 @@ Same address, different screens (the `#` forms also work on the claude.ai page):
 The admin has a tab of its own for the TV:
 
 - **Colours.** One row per kind of tile: minyanim still to come, the next one, the one davening now, the one that went last, the earlier ones, the frames and the top bar. Each has a colour and a writing colour. Tick one to use your own colour; leave it and that tile keeps the colour of the look chosen in General. "Back to the look's own colours" clears them all.
+- **The next-minyan panel.** One line per line of a template. `{tefilla}` `{room}` `{time}` `{milestone}` `{countdown}` `{day}` `{note}` are filled in; anything else is shown as written. A line's size follows the piece it carries: the room large, the time largest, the countdown red, plain words small. Buttons put a piece where the cursor is, and one button puts the usual lines back.
 - **Which minyanim it shows.** The whole day from the first minyan to the last, or only what is near: so many minutes ahead, and so many minutes after one starts. With "never leave the screen empty", a tefilla with nothing near still shows its next few.
 
 ## Another day's minyanim

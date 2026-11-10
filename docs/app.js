@@ -215,13 +215,15 @@
       var e = up.entry, bigMs = bigIsMilestone(e.tefilla);
       ui.countdownMs = keyMs(e);
       /* on the hallway screen the room stands on its own line, large: from across the room that is what people look for */
-      next.appendChild(lobby ? el('div', { class: 'what' }, [el('span', { class: 'tf', text: e.tefilla.name }), e.room ? el('span', { class: 'rm', text: e.room }) : null])
-        : el('div', { class: 'what', text: e.tefilla.name + (e.room ? ' – ' + e.room : '') }));
-      if (bigMs) next.appendChild(el('div', { class: 'ms num pre', text: startLabel(e.tefilla) + ' ' + fmtTime(e.start) })); /* the start stays first: ברכות above, הודו big below */
-      next.appendChild(el('div', { class: 'time num', text: fmtTime(bigMs ? e.milestone : e.start) }));
-      if (e.tefilla.milestone && !bigMs) next.appendChild(el('div', { class: 'ms num', text: e.tefilla.milestone + ' ' + fmtTime(e.milestone) }));
-      ui.countdown = el('div', { class: 'count num', text: fmtCountdown(ui.countdownMs - now) });
-      next.appendChild(ui.countdown);
+      if (lobby) { nextPanelFromTemplate(next, e, up, now); }
+      else next.appendChild(el('div', { class: 'what', text: e.tefilla.name + (e.room ? ' – ' + e.room : '') }));
+      if (!lobby) {
+        if (bigMs) next.appendChild(el('div', { class: 'ms num pre', text: startLabel(e.tefilla) + ' ' + fmtTime(e.start) })); /* the start stays first: ברכות above, הודו big below */
+        next.appendChild(el('div', { class: 'time num', text: fmtTime(bigMs ? e.milestone : e.start) }));
+        if (e.tefilla.milestone && !bigMs) next.appendChild(el('div', { class: 'ms num', text: e.tefilla.milestone + ' ' + fmtTime(e.milestone) }));
+        ui.countdown = el('div', { class: 'count num', text: fmtCountdown(ui.countdownMs - now) });
+        next.appendChild(ui.countdown);
+      }
       /* the three after it, as small cards: tomorrow's first Shacharis included once the day runs out */
       var more = engine.after(now, rd, 3).filter(function (x) { return x.entry.tefilla.kind !== 'event' && !sameEntry(x.entry, e) && keyMs(x.entry) > now; }).slice(0, 3), canTapMore = canSetReminders();
       if (more.length && !lobby) next.appendChild(el('div', { class: 'soon-row' }, more.map(function (x) {
@@ -230,8 +232,8 @@
         if (canTapMore) makeTappable(card, en);
         return card;
       })));
-      if (up.daysAhead > 0) next.appendChild(el('div', { class: 'when', text: (up.daysAhead === 1 ? S().tomorrow + ', ' : '') + S().days[up.sched.info.dow] + ' ' + Cal.formatHeb(up.sched.info.heb) }));
-      if (e.note) next.appendChild(el('div', { class: 'when', text: e.note }));
+      if (!lobby && up.daysAhead > 0) next.appendChild(el('div', { class: 'when', text: (up.daysAhead === 1 ? S().tomorrow + ', ' : '') + S().days[up.sched.info.dow] + ' ' + Cal.formatHeb(up.sched.info.heb) }));
+      if (!lobby && e.note) next.appendChild(el('div', { class: 'when', text: e.note }));
     } else {
       next.appendChild(el('div', { class: 'empty', text: S().noMinyanim }));
     }
@@ -388,6 +390,31 @@
   }
   /* ---------- the hallway screen (?view=display): one card per tefilla, tiles in columns, nothing to scroll ---------- */
   /* A card per tefilla. A repeating line ("every 10 minutes from … to …") shows its next minyan as a tile and the rest as one line. */
+  var NEXT_TEMPLATE = '{tefilla}\n{room}\n{time}\n{milestone}\n{countdown}';
+  var NEXT_VARS = ['tefilla', 'room', 'time', 'milestone', 'countdown', 'day', 'note'];
+  /* The hallway screen's next-minyan panel, line by line, from the template in the Hallway screen tab. A line is styled by the piece it
+     carries: {room} large, {time} largest, {countdown} in red; a line of plain words comes out small. */
+  function nextPanelFromTemplate(next, e, up, now) {
+    var tpl = (cfg.nextTemplate == null || cfg.nextTemplate === '' ? NEXT_TEMPLATE : String(cfg.nextTemplate)), bigMs = bigIsMilestone(e.tefilla);
+    var vals = {
+      tefilla: e.tefilla.name,
+      room: e.room || '',
+      time: fmtTime(bigMs ? e.milestone : e.start),
+      milestone: e.tefilla.milestone && !bigMs ? e.tefilla.milestone + ' ' + fmtTime(e.milestone) : (bigMs ? startLabel(e.tefilla) + ' ' + fmtTime(e.start) : ''),
+      countdown: '',
+      day: up.daysAhead > 0 ? (up.daysAhead === 1 ? S().tomorrow + ', ' : '') + S().days[up.sched.info.dow] + ' ' + Cal.formatHeb(up.sched.info.heb) : '',
+      note: e.note || ''
+    };
+    tpl.split('\n').forEach(function (line) {
+      var txt = line.replace(/\{(\w+)\}/g, function (m, k) { return vals.hasOwnProperty(k) ? vals[k] : m; }).trim();
+      var isCount = /\{countdown\}/.test(line);
+      if (!txt && !isCount) return;
+      var cls = isCount ? 'count num' : /\{time\}/.test(line) ? 'time num' : /\{room\}/.test(line) ? 'rm' : /\{tefilla\}/.test(line) ? 'tf' : /\{milestone\}/.test(line) ? 'ms num' : 'when';
+      var node = el('div', { class: cls, text: isCount ? fmtCountdown(ui.countdownMs - now) : txt });
+      if (isCount) ui.countdown = node;
+      next.appendChild(node);
+    });
+  }
   function wallCard(title, nodes) {
     var sec = el('section', { class: 'tefilla' }, [el('h3', null, [title])]);
     nodes.forEach(function (n) { if (n) sec.appendChild(n); });
@@ -1625,7 +1652,22 @@
     cWallShow.body.appendChild(el('div', { class: 'fields' }, [field('What the hallway screen lists', fWinMode)]));
     cWallShow.body.appendChild(winRow);
     cWallShow.body.appendChild(el('div', { class: 'checks' }, [el('label', { for: 'w-keep' }, [fWinKeep, ' Never leave the screen empty: when nothing is near, show the next ones anyway'])]));
-    sp.appendChild(cWallLook); sp.appendChild(cWallShow);
+    var cWallNext = card('The next-minyan panel', 'One line per line. Put a piece in braces and it is filled in; anything else is shown as you write it.');
+    var fNextT = el('textarea', { id: 'w-next-template', dir: 'ltr', spellcheck: 'false' });
+    fNextT.value = d.nextTemplate == null || d.nextTemplate === '' ? NEXT_TEMPLATE : d.nextTemplate;
+    fNextT.style.minHeight = '120px'; fNextT.style.fontFamily = 'var(--font-ui)';
+    var varRow = el('div', { class: 'chips-row' }, NEXT_VARS.map(function (v) {
+      return el('button', { type: 'button', class: 'btn small', text: '{' + v + '}', title: 'Put it where the cursor is', 'data-nodirty': '1', onclick: function () {
+        var i = fNextT.selectionStart == null ? fNextT.value.length : fNextT.selectionStart, j = fNextT.selectionEnd == null ? i : fNextT.selectionEnd;
+        fNextT.value = fNextT.value.slice(0, i) + '{' + v + '}' + fNextT.value.slice(j);
+        fNextT.focus(); fNextT.selectionStart = fNextT.selectionEnd = i + v.length + 2; markDirty();
+      } });
+    }));
+    cWallNext.body.appendChild(el('div', { class: 'fields' }, [field('The panel, line by line', fNextT)]));
+    cWallNext.body.appendChild(el('div', { class: 'hint', text: '{tefilla} שחרית · {room} the shtibl · {time} the big time · {milestone} הודו and its time · {countdown} the red countdown · {day} tomorrow and its date · {note} the row\'s note' }));
+    cWallNext.body.appendChild(varRow);
+    cWallNext.body.appendChild(el('div', { class: 'bar actions' }, [el('button', { type: 'button', class: 'btn small', text: 'Back to the usual lines', 'data-nodirty': '1', onclick: function () { fNextT.value = NEXT_TEMPLATE; markDirty(); } })]));
+    sp.appendChild(cWallLook); sp.appendChild(cWallNext); sp.appendChild(cWallShow);
     pages.screen = sp;
 
     /* this week: add, move or cancel a minyan for today or one of the next six days, without the editor; each day is saved as its own one-date schedule */
@@ -1874,6 +1916,7 @@
         d.tefillos.forEach(function (tf) { var v = lines[t[0]][tf.id].value; if (v.trim()) o[tf.id] = v.replace(/\r/g, ''); });
         if (Object.keys(o).length) out.schedules[t[0]] = o;
       });
+      out.nextTemplate = fNextT.value.trim() === NEXT_TEMPLATE ? '' : fNextT.value;
       out.wallLook = {}; SWATCHES.forEach(function (sw) { if (wall[sw[0]]) out.wallLook[sw[0]] = wall[sw[0]]; });
       out.wallWindow = { mode: fWinMode.value, before: Math.max(10, Math.min(1440, +fWinBefore.value || 180)), after: Math.max(0, Math.min(240, +fWinAfter.value || 0)), neverEmpty: fWinKeep.checked };
       out.notices = nRows.map(function (r) { return { title: r.title.value.trim(), name: r.name.value.trim(), body: r.body.value.trim(), from: r.from.value, to: r.to.value }; }).filter(function (n) { return n.title || n.name || n.body; });
@@ -2037,7 +2080,7 @@
     function lines(t) { return (t || '').split('\n').map(function (l) { return l.trim(); }).filter(Boolean); }
     function few(list) { return list.slice(0, 5).join('; ') + (list.length > 5 ? ' … (' + list.length + ')' : ''); }
     (a.tefillos || []).concat(b.tefillos || []).forEach(function (t) { names[t.id] = t.name; });
-    [['name', 'Shul name'], ['rooms', 'Rooms'], ['palette', 'Colors'], ['lang', 'Board labels'], ['bigTime', 'Big number'], ['displayScale', 'Hallway screen size'], ['wallLook', 'Hallway screen colours'], ['wallWindow', 'What the hallway screen lists'], ['dateFormat', 'Date format'], ['nowMinutes', '"Now" minutes'], ['countdownZmanim', 'Countdown zmanim'],
+    [['name', 'Shul name'], ['rooms', 'Rooms'], ['palette', 'Colors'], ['lang', 'Board labels'], ['bigTime', 'Big number'], ['displayScale', 'Hallway screen size'], ['wallLook', 'Hallway screen colours'], ['nextTemplate', 'Next-minyan panel'], ['wallWindow', 'What the hallway screen lists'], ['dateFormat', 'Date format'], ['nowMinutes', '"Now" minutes'], ['countdownZmanim', 'Countdown zmanim'],
       ['candles', 'Candle lighting minutes'], ['tzeisMinutes', 'Nightfall minutes'], ['tzeisDeg', 'Nightfall degrees'], ['minchaGedola', 'Mincha gedola'], ['amidahMinutes', 'Minutes from הודו to שמונה עשרה'], ['israel', 'Eretz Yisroel calendar'], ['weeklyEarliest', 'Weekly earliest sunset'], ['clock24', '24-hour clock'],
       ['showTzeis', 'Show צאת הכוכבים'], ['showRT', 'Show Rabbeinu Tam'], ['show60', 'Show 60 minutes'], ['siteUrl', 'Website address'], ['logo', 'Logo'], ['notifyUrl', 'Notification service'], ['smsNumber', 'SMS number'], ['smsLang', 'Text reply language'],
       ['sponsorSeconds', 'Sponsor seconds'], ['remoteConfigUrl', 'Central schedule URL'], ['location', 'Location'], ['pinHash', 'PIN'], ['pin', 'PIN']].forEach(function (f) {
