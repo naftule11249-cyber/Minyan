@@ -33,6 +33,15 @@ const full = '<!doctype html><html lang="he"><head><meta charset="utf-8"><meta n
 fs.writeFileSync(path.join(dist, 'index.html'), full);
 const adminFull = full.replace('<title>' + esc(name) + '</title>', '<title>' + esc(name) + ' – Admin</title>').replace('<head>', '<head><meta name="robots" content="noindex,nofollow">');
 fs.writeFileSync(path.join(dist, 'admin.html'), adminFull);
+// a short way in to the back end: minyan.example.org/admin — a page that steps aside to admin.html, keeping ?pin= and the like
+fs.mkdirSync(path.join(dist, 'admin'), { recursive: true });
+fs.writeFileSync(path.join(dist, 'admin', 'index.html'), '<!doctype html><html lang="en"><head><meta charset="utf-8">' +
+  '<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">' +
+  '<title>' + esc(name) + ' \u2013 Admin</title><link rel="icon" href="../favicon.png">' +
+  '<meta http-equiv="refresh" content="0; url=../admin.html">' +
+  '<style>body{margin:0;display:grid;place-items:center;min-height:100vh;background:#e8e3da;color:#2b2622;font:16px -apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif}a{color:#7a2433}</style></head>' +
+  '<body><p>Opening the admin page\u2026 <a href="../admin.html">carry on</a></p>' +
+  '<script>location.replace("../admin.html" + location.search + location.hash);<\/script></body></html>');
 for (const f of ['style.css', 'cal.js', 'engine.js', 'template.js', 'app.js', 'manifest.webmanifest']) fs.copyFileSync(path.join(__dirname, 'src', f), path.join(dist, f));
 fs.writeFileSync(path.join(dist, 'config.json'), json);
 fs.writeFileSync(path.join(dist, '.nojekyll'), '');
@@ -53,6 +62,6 @@ fs.writeFileSync(path.join(__dirname, 'sms/dist/worker.js'), core + '\n' + strip
 const www = path.join(__dirname, 'app', 'www');
 if (fs.existsSync(path.join(__dirname, 'app'))) {
   fs.rmSync(www, { recursive: true, force: true }); fs.mkdirSync(www, { recursive: true });
-  for (const f of fs.readdirSync(dist)) fs.copyFileSync(path.join(dist, f), path.join(www, f));
+  fs.cpSync(dist, www, { recursive: true }); /* folders too, such as docs/admin */
 }
 console.log('built src/index.html, docs/, sms/dist/' + (fs.existsSync(www) ? ' and app/www' : '') + (cfg.remoteConfigUrl ? ' (remote: ' + cfg.remoteConfigUrl + ')' : ''));

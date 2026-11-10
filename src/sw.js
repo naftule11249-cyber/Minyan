@@ -27,7 +27,8 @@ self.addEventListener('fetch', function (e) {
     if (e.request.mode === 'navigate') {
       /* the board (/, index.html) and the admin page are the app shell: cached copy first, refreshed behind it, each under its own name.
          Any other page (sign, sms, privacy, tv) comes from the network and is cached under its own name for offline use. */
-      var shell = /\/(index\.html)?$/.test(url.pathname) ? './index.html' : /\/admin\.html$/.test(url.pathname) ? './admin.html' : null;
+      var root = new URL(self.registration.scope).pathname; /* the site's own root, "/" or "/minyan/" */
+      var shell = url.pathname === root || url.pathname === root + 'index.html' ? './index.html' : url.pathname === root + 'admin.html' ? './admin.html' : null;
       if (shell) {
         e.respondWith(caches.match(shell).then(function (cached) {
           var net = fetch(e.request).then(function (r) { if (r.ok) caches.open(VERSION).then(function (c) { c.put(shell, r.clone()); }); return r; });

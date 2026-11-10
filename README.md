@@ -4,7 +4,7 @@ Published as **Cascade Zmanim**, a privately run service: the shul's name appear
 
 Shows the next minyan with a live countdown, every room's Shacharis / Mincha / Maariv
 minyanim (with the Hodu / Shemoneh Esrei time), the Hebrew date, the parsha of the week,
-holidays and today's zmanim. The board itself is in Hebrew and has no editing controls. The gabbai edits everything from a separate admin page in English: `admin.html` on the self-hosted site (PIN), or the claude.ai link with `#admin` added (owner only).
+holidays and today's zmanim. The board itself is in Hebrew and has no editing controls. The gabbai edits everything from a separate admin page in English: `/admin` on the self-hosted site — the short way in, or `admin.html` itself (PIN) — or the claude.ai link with `#admin` added (owner only).
 
 Three ways to use it, all from the same code:
 
@@ -70,7 +70,7 @@ fastest way to say "Mincha is 5:30 today".
 3. Repository Settings → Pages → Source: "Deploy from a branch", branch `main`, folder `/docs` (or `/ (root)` if you uploaded only the site files). The site appears at `https://USERNAME.github.io/minyan/` after a minute. With a custom domain, keep `docs/CNAME` (it holds the domain name) and point the domain's DNS at GitHub Pages.
 4. On a phone, open that address: Android offers "Install app"; on iPhone use Share → "Add to Home Screen". The app works offline.
 
-Editing: open `https://USERNAME.github.io/minyan/admin.html` and enter the PIN (default 1234; change it under General, it is stored hashed). The public page has no edit button.
+Editing: open `https://USERNAME.github.io/minyan/admin` (or `admin.html`) and enter the PIN (default 1234; change it under General, it is stored hashed). The public page has no edit button.
 
 Letting the gabbai update everyone from the page: in GitHub create a fine-grained personal
 access token (Settings → Developer settings → Fine-grained tokens) limited to that one
@@ -179,7 +179,7 @@ Same address, different screens (the `#` forms also work on the claude.ai page):
 `index.html?view=display` is laid out like a shul's printed board, in three columns that never scroll:
 
 - **The top bar** carries the day and the parsha on one side, the Hebrew and civil date with any label (ראש חודש, ערב שבת…) and the running clock with seconds on the other. The shul's name is not repeated there.
-- **The first tefilla of the day** (שחרית) has a frame to itself, with the whole day's minyanim as tiles: room, time and הודו. A tile reads its state by colour: the next one green with הבא, the one before it light green (with עכשיו while it is within the minutes General gives it), the earlier ones light, and the rest, still to come, in the board's own colour. The last minyan that still reaches שמונה עשרה before סוף זמן תפילה is marked סוף זמן תפילה, and the last one before חצות אחרון לחצות (the pace from הודו to שמונה עשרה is General → "Minutes from הודו to שמונה עשרה"). Under that frame is the next-minyan panel: the room on a line of its own, large, then the time and the countdown.
+- **The first tefilla of the day** (שחרית) has a frame to itself, with the whole day's minyanim as tiles: room, time and הודו. The tiles sit in the middle of the frame, and whatever height the frame has to spare is shared out between the rows rather than left at the bottom. A tile reads its state by colour: the next one green with הבא, the one before it light green (with עכשיו while it is within the minutes General gives it), the earlier ones light, and the rest, still to come, in the board's own colour. The last minyan that still reaches שמונה עשרה before סוף זמן תפילה is marked with a tab on its bottom edge reading סוף זמן תפילה, and the last one before חצות אחרון לחצות (the pace from הודו to שמונה עשרה is General → "Minutes from הודו to שמונה עשרה"). Under that frame is the next-minyan panel: the room on a line of its own, large, then the time and the countdown.
 - **The middle** holds the big round clock, with the running time and its seconds in a window on the face, the hands sweeping over it, and the sponsor frames (פרנס החודש and the like) stacked under it, the two together in the middle of the column. A frame appears only when that notice has something in it for the day.
 - **The rest of the day** (מנחה, מעריב) shares one frame, each tefilla named above its own tiles. A repeating line is written as one line with its rooms, "כל 10 דק׳ · 6:15–7:55", instead of a tile for each minyan, so a long Maariv list stays readable. Under it are the next three zmanim, large; the first of them is marked and carries the countdown, and once the day's are over they come from tomorrow.
 - **It sizes itself to the TV.** Everything is measured from the screen's width and height, so a 60-inch TV and a 32-inch one show the same board and a 4K TV at full resolution is simply twice as sharp; the screen then takes the largest size that fits the day, so a crowded morning shrinks a little by itself. General → "Hallway screen (TV)" caps that size and `&size=80` in the address caps one screen.

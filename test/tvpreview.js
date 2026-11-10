@@ -33,6 +33,9 @@ const { chromium } = require('playwright');
   ({ ctx, page } = await open('index.html?view=display', { width: 1366, height: 768 }));
   ok('a laptop or TV keeps the lobby page', [/index\.html/.test(page.url()), await page.locator('.aclock svg').count()], [true, 1]);
   await ctx.close();
+  ({ ctx, page } = await open('admin/', { width: 1100, height: 800 }));
+  ok('the short way in: /admin/ steps aside to the admin page and asks for the PIN', [/\/admin\.html$/.test(page.url()), await page.locator('#pin-input').count()], [true, 1]);
+  await ctx.close();
   ({ ctx, page } = await open('admin.html', { width: 1100, height: 800 }));
   await page.fill('#pin-input', '1234'); await page.press('#pin-input', 'Enter'); await page.waitForSelector('#tab-notices');
   ok('the admin header has a TV link to the preview', await page.locator('.abar a[href="tv.html"]').count(), 1);
@@ -45,8 +48,8 @@ const { chromium } = require('playwright');
   await page.reload({ waitUntil: 'networkidle' }); await page.waitForTimeout(500);
   ok('service worker controls the page', await page.evaluate(() => !!navigator.serviceWorker.controller), true);
   const titles = {};
-  for (const p of ['sign.html', 'sms.html', 'tv.html', 'admin.html', 'index.html']) { await page.goto('http://localhost:8790/' + p, { waitUntil: 'networkidle' }); await page.waitForTimeout(200); titles[p] = (await page.title()).replace(/Cascade Zmanim/, 'SHUL'); }
-  ok('with the worker installed, each page is itself (not the page visited before it)', [/שלט/.test(titles['sign.html']), /טקסט/.test(titles['sms.html']), titles['tv.html'], /Admin/.test(titles['admin.html']), titles['index.html']], [true, true, 'Hallway screen preview', true, 'SHUL']);
+  for (const p of ['sign.html', 'sms.html', 'tv.html', 'admin.html', 'admin/', 'index.html']) { await page.goto('http://localhost:8790/' + p, { waitUntil: 'networkidle' }); await page.waitForTimeout(400); titles[p] = (await page.title()).replace(/Cascade Zmanim/, 'SHUL'); }
+  ok('with the worker installed, each page is itself (not the page visited before it)', [/שלט/.test(titles['sign.html']), /טקסט/.test(titles['sms.html']), titles['tv.html'], /Admin/.test(titles['admin.html']), /Admin/.test(titles['admin/']), titles['index.html']], [true, true, 'Hallway screen preview', true, true, 'SHUL']);
   await ctx.close(); await browser.close();
   console.log(errors.length ? 'ERRORS:\n' + errors.join('\n') : 'no console errors');
   console.log(fails ? fails + ' FAILING' : 'tvpreview: all good');
