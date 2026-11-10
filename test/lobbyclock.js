@@ -92,7 +92,7 @@ const { chromium } = require('playwright');
     const cs = getComputedStyle(document.documentElement);
     return [document.documentElement.getAttribute('data-palette'), cs.getPropertyValue('--bg').trim(), cs.getPropertyValue('--gold').trim()];
   }), ['hallway', '#cdc5b6', '#b3904a']);
-  ok('no logo on the clock face while the setting is empty', await page.locator('.aclock .dial-logo').count(), 0);
+  ok('the shul\'s own logo stands on the dial', [await page.locator('.aclock .dial-logo').count(), await page.locator('.aclock .dial-logo').getAttribute('href')], [1, 'logo-name.png']);
   await ctx.close();
   {
     const c2 = await browser.newContext({ viewport: { width: 1920, height: 1080 }, locale: 'he', timezoneId: 'America/New_York', serviceWorkers: 'block' });

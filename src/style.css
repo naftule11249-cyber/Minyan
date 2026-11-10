@@ -54,16 +54,18 @@ button { cursor: pointer; }
 /* Sponsor boxes under the header */
 .sponsors { max-width: 1120px; margin: 0 auto; padding-block: 18px 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 .sponsors-inner { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 14px; }
-.sponsor { position: relative; background: linear-gradient(180deg, var(--panel), var(--panel-2)); border: 3px double var(--gold); border-radius: 8px; padding: 16px 22px 18px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,.06); min-width: 0; }
+.sponsor { --sp: 1; position: relative; background: linear-gradient(180deg, var(--panel), var(--panel-2)); border: 3px double var(--gold); border-radius: 8px; padding: 16px 22px 18px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,.06); min-width: 0; }
 .sponsor .frame { position: absolute; inset: 6px; border: 1px solid var(--gold); border-radius: 4px; opacity: .75; pointer-events: none; }
 .sponsor .frame::before, .sponsor .frame::after { content: ""; position: absolute; width: 10px; height: 10px; background: var(--gold); transform: rotate(45deg); }
 .sponsor .frame::before { top: -6px; inset-inline-start: -6px; }
 .sponsor .frame::after { bottom: -6px; inset-inline-end: -6px; }
-.sponsor .t { font-size: 1.4rem; color: var(--accent); letter-spacing: .02em; display: flex; align-items: center; justify-content: center; gap: 10px; }
+.sponsor.sp-big { --sp: 1.45; }
+.sponsor.sp-sm { --sp: .78; }
+.sponsor .t { font-size: calc(1.4rem * var(--sp)); color: var(--accent); letter-spacing: .02em; display: flex; align-items: center; justify-content: center; gap: 10px; }
 .sponsor .t::before, .sponsor .t::after { content: ""; flex: 0 0 34px; height: 2px; background: linear-gradient(90deg, transparent, var(--gold)); }
 .sponsor .t::after { background: linear-gradient(90deg, var(--gold), transparent); }
-.sponsor .b { white-space: pre-wrap; font-size: 1.2rem; line-height: 1.5; margin-top: 8px; font-family: var(--font-display); font-weight: 700; text-wrap: balance; }
-.sponsor:first-child .b { font-size: 1.35rem; }
+.sponsor .b { white-space: pre-wrap; font-size: calc(1.2rem * var(--sp)); line-height: 1.5; margin-top: 8px; font-family: var(--font-display); font-weight: 700; text-wrap: balance; }
+
 .sponsor .b:first-line { font-size: 1.05em; }
 
 /* Main grid */
@@ -495,8 +497,12 @@ footer { max-width: 1120px; margin: 0 auto; padding-block: 0 30px; padding-left:
 .hebpick select { background: #fff; border: 1px solid var(--a-line); border-radius: 8px; padding: 4px 6px; font-size: .9rem; min-width: 4.5em; }
 .hebshow { font-size: .9rem; color: var(--a-navy); font-weight: 700; unicode-bidi: plaintext; }
 /* the sponsor's name above the text on the board */
-.sponsor .n { font-family: var(--font-display); font-weight: 700; font-size: 1.15rem; margin-top: 6px; white-space: pre-wrap; text-wrap: balance; }
-#app.display .wall .sponsor .n { font-size: 1.35rem; }
+.sponsor .n { font-family: var(--font-display); font-weight: 700; font-size: calc(1.45rem * var(--sp)); margin-top: 6px; line-height: 1.18; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: .08em .3em; text-wrap: balance; }
+.sponsor .n .hon { font-size: .56em; font-weight: 600; opacity: .82; } /* מו״ה, ב״ר, הי״ו: the titles, small beside the name */
+.sponsor .nrow { display: flex; flex-wrap: nowrap; align-items: center; justify-content: center; gap: .9em; } /* the business's mark stands beside the name, as it does on the plaque */
+.sponsor .nrow .n { margin-top: 0; }
+.sponsor .slogo { height: 1.9em; width: auto; max-width: 30%; object-fit: contain; flex: 0 1 auto; min-width: 0; }
+#app.display .wall .sponsor .n { font-size: calc(1.7rem * var(--sp)); }
 /* this week: a card per day */
 .daychips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 6px; scrollbar-width: none; }
 .daychips::-webkit-scrollbar { display: none; }
@@ -713,9 +719,9 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 #app.display .wall .sponsor{ display: flex; flex-direction: column; justify-content: center; }
 #app.display .wall .sponsor{ padding: .8rem 1rem 1rem; }
 #app.display .wall .sponsor{ padding: .6rem .9rem .8rem; }
-#app.display .wall .sponsor .t{ font-size: 1.4rem; }
-#app.display .wall .sponsor .b{ font-size: 1.25rem; margin-top: .3rem; }
-#app.display .wall .sponsor:first-child .b{ font-size: 1.35rem; }
+#app.display .wall .sponsor .t{ font-size: calc(1.4rem * var(--sp)); }
+#app.display .wall .sponsor .b{ font-size: calc(1.15rem * var(--sp)); margin-top: .3rem; }
+#app.display .wall .sponsor .slogo{ height: 2.4em; }
 /* the round clock */
 #app.display .aclock{ display: none; }
 #app.display .wall .aclock{ display: grid; justify-items: center; align-content: center; gap: .2rem; }

@@ -201,7 +201,7 @@ A special date still beats an extra schedule, and an extra schedule beats the da
 
 The admin has a tab of its own for the TV:
 
-- **The clock.** A logo on the clock face, set between the 12 and the hands the way a watch carries its name. Put the picture beside the website (`logo.png` in `docs/`) and write its name, or paste a web address; leave it empty and the face stays plain.
+- **The clock.** A logo on the clock face, set between the 12 and the hands the way a watch carries its name; the hands sweep over it. Put the picture beside the website (`logo.png` in `docs/`) and write its name, or paste a web address; leave it empty and the face stays plain.
 - **Colours.** One row per kind of tile: minyanim still to come, the next one, the one before it, the earlier ones, the frames and the top bar. Each has a colour and a writing colour. Tick one to use your own colour; leave it and that tile keeps the colour of the look chosen in General. "Back to the look's own colours" clears them all.
 - **The next-minyan panel.** One line per line of a template. `{tefilla}` `{room}` `{time}` `{milestone}` `{countdown}` `{day}` `{note}` are filled in; anything else is shown as written. A line's size follows the piece it carries: the room large, the time largest, the countdown red, plain words small. Buttons put a piece where the cursor is, and one button puts the usual lines back.
 - **Which minyanim it shows.** The whole day from the first minyan to the last, or only what is near: so many minutes ahead, and so many minutes after one starts. With "never leave the screen empty", a tefilla with nothing near still shows its next few.
@@ -246,6 +246,7 @@ Four palettes: **Hallway** (the lobby itself: limestone walls, polished brass, a
 - **Texting, the last minyan**: a text that arrives after a minyan has begun, but 3 minutes or more before its הודו (the tefilla's milestone), gets that minyan first as מנין העבר, since one can still run for it, and then the next two. Tefillos without a milestone have no such window.
 - **Temporary banner** (Edit → Notices): one line across the top of the board, and at the start of text replies. Give it a start time and it appears by itself at that time (the night before a clock change, say); give it an end time and it disappears by itself. Either may be blank.
 - **Sponsor dates**: each notice can have "show from" and "show until" dates; several entries with the same title form a queue.
+- **How a sponsor panel reads**: the name goes in its own field and is set large, with the titles around it — מו״ה, הרה״ח, ב״ר, מרת, הי״ו, ע״ה and their like — picked out and set small beside it, so the name carries the panel. "How big on the screen" gives each panel its own size (big for פרנס החודש, small for נר למאור), and "picture beside the name" puts a sponsor's own mark, such as a business logo, next to the name the way the printed plaque does.
 - **Undo** (Edit → Backup → Previous versions): every Save made on a device keeps the version before it; Restore loads it into the editor.
 
 ## Notes

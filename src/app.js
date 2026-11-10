@@ -641,14 +641,33 @@
     });
     return el('section', { class: 'side' }, [el('h3', { text: title || L.zmanim }), ul]);
   }
+  /* The titles around a name — מו״ה, ב״ר, הי״ו and their like — are set small, so the name itself carries the panel. */
+  var HON_WORDS = 'מו"ה מוה"ר הרה"ח הרה"ג הרה"צ הרה"ק הר"ר הרב הגאון הרבני כ"ק ה"ה רבי ר\' הי"ו שליט"א ני"ו נ"י ז"ל ע"ה זצ"ל זי"ע שיחי\' תחי\' ב"ר בהר"ר בה"ר בן בת מרת האשה החשובה החשוב הנגיד'.split(' ');
+  var HONS = {};
+  function normHon(t) { return t.replace(/[\u05f4"]/g, '"').replace(/[\u05f3']/g, "'"); }
+  HON_WORDS.forEach(function (t) { HONS[normHon(t)] = 1; });
+  function nameRuns(name) {
+    var toks = (name || '').trim().split(/\s+/).filter(Boolean), runs = [];
+    if (!toks.length) return runs;
+    if (!toks.some(function (t) { return !HONS[normHon(t)]; })) return [{ text: toks.join(' '), small: false }]; /* titles only: let them stand full size */
+    toks.forEach(function (t) {
+      var small = !!HONS[normHon(t)], last = runs[runs.length - 1];
+      if (last && last.small === small) last.text += ' ' + t; else runs.push({ text: t, small: small });
+    });
+    return runs;
+  }
   /* Sponsor boxes (פרנס החודש and friends) in a framed strip under the header */
   function sponsorsStrip(rd) {
     var items = [];
     engine.activeNotices(rd).forEach(function (n) {
-      items.push(el('section', { class: 'sponsor' }, [
+      var nm = (n.name || '').trim(), logo = (n.logo || '').trim();
+      var nameEl = nm ? el('div', { class: 'n' }, nameRuns(nm).map(function (r) {
+        return el('span', { class: r.small ? 'hon' : 'nm', text: r.text });
+      })) : null;
+      items.push(el('section', { class: 'sponsor' + (n.size === 'big' ? ' sp-big' : n.size === 'small' ? ' sp-sm' : '') }, [
         el('div', { class: 'frame' }),
         el('h2', { class: 't', text: n.title || '' }),
-        (n.name || '').trim() ? el('div', { class: 'n', text: n.name.trim() }) : null,
+        nameEl && logo ? el('div', { class: 'nrow' }, [el('img', { class: 'slogo', src: logo, alt: '', loading: 'lazy' }), nameEl]) : nameEl,
         el('div', { class: 'b', text: (n.body || '').trim() })]));
     });
     if (ui.sponsorTimer) { clearInterval(ui.sponsorTimer); ui.sponsorTimer = null; }
@@ -963,7 +982,7 @@
       '<line class="hand hour" x1="100" y1="112" x2="100" y2="52"/><line class="hand minute" x1="100" y1="114" x2="100" y2="30"/><line class="hand second" x1="100" y1="118" x2="100" y2="24"/><circle class="cap" cx="100" cy="100" r="5"/></svg>';
     if (cfg.wallLogo) { /* a logo on the dial, between the 12 and the hands, the way a watch carries its name */
       var svgEl = wrap.querySelector('svg'), lg = document.createElementNS('http://www.w3.org/2000/svg', 'image');
-      lg.setAttribute('class', 'dial-logo'); lg.setAttribute('x', '68'); lg.setAttribute('y', '38'); lg.setAttribute('width', '64'); lg.setAttribute('height', '26');
+      lg.setAttribute('class', 'dial-logo'); lg.setAttribute('x', '61'); lg.setAttribute('y', '45'); lg.setAttribute('width', '78'); lg.setAttribute('height', '36');
       lg.setAttribute('preserveAspectRatio', 'xMidYMid meet'); lg.setAttribute('href', cfg.wallLogo);
       lg.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', cfg.wallLogo);
       svgEl.insertBefore(lg, svgEl.querySelector('.digbox'));
@@ -1586,7 +1605,10 @@
     return { k: 'on', t: 'פעיל' };
   }
   function addNotice(n) {
-      var id = ++uid, r = { title: inp('n-title-' + id, n.title), name: inp('n-name-' + id, n.name || '', { dir: 'auto' }), body: el('textarea', { id: 'n-body-' + id, dir: 'auto' }), from: inp('n-from-' + id, n.from || '', { type: 'date' }), to: inp('n-to-' + id, n.to || '', { type: 'date' }) };
+      var id = ++uid, r = { title: inp('n-title-' + id, n.title), name: inp('n-name-' + id, n.name || '', { dir: 'auto' }), body: el('textarea', { id: 'n-body-' + id, dir: 'auto' }), from: inp('n-from-' + id, n.from || '', { type: 'date' }), to: inp('n-to-' + id, n.to || '', { type: 'date' }),
+        size: el('select', { id: 'n-size-' + id }, [el('option', { value: 'big', text: 'Big: the panel that leads' }), el('option', { value: '', text: 'Normal' }), el('option', { value: 'small', text: 'Small' })]),
+        logo: inp('n-logo-' + id, n.logo || '', { dir: 'ltr', placeholder: 'logo-name.png' }) };
+      r.size.value = n.size === 'big' || n.size === 'small' ? n.size : '';
       r.body.value = n.body || ''; r.body.style.minHeight = '64px';
       var FRAMES = ['פרנס החודש', 'פרנס השבוע', 'פרנס היום', 'נר למאור לחודש', 'נר למאור'];
       var frame = el('select', { id: 'n-frame-' + id }, FRAMES.map(function (f) { return el('option', { value: f, text: f }); }).concat([el('option', { value: '', text: 'אחר…' })]));
@@ -1617,6 +1639,7 @@
           el('button', { type: 'button', class: 'btn small danger', text: 'Remove', onclick: function () { nRows.splice(nRows.indexOf(r), 1); r.wrap.remove(); nRows.forEach(function (x, k) { x.num.textContent = (k + 1) + '.'; }); } })]),
         el('div', { class: 'fields' }, [field('Which frame', frame, r.title), field('Name', r.name)]),
         el('div', { class: 'fields' }, [field('Text under the name', r.body)]),
+        el('div', { class: 'fields' }, [field('How big on the screen', r.size), field('Picture beside the name (blank = none)', r.logo)]),
         el('div', { class: 'fields' }, [
           field('Show from (blank = right away)', r.from, el('div', { class: 'hebrow' }, [hFrom.wrap, hFrom.shown])),
           field('Show until (blank = no end)', r.to, el('div', { class: 'hebrow' }, [hTo.wrap, hTo.shown]))])]);
@@ -2014,7 +2037,7 @@
         d.tefillos.forEach(function (tf) { if ((r.lines[tf.id].value || '').trim()) ln[tf.id] = r.lines[tf.id].value; });
         return { name: r.name.value.trim(), type: r.type.value, priority: +r.priority.value || 0, active: r.active.checked, dows: dows.length === 7 ? [] : dows, from: r.from.value, to: r.to.value, lines: ln };
       }).filter(function (r) { return r.name || Object.keys(r.lines).length; });
-      out.notices = nRows.map(function (r) { return { title: r.title.value.trim(), name: r.name.value.trim(), body: r.body.value.trim(), from: r.from.value, to: r.to.value }; }).filter(function (n) { return n.title || n.name || n.body; });
+      out.notices = nRows.map(function (r) { return { title: r.title.value.trim(), name: r.name.value.trim(), body: r.body.value.trim(), size: r.size.value, logo: r.logo.value.trim(), from: r.from.value, to: r.to.value }; }).filter(function (n) { return n.title || n.name || n.body; });
       out.banner = { text: bText.value.trim(), from: bFrom.value, until: bUntil.value };
       out.overrides = oRows.map(function (r) {
         var lines = {};

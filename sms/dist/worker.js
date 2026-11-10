@@ -466,7 +466,7 @@ var MinyanEngine = (function () {
     function activeNotices(rd) {
       var iso = isoDate(rd);
       return (cfg.notices || []).filter(function (n) {
-        if (!(n.body || '').trim()) return false;
+        if (!((n.body || '') + (n.name || '')).trim()) return false; /* a name on its own is a sponsor too */
         if (n.from && iso < n.from) return false;
         if (n.to && iso > n.to) return false;
         return true;
