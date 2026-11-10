@@ -34,7 +34,7 @@
   var sameEntry = MinyanEngine.sameEntry, gregStr = MinyanEngine.gregStr, parseLine = MinyanEngine.parseLine;
   function setCfg(c) { cfg = (c && typeof c === 'object') ? c : {}; cfg.location = cfg.location || {}; engine = MinyanEngine(cfg); applyLook(); }
   /* looks: the palette chosen in General is the default and what the lobby screen and door displays always use; each phone may pick its own in the footer */
-  var LOOKS = [['hallway', 'Hallway'], ['shul', 'Shul'], ['classic', 'Classic'], ['contrast', 'High contrast']], LOOK_BAND = { hallway: '#413a31', shul: '#3a332c', classic: '#223b68', contrast: '#000000' };
+  var LOOKS = [['hallway', 'Hallway'], ['shul', 'Shul'], ['classic', 'Classic'], ['contrast', 'High contrast']], LOOK_BAND = { hallway: '#4a3a28', shul: '#3a332c', classic: '#223b68', contrast: '#000000' };
   function isLook(v) { return LOOKS.some(function (l) { return l[0] === v; }); }
   function lookDefault() { return isLook(cfg.palette) ? cfg.palette : 'shul'; }
   function lookMode() {

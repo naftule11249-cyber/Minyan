@@ -9,7 +9,7 @@ const { chromium } = require('playwright');
   page.on('console', m => { if (m.type() === 'error' && !/ERR_TUNNEL|ERR_NAME_NOT_RESOLVED|ERR_INTERNET|ERR_CONNECTION/.test(m.text())) errors.push(m.text()); });
   const look = () => page.evaluate(() => [document.documentElement.getAttribute('data-palette'), document.querySelector('meta[name=theme-color]').getAttribute('content'), getComputedStyle(document.documentElement).getPropertyValue('--band').trim()]);
   await page.goto('http://localhost:8790/index.html', { waitUntil: 'networkidle' }); await page.waitForTimeout(400);
-  ok('default look is the hallway palette', await look(), ['hallway', '#413a31', '#413a31']);
+  ok('default look is the hallway palette', await look(), ['hallway', '#4a3a28', '#4a3a28']);
   await page.click('#settings-open'); await page.waitForTimeout(200);
   ok('settings sheet shows it', await page.locator('#look').inputValue(), 'hallway');
   await page.selectOption('#look', 'shul'); await page.waitForTimeout(200);

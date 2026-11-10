@@ -33,18 +33,30 @@ const { chromium } = require('playwright');
   ({ ctx, page } = await open('index.html?view=display', { width: 1366, height: 768 }));
   ok('a laptop or TV keeps the lobby page', [/index\.html/.test(page.url()), await page.locator('.aclock svg').count()], [true, 1]);
   await ctx.close();
-  ({ ctx, page } = await open('admin/', { width: 1100, height: 800 }));
-  ok('the short way in: /admin/ steps aside to the admin page and asks for the PIN', [/\/admin\.html$/.test(page.url()), await page.locator('#pin-input').count()], [true, 1]);
+  ({ ctx, page } = await open('screen.html', { width: 1920, height: 1080 }));
+  ok('/screen opens the hallway screen itself, full size', [/index\.html\?view=display&full=1$/.test(page.url()), await page.locator('.aclock svg').count(), await page.locator('main.wall').count()], [true, 1, 1]);
   await ctx.close();
-  ({ ctx, page } = await open('screen/', { width: 1920, height: 1080 }));
-  ok('/screen/ opens the hallway screen itself, full size', [/index\.html\?view=display&full=1$/.test(page.url()), await page.locator('.aclock svg').count(), await page.locator('main.wall').count()], [true, 1, 1]);
-  await ctx.close();
-  ({ ctx, page } = await open('tv/', { width: 844, height: 390 }));
-  ok('/tv/ opens the preview page', [/\/tv\.html$/.test(page.url()), await page.locator('#tv').count()], [true, 1]);
-  await ctx.close();
-  ({ ctx, page } = await open('screen/?size=120', { width: 1920, height: 1080 }));
+  ({ ctx, page } = await open('screen.html?size=120', { width: 1920, height: 1080 }));
   ok('a short link carries what the address already had', /index\.html\?view=display&full=1&size=120$/.test(page.url()), true);
   await ctx.close();
+  /* the host answers an address it has no file for with 404.html, which sends each short name to its page */
+  for (const [asked, lands] of [['/admin', 'admin.html'], ['/admin/', 'admin.html'], ['/screen', 'index.html'], ['/tv', 'tv.html'], ['/nowhere', null]]) {
+    const c3 = await browser.newContext({ viewport: { width: 1100, height: 800 }, locale: 'he', timezoneId: 'America/New_York', serviceWorkers: 'block' });
+    await c3.route('**/*', async route => { /* stand in for GitHub Pages: an unknown path gets 404.html, with that status */
+      const u = new URL(route.request().url());
+      if (route.request().resourceType() === 'document' && !/\.[a-z0-9]+$/i.test(u.pathname)) {
+        const r = await route.fetch({ url: u.origin + '/404.html' });
+        return route.fulfill({ status: 404, contentType: 'text/html', body: await r.text() });
+      }
+      return route.fallback();
+    });
+    const p3 = await c3.newPage();
+    await p3.goto('http://localhost:8790' + asked, { waitUntil: 'domcontentloaded' }); await p3.waitForTimeout(700);
+    const landed = new URL(p3.url()).pathname;
+    ok('a host with no file for ' + asked + (lands ? ' ends up on ' + lands : ' says so plainly'),
+      lands ? landed === '/' + lands : [landed, await p3.locator('#m').textContent()], lands ? true : ['/nowhere', 'That page is not here.']);
+    await c3.close();
+  }
   ({ ctx, page } = await open('admin.html', { width: 1100, height: 800 }));
   await page.fill('#pin-input', '1234'); await page.press('#pin-input', 'Enter'); await page.waitForSelector('#tab-notices');
   ok('the admin header has a TV link to the preview', await page.locator('.abar a[href="tv.html"]').count(), 1);
@@ -57,8 +69,8 @@ const { chromium } = require('playwright');
   await page.reload({ waitUntil: 'networkidle' }); await page.waitForTimeout(500);
   ok('service worker controls the page', await page.evaluate(() => !!navigator.serviceWorker.controller), true);
   const titles = {};
-  for (const p of ['sign.html', 'sms.html', 'tv.html', 'admin.html', 'admin/', 'index.html']) { await page.goto('http://localhost:8790/' + p, { waitUntil: 'networkidle' }); await page.waitForTimeout(400); titles[p] = (await page.title()).replace(/Cascade Zmanim/, 'SHUL'); }
-  ok('with the worker installed, each page is itself (not the page visited before it)', [/שלט/.test(titles['sign.html']), /טקסט/.test(titles['sms.html']), titles['tv.html'], /Admin/.test(titles['admin.html']), /Admin/.test(titles['admin/']), titles['index.html']], [true, true, 'Hallway screen preview', true, true, 'SHUL']);
+  for (const p of ['sign.html', 'sms.html', 'tv.html', 'admin.html', 'screen.html', '404.html', 'index.html']) { await page.goto('http://localhost:8790/' + p, { waitUntil: 'domcontentloaded' }); await page.waitForTimeout(400); titles[p] = (await page.title()).replace(/Cascade Zmanim/, 'SHUL'); }
+  ok('with the worker installed, each page is itself (not the page visited before it)', [/שלט/.test(titles['sign.html']), /טקסט/.test(titles['sms.html']), titles['tv.html'], /Admin/.test(titles['admin.html']), titles['screen.html'], /not found/i.test(titles['404.html']), titles['index.html']], [true, true, 'Hallway screen preview', true, 'SHUL', true, 'SHUL']);
   await ctx.close(); await browser.close();
   console.log(errors.length ? 'ERRORS:\n' + errors.join('\n') : 'no console errors');
   console.log(fails ? fails + ' FAILING' : 'tvpreview: all good');

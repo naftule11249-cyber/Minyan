@@ -34,22 +34,28 @@ fs.writeFileSync(path.join(dist, 'index.html'), full);
 const adminFull = full.replace('<title>' + esc(name) + '</title>', '<title>' + esc(name) + ' – Admin</title>').replace('<head>', '<head><meta name="robots" content="noindex,nofollow">');
 fs.writeFileSync(path.join(dist, 'admin.html'), adminFull);
 // short ways in: /admin for the back end, /screen for the TV itself, /tv for the preview on a phone.
-// Each is a folder with a page that steps aside to the real one, carrying anything the address already had.
-const shortcut = (folder, file, query, title) => {
-  const href = file + (query ? '?' + query : '');
-  fs.mkdirSync(path.join(dist, folder), { recursive: true });
-  fs.writeFileSync(path.join(dist, folder, 'index.html'), '<!doctype html><html lang="en"><head><meta charset="utf-8">' +
-    '<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">' +
-    '<title>' + esc(name) + ' \u2013 ' + esc(title) + '</title><link rel="icon" href="../favicon.png">' +
-    '<meta http-equiv="refresh" content="0; url=../' + esc(href) + '">' +
-    '<style>body{margin:0;display:grid;place-items:center;min-height:100vh;background:#e8e3da;color:#2b2622;font:16px -apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif}a{color:#7a2433}</style></head>' +
-    '<body><p>Opening\u2026 <a href="../' + href.replace(/&/g, '&amp;') + '">carry on</a></p><script>' +
-    '(function(){var own=' + JSON.stringify(query) + ',had=location.search.slice(1),q=[own,had].filter(Boolean).join("&");' +
-    'location.replace(' + JSON.stringify('../' + file) + ' + (q ? "?" + q : "") + location.hash);})();<\/script></body></html>');
-};
-shortcut('admin', 'admin.html', '', 'Admin');
-shortcut('screen', 'index.html', 'view=display&full=1', 'Hallway screen');
-shortcut('tv', 'tv.html', '', 'Hallway screen preview');
+// They are plain pages next to the others, never folders: a folder address ends in "/", which the service
+// worker of an older visit treats as the board. screen.html steps aside to the display; 404.html catches
+// the rest, so /admin and /admin/ both land on the admin page whatever the host does with the address.
+const jump = (target, title, body) => '<!doctype html><html lang="en"><head><meta charset="utf-8">' +
+  '<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">' +
+  '<title>' + esc(name) + ' \u2013 ' + esc(title) + '</title><link rel="icon" href="favicon.png">' +
+  (target ? '<meta http-equiv="refresh" content="0; url=' + esc(target) + '">' : '') +
+  '<style>body{margin:0;display:grid;place-items:center;min-height:100vh;background:#cdc5b6;color:#2e2923;font:16px -apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;text-align:center;padding:1rem}a{color:#87662e}</style></head>' +
+  '<body>' + body + '</body></html>';
+fs.writeFileSync(path.join(dist, 'screen.html'), jump('index.html?view=display&full=1', 'Hallway screen',
+  '<p>Opening the hallway screen\u2026 <a href="index.html?view=display&amp;full=1">carry on</a></p>' +
+  '<script>location.replace("index.html?view=display&full=1" + (location.search ? "&" + location.search.slice(1) : "") + location.hash);<\/script>'));
+fs.writeFileSync(path.join(dist, '404.html'), jump('', 'Page not found',
+  '<p id="m">Looking for that page\u2026</p><p><a href="index.html">The board</a> \u00b7 <a href="admin.html">Admin</a> \u00b7 ' +
+  '<a href="screen.html">Hallway screen</a> \u00b7 <a href="tv.html">Preview</a></p><script>' +
+  '(function(){var parts=location.pathname.replace(/\\/+$/,"").split("/");' +
+  'var seg=(parts.pop()||"").replace(/\\.html$/,"").toLowerCase();' +
+  'if(seg==="index"||seg==="")seg=(parts.pop()||"").toLowerCase();' + /* /admin/ and /admin/index.html land here too */
+  'var base=parts.join("/")+"/";' + /* the site root, whether that is "/" or "/minyan/" */
+  'var to={admin:"admin.html",screen:"screen.html",tv:"tv.html",sign:"sign.html",sms:"sms.html",board:"index.html"}[seg];' +
+  'if(to&&base+to!==location.pathname)location.replace(base+to+location.search+location.hash);' +
+  'else document.getElementById("m").textContent="That page is not here.";})();<\/script>'));
 for (const f of ['style.css', 'cal.js', 'engine.js', 'template.js', 'app.js', 'manifest.webmanifest']) fs.copyFileSync(path.join(__dirname, 'src', f), path.join(dist, f));
 fs.writeFileSync(path.join(dist, 'config.json'), json);
 fs.writeFileSync(path.join(dist, '.nojekyll'), '');

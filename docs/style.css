@@ -255,24 +255,24 @@ footer { max-width: 1120px; margin: 0 auto; padding-block: 0 30px; padding-left:
 /* hallway: the shul's own lobby — limestone walls, polished brass, the bronze wood of the doors and the screen's frame */
 :root[data-palette="hallway"] {
   --bg: #cdc5b6; --panel: #ebe6db; --panel-2: #ded8ca; --ink: #2e2923; --muted: #6d6456; --line: #b5a991;
-  --band: #413a31; --band-2: #524a3f; --band-ink: #f3ece0;
-  --tile: #5c4a33; --tile-2: #453726; --tile-ink: #f7f0e3; --next: #9a7b3a; --next-2: #7c6130; --now: #a8641f;
+  --band: #4a3a28; --band-2: #5c4a33; --band-ink: #f4ece0;
+  --tile: #6b5239; --tile-2: #52402b; --tile-ink: #f8f1e5; --next: #9a7b3a; --next-2: #7c6130; --now: #a8641f;
   --accent: #87662e; --count: #9a3b28; --focus: #8a6d33; --gold: #b3904a; --gold-2: #e0cb95;
   --live: #2d6a42; --live-2: #21502f; --live-soft: #d3e0cb; --live-soft-ink: #214a2c;
 }
 @media (prefers-color-scheme: dark) {
   :root[data-palette="hallway"]:not([data-theme="light"]) {
     --bg: #1b1814; --panel: #26221c; --panel-2: #2f2a23; --ink: #f0e9dc; --muted: #b3a894; --line: #4a4237;
-    --band: #272219; --band-2: #353026; --band-ink: #f0e9dc;
-    --tile: #4e3f2c; --tile-2: #3a2f21; --tile-ink: #f7f0e3; --next: #8a6c2f; --next-2: #6c5424; --now: #c98a33;
+    --band: #2a2118; --band-2: #3a2e20; --band-ink: #f0e9dc;
+    --tile: #5a4430; --tile-2: #413122; --tile-ink: #f8f1e5; --next: #8a6c2f; --next-2: #6c5424; --now: #c98a33;
     --accent: #d6b878; --count: #ff8a80; --focus: #d8bd82; --gold: #c9a65e; --gold-2: #574828;
     --live: #398a55; --live-2: #2a6b40; --live-soft: #2b4433; --live-soft-ink: #d3e8d8;
   }
 }
 :root[data-palette="hallway"][data-theme="dark"] {
   --bg: #1b1814; --panel: #26221c; --panel-2: #2f2a23; --ink: #f0e9dc; --muted: #b3a894; --line: #4a4237;
-  --band: #272219; --band-2: #353026; --band-ink: #f0e9dc;
-  --tile: #4e3f2c; --tile-2: #3a2f21; --tile-ink: #f7f0e3; --next: #8a6c2f; --next-2: #6c5424; --now: #c98a33;
+  --band: #2a2118; --band-2: #3a2e20; --band-ink: #f0e9dc;
+  --tile: #5a4430; --tile-2: #413122; --tile-ink: #f8f1e5; --next: #8a6c2f; --next-2: #6c5424; --now: #c98a33;
   --accent: #d6b878; --count: #ff8a80; --focus: #d8bd82; --gold: #c9a65e; --gold-2: #574828;
   --live: #398a55; --live-2: #2a6b40; --live-soft: #2b4433; --live-soft-ink: #d3e8d8;
 }
