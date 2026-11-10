@@ -41,7 +41,7 @@ const { chromium } = require('playwright');
   ok('nothing is paged away', await page.locator('.pg').count(), 0);
   const runs = await page.locator('.wall .runline .num').allTextContents();
   ok('maariv\'s repeating lines are written as runs over the whole run, not as a tile each', [runs.length, runs[0]], [3, 'כל 10 דק׳ · 6:05–7:55']);
-  ok('the next minyan is marked and its הודו reads on the tile', [await page.locator('.wall .tile.next .time').textContent(), await page.locator('.wall .tile.next .ms').textContent(), await page.locator('.wall .tile.next .ms').evaluate(e => getComputedStyle(e).color)], ['8:00', 'הודו 8:10', 'rgb(251, 238, 219)']);
+  ok('the next minyan is marked and its הודו reads on the tile', [await page.locator('.wall .tile.next .time').textContent(), await page.locator('.wall .tile.next .ms').textContent(), await page.locator('.wall .tile.next .ms').evaluate(e => getComputedStyle(e).color)], ['8:00', 'הודו 8:10', 'rgb(247, 240, 227)']);
   ok('the last minyan that still reaches שמונה עשרה before סוף זמן תפילה is marked, and the last before חצות', (await page.locator('.wall .tile.marked').evaluateAll(ts => ts.map(t => t.querySelector('.time').textContent + ' ' + t.querySelector('.mark').textContent))), ['9:30 סוף זמן תפילה', '11:09 אחרון לחצות']);
   ok('the next-minyan panel is drawn from its template: tefilla, room, time, הודו, countdown', [await page.locator('.wall > .wcol > section.next').evaluate(e => Array.from(e.children).map(c => c.className.replace(' num', ''))), await page.locator('.wall > .wcol > section.next > .rm').textContent(), parseFloat(await page.locator('.wall > .wcol > section.next > .rm').evaluate(e => getComputedStyle(e).fontSize)) > parseFloat(await page.locator('.wall > .wcol > section.next > .tf').evaluate(e => getComputedStyle(e).fontSize)) * 1.6], [['', 'tf', 'rm', 'time', 'ms', 'count'], 'דברי יואל', true]);
   ok('a part-full last row of tiles sits in the middle', await page.evaluate(() => { const g = document.querySelectorAll('.wall .grid')[1], last = g.lastElementChild.getBoundingClientRect(), box = g.getBoundingClientRect(); return Math.abs((last.left - box.left) - (box.right - last.right)) < 4; }), true);
@@ -77,7 +77,34 @@ const { chromium } = require('playwright');
   await ctx.close();
   ({ ctx, page } = await open('?room=' + encodeURIComponent('ברך משה')));
   ok('a door display has neither', [await page.locator('.aclock:visible').count(), await page.locator('main.wall').count()], [0, 0]);
-  await ctx.close(); await browser.close();
+  await ctx.close();
+
+  /* the look the gabbai publishes, and a logo on the dial when one is set */
+  ({ ctx, page } = await open('?view=display'));
+  ok('the hallway screen wears the hallway look: limestone, brass and bronze', await page.evaluate(() => {
+    const cs = getComputedStyle(document.documentElement);
+    return [document.documentElement.getAttribute('data-palette'), cs.getPropertyValue('--bg').trim(), cs.getPropertyValue('--gold').trim()];
+  }), ['hallway', '#cdc5b6', '#b3904a']);
+  ok('no logo on the clock face while the setting is empty', await page.locator('.aclock .dial-logo').count(), 0);
+  await ctx.close();
+  {
+    const c2 = await browser.newContext({ viewport: { width: 1920, height: 1080 }, locale: 'he', timezoneId: 'America/New_York', serviceWorkers: 'block' });
+    await c2.addInitScript(({ fixed }) => { const real = Date.now; const start = real(); Date.now = () => fixed + (real() - start); }, { fixed: Date.UTC(2026, 10, 10, 12, 50, 1) });
+    await c2.route('**/config.json*', async route => {
+      const res = await route.fetch(); const cfg = JSON.parse(await res.text());
+      cfg.wallLogo = 'favicon.png';
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(cfg) });
+    });
+    const p2 = await c2.newPage(); p2.on('pageerror', e => errors.push(e.message));
+    await p2.goto('http://localhost:8790/index.html?view=display', { waitUntil: 'networkidle' }); await p2.waitForTimeout(800);
+    ok('with a logo set it sits on the dial, above the hands and below the 12', await p2.evaluate(() => {
+      const g = document.querySelector('.aclock .dial-logo'); if (!g) return 'missing';
+      const svg = g.ownerSVGElement, kids = Array.from(svg.children).map(n => n.getAttribute('class') || n.tagName);
+      return [g.getAttribute('href'), +g.getAttribute('y') > 27 && +g.getAttribute('y') < 100, kids.indexOf('dial-logo') < kids.indexOf('hand minute')];
+    }), ['favicon.png', true, true]);
+    await c2.close();
+  }
+  await browser.close();
   console.log(errors.length ? 'ERRORS:\n' + errors.join('\n') : 'no console errors');
   console.log(fails ? fails + ' FAILING' : 'lobbyclock: all good');
   if (fails) process.exit(1);

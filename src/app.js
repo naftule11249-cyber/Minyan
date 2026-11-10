@@ -34,7 +34,7 @@
   var sameEntry = MinyanEngine.sameEntry, gregStr = MinyanEngine.gregStr, parseLine = MinyanEngine.parseLine;
   function setCfg(c) { cfg = (c && typeof c === 'object') ? c : {}; cfg.location = cfg.location || {}; engine = MinyanEngine(cfg); applyLook(); }
   /* looks: the palette chosen in General is the default and what the lobby screen and door displays always use; each phone may pick its own in the footer */
-  var LOOKS = [['shul', 'Shul'], ['classic', 'Classic'], ['contrast', 'High contrast']], LOOK_BAND = { shul: '#3a332c', classic: '#223b68', contrast: '#000000' };
+  var LOOKS = [['hallway', 'Hallway'], ['shul', 'Shul'], ['classic', 'Classic'], ['contrast', 'High contrast']], LOOK_BAND = { hallway: '#413a31', shul: '#3a332c', classic: '#223b68', contrast: '#000000' };
   function isLook(v) { return LOOKS.some(function (l) { return l[0] === v; }); }
   function lookDefault() { return isLook(cfg.palette) ? cfg.palette : 'shul'; }
   function lookMode() {
@@ -961,6 +961,13 @@
     wrap.innerHTML = '<svg viewBox="0 0 200 200"><circle class="face" cx="100" cy="100" r="97"/><circle class="rim" cx="100" cy="100" r="91"/>' + svg +
       '<rect class="digbox" x="60" y="128" width="80" height="25" rx="8"/><text class="dig" x="100" y="141"></text>' + /* before the hands, so the hands sweep over the readout */
       '<line class="hand hour" x1="100" y1="112" x2="100" y2="52"/><line class="hand minute" x1="100" y1="114" x2="100" y2="30"/><line class="hand second" x1="100" y1="118" x2="100" y2="24"/><circle class="cap" cx="100" cy="100" r="5"/></svg>';
+    if (cfg.wallLogo) { /* a logo on the dial, between the 12 and the hands, the way a watch carries its name */
+      var svgEl = wrap.querySelector('svg'), lg = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+      lg.setAttribute('class', 'dial-logo'); lg.setAttribute('x', '68'); lg.setAttribute('y', '38'); lg.setAttribute('width', '64'); lg.setAttribute('height', '26');
+      lg.setAttribute('preserveAspectRatio', 'xMidYMid meet'); lg.setAttribute('href', cfg.wallLogo);
+      lg.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', cfg.wallLogo);
+      svgEl.insertBefore(lg, svgEl.querySelector('.digbox'));
+    }
     var digital = withDigital === false ? null : el('div', { class: 'atime num' });
     if (digital) wrap.appendChild(digital);
     ui.aclock = { h: wrap.querySelector('.hour'), m: wrap.querySelector('.minute'), s: wrap.querySelector('.second'), t: digital, d: wrap.querySelector('.dig') };
@@ -1195,7 +1202,7 @@
     var fAmidah = inp('f-amidah', d.amidahMinutes == null || d.amidahMinutes === '' ? 15 : d.amidahMinutes, { type: 'number', min: '0', max: '60', inputmode: 'numeric' });
     cZman.body.appendChild(el('div', { class: 'fields' }, [field('Mincha gedola: how it is counted', fMinchag), field('Minutes from הודו to שמונה עשרה: "the last minyan before sof zman Shema / sof zman tefilla / chatzos" is the last whose הודו is this long before the zman, so the davening is said in time', fAmidah)]));
     var lookRow2 = el('div', { class: 'fields' }, [field('Civil date on the board and the weekly sheet', fDateFmt), field('Big number on the tiles, by default (everyone may switch it on their own phone)', fBig), field('Minutes a minyan stays marked "now" after it starts (then it is dimmed, and the lobby screen hides it)', fNowMins), field('Lobby screen: seconds per sponsor box (they take turns when there is more than one)', fSponsorSecs)]);
-    var fPalette = el('select', { id: 'f-palette' }, [el('option', { value: 'shul', text: 'Shul: light stone, brass, charcoal, burgundy' }), el('option', { value: 'classic', text: 'Classic: parchment and navy' }), el('option', { value: 'contrast', text: 'High contrast: black on white, larger type' })]);
+    var fPalette = el('select', { id: 'f-palette' }, [el('option', { value: 'hallway', text: 'Hallway: the lobby\'s limestone, brass and bronze' }), el('option', { value: 'shul', text: 'Shul: light stone, brass, charcoal, burgundy' }), el('option', { value: 'classic', text: 'Classic: parchment and navy' }), el('option', { value: 'contrast', text: 'High contrast: black on white, larger type' })]);
     fPalette.value = lookDefault.call(null) && isLook(d.palette) ? d.palette : 'shul';
     var fLang = el('select', { id: 'f-lang' }, [el('option', { value: 'he', text: 'Hebrew (היום, מחר, מנין הבא…)' }), el('option', { value: 'yi', text: 'Yiddish (היינט, מארגן, זונטאג…)' })]); fLang.value = d.lang === 'yi' ? 'yi' : 'he';
     cLook.body.appendChild(el('div', { class: 'fields' }, [field('Colors: the look everyone gets unless they pick another in the footer; the lobby screen and door displays always use it', fPalette), field('Board labels: the language everyone gets unless they pick another in the footer', fLang)]));
@@ -1746,7 +1753,10 @@
     cWallNext.body.appendChild(el('div', { class: 'hint', text: '{tefilla} שחרית · {room} the shtibl · {time} the big time · {milestone} הודו and its time · {countdown} the red countdown · {day} tomorrow and its date · {note} the row\'s note' }));
     cWallNext.body.appendChild(varRow);
     cWallNext.body.appendChild(el('div', { class: 'bar actions' }, [el('button', { type: 'button', class: 'btn small', text: 'Back to the usual lines', 'data-nodirty': '1', onclick: function () { fNextT.value = NEXT_TEMPLATE; markDirty(); } })]));
-    sp.appendChild(cWallLook); sp.appendChild(cWallNext); sp.appendChild(cWallShow);
+    var cWallClock = card('The clock', 'A logo on the clock face, above the hands. Put the picture beside the website (logo.png) or paste its web address; leave it empty for a plain face.');
+    var fWallLogo = inp('w-logo', d.wallLogo || '', { dir: 'ltr', placeholder: 'logo.png' });
+    cWallClock.body.appendChild(el('div', { class: 'fields' }, [field('Logo on the clock face', fWallLogo)]));
+    sp.appendChild(cWallLook); sp.appendChild(cWallClock); sp.appendChild(cWallNext); sp.appendChild(cWallShow);
     pages.screen = sp;
 
     /* this week: add, move or cancel a minyan for today or one of the next six days, without the editor; each day is saved as its own one-date schedule */
@@ -1996,6 +2006,7 @@
         if (Object.keys(o).length) out.schedules[t[0]] = o;
       });
       out.nextTemplate = fNextT.value.trim() === NEXT_TEMPLATE ? '' : fNextT.value;
+      out.wallLogo = fWallLogo.value.trim();
       out.wallLook = {}; SWATCHES.forEach(function (sw) { if (wall[sw[0]]) out.wallLook[sw[0]] = wall[sw[0]]; });
       out.wallWindow = { mode: fWinMode.value, before: Math.max(10, Math.min(1440, +fWinBefore.value || 180)), after: Math.max(0, Math.min(240, +fWinAfter.value || 0)), neverEmpty: fWinKeep.checked };
       out.rolls = rollRows.map(function (r) {
@@ -2166,7 +2177,7 @@
     (a.tefillos || []).concat(b.tefillos || []).forEach(function (t) { names[t.id] = t.name; });
     [['name', 'Shul name'], ['rooms', 'Rooms'], ['palette', 'Colors'], ['lang', 'Board labels'], ['bigTime', 'Big number'], ['displayScale', 'Hallway screen size'], ['wallLook', 'Hallway screen colours'], ['nextTemplate', 'Next-minyan panel'], ['wallWindow', 'What the hallway screen lists'], ['dateFormat', 'Date format'], ['nowMinutes', '"Now" minutes'], ['countdownZmanim', 'Countdown zmanim'],
       ['candles', 'Candle lighting minutes'], ['tzeisMinutes', 'Nightfall minutes'], ['tzeisDeg', 'Nightfall degrees'], ['minchaGedola', 'Mincha gedola'], ['amidahMinutes', 'Minutes from הודו to שמונה עשרה'], ['israel', 'Eretz Yisroel calendar'], ['weeklyEarliest', 'Weekly earliest sunset'], ['clock24', '24-hour clock'],
-      ['showTzeis', 'Show צאת הכוכבים'], ['showRT', 'Show Rabbeinu Tam'], ['show60', 'Show 60 minutes'], ['siteUrl', 'Website address'], ['logo', 'Logo'], ['notifyUrl', 'Notification service'], ['smsNumber', 'SMS number'], ['smsLang', 'Text reply language'],
+      ['showTzeis', 'Show צאת הכוכבים'], ['showRT', 'Show Rabbeinu Tam'], ['show60', 'Show 60 minutes'], ['siteUrl', 'Website address'], ['logo', 'Logo'], ['wallLogo', 'Logo on the clock face'], ['notifyUrl', 'Notification service'], ['smsNumber', 'SMS number'], ['smsLang', 'Text reply language'],
       ['sponsorSeconds', 'Sponsor seconds'], ['remoteConfigUrl', 'Central schedule URL'], ['location', 'Location'], ['pinHash', 'PIN'], ['pin', 'PIN']].forEach(function (f) {
       if (same(a[f[0]], b[f[0]])) return;
       var v = b[f[0]];
@@ -2217,7 +2228,7 @@
   /* the settings the admin form fills in by itself, so a published file that never had them does not look changed */
   function withDefaults(c) {
     var o = clone(c), tz = (o.location || {}).tz || '';
-    var d = { palette: 'shul', lang: 'he', bigTime: 'start', dateFormat: /^America\//.test(tz) ? 'mdy' : 'dmy', nowMinutes: 20, sponsorSeconds: 8, tzeisDeg: 8.5, candles: 18, minchaGedola: 'later', displayScale: 100, smsLang: 'auto', amidahMinutes: 15, wallLook: {}, wallWindow: { mode: 'day', before: 180, after: 20, neverEmpty: true } };
+    var d = { palette: 'shul', lang: 'he', bigTime: 'start', dateFormat: /^America\//.test(tz) ? 'mdy' : 'dmy', nowMinutes: 20, sponsorSeconds: 8, tzeisDeg: 8.5, candles: 18, minchaGedola: 'later', displayScale: 100, smsLang: 'auto', amidahMinutes: 15, wallLogo: '', wallLook: {}, wallWindow: { mode: 'day', before: 180, after: 20, neverEmpty: true } };
     Object.keys(d).forEach(function (k) { if (o[k] == null || o[k] === '') o[k] = d[k]; });
     return o;
   }

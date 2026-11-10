@@ -201,6 +201,7 @@ A special date still beats an extra schedule, and an extra schedule beats the da
 
 The admin has a tab of its own for the TV:
 
+- **The clock.** A logo on the clock face, set between the 12 and the hands the way a watch carries its name. Put the picture beside the website (`logo.png` in `docs/`) and write its name, or paste a web address; leave it empty and the face stays plain.
 - **Colours.** One row per kind of tile: minyanim still to come, the next one, the one before it, the earlier ones, the frames and the top bar. Each has a colour and a writing colour. Tick one to use your own colour; leave it and that tile keeps the colour of the look chosen in General. "Back to the look's own colours" clears them all.
 - **The next-minyan panel.** One line per line of a template. `{tefilla}` `{room}` `{time}` `{milestone}` `{countdown}` `{day}` `{note}` are filled in; anything else is shown as written. A line's size follows the piece it carries: the room large, the time largest, the countdown red, plain words small. Buttons put a piece where the cursor is, and one button puts the usual lines back.
 - **Which minyanim it shows.** The whole day from the first minyan to the last, or only what is near: so many minutes ahead, and so many minutes after one starts. With "never leave the screen empty", a tefilla with nothing near still shows its next few.
@@ -223,7 +224,7 @@ In the zmanim list, a zman that has passed keeps today's time, shown dimmed; tap
 
 ## Looks
 
-Three palettes: **Shul** (light stone and pale oak, brass, charcoal, the burgundy of the paroches), **Classic** (parchment and navy) and **High contrast** (black on white, larger type). General → Colors sets the default, which the lobby screen and door displays always use; a "Look" switch in the footer lets each phone pick its own. Dark mode follows the phone's setting with darker shades of the chosen palette. The icon and the share image use the shul palette.
+Four palettes: **Hallway** (the lobby itself: limestone walls, polished brass, the bronze of the doors and the screen's frame — the default), **Shul** (light stone and pale oak, brass, charcoal, the burgundy of the paroches), **Classic** (parchment and navy) and **High contrast** (black on white, larger type). General → Colors sets the default, which the lobby screen and door displays always use; a "Look" switch in the footer lets each phone pick its own. Dark mode follows the phone's setting with darker shades of the chosen palette. The icon and the share image use the shul palette.
 
 ## Calendar
 
