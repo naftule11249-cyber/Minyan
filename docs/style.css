@@ -3,7 +3,7 @@
   --bg: #ece2cf; --panel: #fbf7ef; --panel-2: #f3ecdd; --ink: #2a1a1d; --muted: #6f5c60; --line: #d8cab2;
   --band: #223b68; --band-2: #2d4b82; --band-ink: #f6f1e7;
   --tile: #7a1d2a; --tile-2: #641622; --tile-ink: #fff3e3; --next: #1e7a3a; --next-2: #176430; --now: #b85c00;
-  --accent: #8a2537; --count: #b3261e; --focus: #2d4b82; --gold: #b8963f; --gold-2: #e3cf8a;
+  --accent: #8a2537; --count: #b3261e; --focus: #2d4b82; --gold: #b8963f; --gold-2: #e3cf8a; --live: #1d6f37; --live-2: #15552a;
   --font-display: 'Frank Ruhl Libre', 'David', 'Times New Roman', serif;
   --font-ui: 'Heebo', 'Arial Hebrew', Arial, sans-serif;
   color-scheme: light;
@@ -13,7 +13,7 @@
     --bg: #151011; --panel: #211819; --panel-2: #2a1f20; --ink: #f1e7d8; --muted: #b7a69f; --line: #3d2f30;
     --band: #16284a; --band-2: #1e3661; --band-ink: #f1e7d8;
     --tile: #6a1823; --tile-2: #52121b; --tile-ink: #ffe8d4; --next: #237a3f; --next-2: #1b6233; --now: #d07a1f;
-    --accent: #e09aa6; --count: #ff7b72; --focus: #8fb0ea; --gold: #d2b25a; --gold-2: #6b5a2a;
+    --accent: #e09aa6; --count: #ff7b72; --focus: #8fb0ea; --gold: #d2b25a; --gold-2: #6b5a2a; --live: #2a8b4a; --live-2: #1d6936;
     color-scheme: dark;
   }
 }
@@ -21,7 +21,7 @@
   --bg: #151011; --panel: #211819; --panel-2: #2a1f20; --ink: #f1e7d8; --muted: #b7a69f; --line: #3d2f30;
   --band: #16284a; --band-2: #1e3661; --band-ink: #f1e7d8;
   --tile: #6a1823; --tile-2: #52121b; --tile-ink: #ffe8d4; --next: #237a3f; --next-2: #1b6233; --now: #d07a1f;
-  --accent: #e09aa6; --count: #ff7b72; --focus: #8fb0ea; --gold: #d2b25a; --gold-2: #6b5a2a;
+  --accent: #e09aa6; --count: #ff7b72; --focus: #8fb0ea; --gold: #d2b25a; --gold-2: #6b5a2a; --live: #2a8b4a; --live-2: #1d6936;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -624,6 +624,13 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 #app.display .wall .tile .ms{ font-size: .85rem; }
 #app.display .wall .tile .note{ font-size: .85rem; }
 #app.display .wall .tile.next::after, #app.display .wall .tile.now::after{ font-size: .8rem; top: -.6rem; padding: .05rem .5rem; }
+/* how a tile reads at a glance: still to come, the next one, the one davening now, the one that just went, and the earlier ones */
+#app.display .wall .tile.past { display: block; opacity: .4; filter: saturate(.3); }
+#app.display .wall .tile.last { display: block; opacity: 1; filter: none; background: var(--muted); }
+#app.display .wall .tile.last::after { content: var(--badge-last, "עבר"); position: absolute; top: -.6rem; inset-inline-start: .5rem; background: var(--muted); color: #fff; font-size: .8rem; padding: .05rem .5rem; border-radius: 999px; }
+#app.display .wall .tile.now { background: linear-gradient(180deg, var(--live), var(--live-2)); }
+#app.display .wall .tile.now::after { background: var(--live-2); }
+#app.display .wall .runline.past { opacity: .45; }
 /* a repeating run, written as one line instead of a tile each */
 #app.display .wall .sub{ margin: .55rem 0 .35rem; text-align: center; font-family: var(--font-display); font-weight: 700; font-size: 1.25rem; color: var(--accent); letter-spacing: .02em; }
 #app.display .wall .sub:first-of-type{ margin-top: 0; }
@@ -631,7 +638,7 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 #app.display .wall .runline .num{ font-size: 1.3rem; font-weight: 700; }
 #app.display .wall .runline .rooms{ display: block; font-size: .95rem; color: var(--muted); }
 /* the zmanim, as tiles; the one being counted down to is marked */
-#app.display .wall .zcard .zgrid{ grid-template-columns: repeat(auto-fill, minmax(6.4rem, 1fr)); gap: .45rem; }
+#app.display .wall .zcard .zgrid { grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: .6rem; } /* only the next few, so they can be large */
 #app.display .wall .ztile{ background: var(--panel-2); border: 1px solid var(--line); border-radius: .5rem; padding: .35rem .3rem; text-align: center; min-width: 0; }
 #app.display .wall .ztile .room{ font-size: 1.05rem; color: var(--muted); line-height: 1.15; }
 #app.display .wall .ztile .time{ font-size: 1.55rem; font-weight: 700; line-height: 1.1; }

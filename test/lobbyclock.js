@@ -36,19 +36,21 @@ const { chromium } = require('playwright');
   const titles = await page.locator('main.wall section.tefilla h3').allTextContents();
   ok('one frame for the first tefilla, one for the rest of the day, one for the zmanim', [titles, await page.locator('.wall .sub').allTextContents()], [['מניני שחרית', 'מניני מנחה מעריב', 'זמני היום'], ['מנחה', 'מעריב']]);
   const shacharis = page.locator('main.wall > .wcol').first().locator('section.tefilla').first();
-  ok('shacharis stands alone in the first column, every minyan still ahead shown as a tile, the one that just started first', [await shacharis.locator('h3').textContent(), await shacharis.locator('.tile').count() >= 10, await shacharis.locator('.tile .time').first().textContent()], ['מניני שחרית', true, '7:45']);
+  ok('shacharis stands alone in the first column, the whole day on the screen from the first minyan', [await shacharis.locator('h3').textContent(), await shacharis.locator('.tile').count() >= 18, await shacharis.locator('.tile .time').first().textContent()], ['מניני שחרית', true, '6:20']);
+  ok('a tile reads its state: the earlier ones light, the one davening now, the next one', [await shacharis.locator('.tile.past').count(), await shacharis.locator('.tile.now .time').textContent(), await shacharis.locator('.tile.next .time').textContent()], [4, '7:45', '8:00']);
   ok('nothing is paged away', await page.locator('.pg').count(), 0);
   const runs = await page.locator('.wall .runline .num').allTextContents();
-  ok('maariv\'s repeating lines are written as runs, not as a tile each', [runs.length, runs[0]], [3, 'כל 10 דק׳ · 6:15–7:55']);
+  ok('maariv\'s repeating lines are written as runs over the whole run, not as a tile each', [runs.length, runs[0]], [3, 'כל 10 דק׳ · 6:05–7:55']);
   ok('the next minyan is marked and its הודו reads on the tile', [await page.locator('.wall .tile.next .time').textContent(), await page.locator('.wall .tile.next .ms').textContent(), await page.locator('.wall .tile.next .ms').evaluate(e => getComputedStyle(e).color)], ['8:00', 'הודו 8:10', 'rgb(251, 238, 219)']);
-  ok('the zmanim are tiles; the one being counted down to carries the countdown', [await page.locator('.wall .ztile').count() >= 8, await page.locator('.wall .ztile.now .room').textContent(), /^\d{2}:\d{2}:\d{2}$/.test(await page.locator('.wall .ztile.now .count').textContent())], [true, 'סוף זמן ק״ש', true]);
-  ok('a zman already passed stays in view, dimmed', [await page.locator('.wall .ztile.past').count() >= 1, await page.locator('.wall .ztile.past').first().isVisible()], [true, true]);
+  ok('only the next three zmanim, large, the first of them counting down', [await page.locator('.wall .ztile .room').allTextContents(), /^\d{2}:\d{2}:\d{2}$/.test(await page.locator('.wall .ztile.now .count').textContent()), await page.locator('.wall .ztile.now .room').textContent()], [['סוף זמן ק״ש', 'סוף זמן תפילה', 'חצות'], true, 'סוף זמן ק״ש']);
+  ok('a zman already passed is not among them', await page.locator('.wall .ztile.past').count(), 0);
   await page.screenshot({ path: 'test/shot-lobby-clock.png' });
   await ctx.close();
 
   /* afternoon and night */
   ({ ctx, page } = await open('?view=display', Date.UTC(2026, 10, 10, 19, 20)));
   ok('2:20 PM: shacharis keeps its frame and names tomorrow, mincha and maariv share the other, nothing clipped', [(await page.locator('main.wall section.tefilla h3').allTextContents()).map(t => t.replace(/[●○ ]+$/, '')), (await fits(page)).columnsFit], [['מניני שחרית – מחר, יום רביעי', 'מניני מנחה מעריב', 'זמני היום'], true]);
+  ok('the minyan that went last carries its own colour, apart from the earlier ones', [await page.locator('.wall .tile.last').count(), await page.locator('.wall .tile.last .time').textContent(), await page.locator('.wall .tile.past').count() >= 1], [1, '2:00', true]);
   await ctx.close();
   ({ ctx, page } = await open('?view=display', Date.UTC(2026, 10, 11, 2, 10)));
   ok('9:10 PM: the zmanim card turns to tomorrow and still counts down', [await page.locator('.zcard h3').textContent(), await page.locator('.wall .ztile.now').count()], ['זמני מחר', 1]);

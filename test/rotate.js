@@ -1,7 +1,7 @@
 const { chromium } = require('playwright'); const fs = require('fs');
 (async () => {
   const orig = fs.readFileSync('docs/config.json', 'utf8'); const c = JSON.parse(orig);
-  c.notices = [{ title: 'פרנס החודש', body: 'א' }, { title: 'פרנס השבוע', body: 'ב' }, { title: 'נר למאור', body: 'ג' }]; c.sponsorSeconds = 2; c.savedAt = Date.now();
+  c.notices = [{ title: 'פרנס החודש', body: 'א' }, { title: 'פרנס השבוע', body: 'ב' }, { title: 'נר למאור', body: 'ג' }]; c.sponsorSeconds = 2; /* the savedAt stays as it is: a newer one would make the next build adopt these placeholders into config.default.json */
   fs.writeFileSync('docs/config.json', JSON.stringify(c));
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' }).catch(() => chromium.launch());
   const errors = [];

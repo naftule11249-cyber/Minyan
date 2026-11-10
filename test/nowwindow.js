@@ -24,7 +24,7 @@ const { chromium } = require('playwright');
   ok('9:36: only the 9:30 minyan is "now" (the 9:15 one left the 20-minute window)', r.now.length === 1 && /9:30/.test(r.now[0]), true);
   ok('9:36: the 9:15 minyan joined the past', r.past, 7);
   r = await at(9, 25, '#display');
-  ok('lobby screen 9:25: past tiles hidden, "now" tile shown', [r.pastVisible, r.nowVisible], [0, 1]);
+  ok('hallway screen 9:25: the ones that went stay in view, light, and the one davening now is marked', [r.pastVisible > 0, r.nowVisible], [true, 1]);
   r = await at(12, 25);
   ok('12:25: last shacharis (chatzos-30 = 12:10) is "now"', r.now.length === 1 && /12:10/.test(r.now[0]), true);
   await browser.close();
