@@ -607,14 +607,14 @@ footer .tabs .btn:hover { border-color: var(--accent); }
 html.lobby { font-size: max(11px, calc((0.62vw + 0.62vh) * var(--lobby-scale, 1))); } /* the floor is low enough that the fit can still shrink a crowded day */
 html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 #app.display:not(.room) { height: 100vh; display: flex; flex-direction: column; }
-#app.display:not(.room) .top { background: linear-gradient(180deg, var(--panel), var(--panel-2)); color: var(--ink); border-bottom: 2px solid var(--gold); }
+#app.display:not(.room) .top { background: var(--w-barBg, linear-gradient(180deg, var(--panel), var(--panel-2))); color: var(--w-barInk, var(--ink)); border-bottom: 2px solid var(--w-frameLine, var(--gold)); }
 #app.display:not(.room) .top .inner { max-width: none; flex-wrap: nowrap; align-items: center; padding-block: .75rem .8rem; gap: 2.4rem; }
 #app.display:not(.room) .top .logo { height: 2.4rem; max-width: 9rem; }
-#app.display:not(.room) .top .dayline { font-size: 2.1rem; color: var(--accent); white-space: nowrap; }
-#app.display:not(.room) .top .dates { font-size: 1.25rem; color: var(--muted); opacity: 1; flex-wrap: nowrap; gap: .1rem 1.2rem; }
+#app.display:not(.room) .top .dayline { font-size: 2.1rem; color: var(--w-barInk, var(--accent)); white-space: nowrap; }
+#app.display:not(.room) .top .dates { font-size: 1.25rem; color: var(--w-barInk, var(--muted)); opacity: .85; flex-wrap: nowrap; gap: .1rem 1.2rem; }
 #app.display:not(.room) .top .chips { width: auto; flex-wrap: nowrap; }
 #app.display:not(.room) .chip { font-size: 1.1rem; padding: .15rem 1rem; background: var(--panel); border-color: var(--gold); color: var(--accent); }
-#app.display:not(.room) .top .clock { display: flex; width: auto; margin-inline-start: auto; color: var(--ink); margin-top: 0; }
+#app.display:not(.room) .top .clock { display: flex; width: auto; margin-inline-start: auto; color: var(--w-barInk, var(--ink)); margin-top: 0; }
 #app.display:not(.room) .top .clock .hm { font-size: 2.3rem; }
 #app.display:not(.room) .top .clock .ss { font-size: 1.5rem; opacity: .7; }
 #app.display:not(.room) .top .clock { gap: 0; }
@@ -630,25 +630,26 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 #app.display .wall .wcol.mid > *{ width: 100%; }
 #app.display .wall .wcol.mid .aclock{ margin-top: .2rem; }
 /* a card: the tefilla's name on a plaque at the top, its minyanim as tiles below */
-#app.display .wall .tefilla{ background: var(--panel); border: 2px solid var(--line); border-radius: 1rem; padding: 1.5rem .8rem .8rem; position: relative; min-height: 0; }
+#app.display .wall .tefilla{ background: var(--w-frameBg, var(--panel)); border: 2px solid var(--w-frameLine, var(--line)); border-radius: 1rem; padding: 1.5rem .8rem .8rem; position: relative; min-height: 0; }
 #app.display .wall .tefilla > h3{ position: absolute; top: -.85rem; inset-inline-start: 50%; transform: translateX(50%); margin: 0; white-space: nowrap;
   background: var(--panel-2); border: 2px solid var(--gold); border-radius: 999px; padding: .1rem 1.1rem; font-size: 1.45rem; color: var(--accent); }
 #app.display .wall .tefilla > h3 .pg{ font-family: var(--font-ui); font-size: .8rem; letter-spacing: .15em; color: var(--muted); margin-inline-start: .5rem; direction: ltr; }
 #app.display .wall .grid { display: flex; flex-wrap: wrap; justify-content: center; gap: .55rem; align-content: start; scroll-behavior: smooth; } /* a part-full last row sits in the middle */
 #app.display .wall .grid > .tile { flex: 1 1 8.4rem; max-width: 11rem; }
 #app.display .wall .grid > .ztile { flex: 1 1 9rem; max-width: 15rem; }
-#app.display .wall .tile{ padding: .4rem .3rem .35rem; border-radius: .5rem; }
+#app.display .wall .tile { padding: .4rem .3rem .35rem; border-radius: .5rem; background: var(--w-tileBg, linear-gradient(180deg, var(--tile), var(--tile-2))); color: var(--w-tileInk, var(--tile-ink)); }
 #app.display .wall .tile .room{ font-size: 1.15rem; }
 #app.display .wall .tile .time{ font-size: 2.1rem; }
 #app.display .wall .tile .ms{ font-size: .85rem; }
 #app.display .wall .tile .note{ font-size: .85rem; }
 #app.display .wall .tile .mark { position: absolute; bottom: -.55rem; left: 50%; transform: translateX(-50%); white-space: nowrap; background: var(--panel); border: 1px solid var(--gold); color: var(--accent); font-size: .78rem; font-weight: 700; padding: .05rem .55rem; border-radius: 999px; } /* a pill on the edge, so a marked tile is no bigger than the rest */
+#app.display .wall .tile.next { background: var(--w-nextBg, linear-gradient(180deg, var(--next), var(--next-2))); color: var(--w-nextInk, var(--tile-ink)); }
 #app.display .wall .tile.next::after, #app.display .wall .tile.now::after{ font-size: .8rem; top: -.6rem; padding: .05rem .5rem; }
 /* how a tile reads at a glance: still to come, the next one, the one davening now, the one that just went, and the earlier ones */
-#app.display .wall .tile.past { display: block; opacity: .4; filter: saturate(.3); }
-#app.display .wall .tile.last { display: block; opacity: 1; filter: none; background: var(--muted); }
+#app.display .wall .tile.past { display: block; opacity: .42; filter: saturate(.3); background: var(--w-pastBg, linear-gradient(180deg, var(--tile), var(--tile-2))); color: var(--w-pastInk, var(--tile-ink)); }
+#app.display .wall .tile.last { display: block; opacity: 1; filter: none; background: var(--w-lastBg, var(--muted)); color: var(--w-lastInk, var(--tile-ink)); }
 #app.display .wall .tile.last::after { content: var(--badge-last, "עבר"); position: absolute; top: -.6rem; inset-inline-start: .5rem; background: var(--muted); color: #fff; font-size: .8rem; padding: .05rem .5rem; border-radius: 999px; }
-#app.display .wall .tile.now { background: linear-gradient(180deg, var(--live), var(--live-2)); }
+#app.display .wall .tile.now { background: var(--w-nowBg, linear-gradient(180deg, var(--live), var(--live-2))); color: var(--w-nowInk, #fff); }
 #app.display .wall .tile.now::after { background: var(--live-2); }
 #app.display .wall .runline.past { opacity: .45; }
 /* a repeating run, written as one line instead of a tile each */
@@ -713,3 +714,17 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 .board-days .daychip.on .dc-date { color: var(--band-ink); opacity: .85; }
 .board-days .daychip:hover { border-color: var(--accent); }
 @media (max-width: 640px) { .board-days .daychip { min-width: 78px; padding: 7px 10px; } }
+
+/* the colour rows on the Hallway screen tab: a kind of tile, its colour and its writing */
+.swatches { display: grid; gap: 8px; }
+.swhead, .swatch { display: grid; grid-template-columns: minmax(0, 1fr) 7.5rem 7.5rem; align-items: center; gap: 10px; }
+.swhead { font-size: .85rem; color: var(--a-muted); padding: 0 12px; }
+.swhead span:not(:first-child), .swpick { justify-self: center; }
+.swatch { background: var(--a-field); border: 1px solid var(--a-line); border-radius: 12px; padding: 8px 12px; }
+.swname { font-size: .97rem; font-weight: 600; }
+.swpick { display: inline-flex; align-items: center; gap: 8px; }
+.swpick input[type="color"] { width: 48px; height: 32px; border: 1px solid var(--a-line); border-radius: 8px; background: #fff; padding: 2px; }
+.swpick input[type="color"]:disabled { opacity: .3; }
+.swpick input[type="checkbox"] { width: 18px; height: 18px; }
+@media (max-width: 640px) { .swhead { display: none; } .swatch { grid-template-columns: minmax(0, 1fr) auto auto; } }
+

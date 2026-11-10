@@ -181,6 +181,11 @@
     /* the lobby screen scales with the TV (the stylesheet sizes it from the screen); General → "Hallway screen size", or &size= in the address, makes everything larger or smaller */
     var html = document.documentElement, lobby = view.kind === 'display';
     html.classList.toggle('lobby', lobby);
+    var wl = cfg.wallLook || {};
+    ['tileBg', 'tileInk', 'nextBg', 'nextInk', 'nowBg', 'nowInk', 'lastBg', 'lastInk', 'pastBg', 'pastInk', 'frameBg', 'frameLine', 'barBg', 'barInk'].forEach(function (k) {
+      var v = lobby && wl[k] ? wl[k] : '';
+      if (v) html.style.setProperty('--w-' + k, v); else html.style.removeProperty('--w-' + k);
+    });
     ui.lobbyScale = lobby ? Math.max(50, Math.min(200, view.size || +cfg.displayScale || 100)) / 100 : 1;
     html.style.setProperty('--lobby-scale', String(ui.lobbyScale));
     ui.roomFilter = view.kind === 'room' ? view.room : null;
@@ -391,7 +396,7 @@
   function wallSections(s, now, up, force) {
     var out = [];
     tefillaLists(s, now, !force).forEach(function (x) {
-      var t = x.t, list = x.list, counts = {}, feature = {};
+      var t = x.t, list = wallWindowList(x.list, now, up), counts = {}, feature = {};
       if (!list.length) return;
       /* the whole day stays on the screen: the ones that have gone are shown light, the one that went last in its own colour */
       var started = list.filter(function (e) { return e.ms <= now; }), lastStarted = started[started.length - 1];
@@ -431,6 +436,16 @@
       out.push({ t: t, title: sectionTitle(x), sub: t.name + (x.fromTomorrow ? ' – ' + S().tomorrow + ', ' + S().days[x.tomorrow.info.dow] : ''), nodes: nodes });
     });
     return out;
+  }
+  /* General → Hallway screen: the whole day, or only the minyanim near this moment */
+  function wallWindowList(list, now, up) {
+    var w = cfg.wallWindow || {};
+    if (w.mode !== 'window' || !list.length) return list;
+    var before = (w.before == null ? 180 : +w.before) * 60000, after = (w.after == null ? 20 : +w.after) * 60000;
+    var near = list.filter(function (e) { return e.ms > now ? e.ms - now <= before : now - e.ms <= after; });
+    if (near.length || w.neverEmpty === false) return near;
+    var ahead = list.filter(function (e) { return e.ms > now; }); /* nothing near: rather than an empty frame, the next ones */
+    return ahead.length ? ahead.slice(0, 4) : list.slice(-3); /* a tefilla with nothing near still shows its next few */
   }
   function wallTile(e, t, st, mark) {
     return el('div', { class: 'tile' + (st ? ' ' + st : '') + (mark ? ' marked' : '') + (t.kind === 'event' ? ' event' : '') }, [
@@ -992,6 +1007,7 @@
     return el('label', { for: id }, [c, ' ' + label]);
   }
   var ICONS = {
+    screen: '<rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/>',
     tv: '<rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/>',
     today: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><circle cx="12" cy="15.5" r="1.7" fill="currentColor" stroke="none"/>',
     general: '<path d="M4 6h8M18 6h2M4 12h2M12 12h8M4 18h10M20 18h0"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>',
@@ -1042,7 +1058,7 @@
     d.location = d.location || {}; d.schedules = d.schedules || {}; d.overrides = d.overrides || []; d.notices = d.notices || [];
     d.tefillos = (d.tefillos && d.tefillos.length) ? d.tefillos : clone(TEFILLA_DEFAULTS);
     var todayRd = Cal.nowInTz(Date.now(), loc().tz).rd, todayInfo = Cal.dayInfo(todayRd, !!cfg.israel);
-    var tabs = [['today', 'This week', 'Move, cancel or add a minyan for today or for one of the next days; that day only.', 'Week'], ['general', 'General', 'Name, rooms, location, looks and the tefillos.'], ['schedule', 'Schedule', 'The regular minyanim for each kind of day.'], ['notices', 'Notices', 'Banner, sponsors and announcements on the board.'], ['overrides', 'Special dates', 'A different schedule for one date or for a day every year.', 'Special']];
+    var tabs = [['today', 'This week', 'Move, cancel or add a minyan for today or for one of the next days; that day only.', 'Week'], ['general', 'General', 'Name, rooms, location, looks and the tefillos.'], ['schedule', 'Schedule', 'The regular minyanim for each kind of day.'], ['notices', 'Notices', 'Banner, sponsors and announcements on the board.'], ['screen', 'Hallway screen', 'The TV in the hallway: its colours, and which minyanim it shows.', 'Screen'], ['overrides', 'Special dates', 'A different schedule for one date or for a day every year.', 'Special']];
     if (mode !== 'artifact') tabs.push(['publish', 'Publish', 'What is waiting to go out, and the connection to the website.']);
     if (mode !== 'artifact') tabs.push(['send', 'Send', 'A notification, right now, to everyone who turned reminders on.']);
     tabs.push(['data', 'Backup', 'Previous versions and the settings as text.']);
@@ -1574,6 +1590,44 @@
     np.appendChild(cBanner); np.appendChild(cNotices);
     pages.notices = np;
 
+    /* the hallway screen: its colours, and which minyanim it shows */
+    var sp = el('div', { class: 'col', id: 'page-screen' }), wall = clone(d.wallLook || {}), win = clone(d.wallWindow || {});
+    var cWallLook = card('Colours', 'Each kind of tile on the hallway screen. Leave one empty and it keeps the colour of the look chosen in General.'),
+      cWallShow = card('Which minyanim it shows', 'The whole day, or only what is near.');
+    var KINDS = [['tile', 'Minyanim still to come', 'Ink'], ['next', 'The next minyan', 'Ink'], ['now', 'The minyan davening now', 'Ink'],
+      ['last', 'The one that went last', 'Ink'], ['past', 'The earlier ones', 'Ink'], ['frame', 'The frames', 'Line'], ['bar', 'The top bar', 'Ink']];
+    var SWATCHES = [];
+    KINDS.forEach(function (k) { SWATCHES.push([k[0] + 'Bg']); SWATCHES.push([k[0] + k[2]]); });
+    var swatchRows = el('div', { class: 'swatches' });
+    swatchRows.appendChild(el('div', { class: 'swhead' }, [el('span'), el('span', { text: 'Colour' }), el('span', { text: 'Writing' })]));
+    KINDS.forEach(function (kind) {
+      var row = el('div', { class: 'swatch' }, [el('span', { class: 'swname', text: kind[1] })]);
+      [kind[0] + 'Bg', kind[0] + kind[2]].forEach(function (key) {
+        var col = el('input', { type: 'color', id: 'w-' + key, value: wall[key] || '#808080' }), on = el('input', { type: 'checkbox', id: 'w-on-' + key, 'aria-label': 'Use this colour' });
+        on.checked = !!wall[key];
+        function sync() { col.disabled = !on.checked; wall[key] = on.checked ? col.value : ''; }
+        on.addEventListener('change', sync); col.addEventListener('input', function () { on.checked = true; sync(); });
+        sync();
+        row.appendChild(el('span', { class: 'swpick' }, [on, col]));
+      });
+      swatchRows.appendChild(row);
+    });
+    cWallLook.body.appendChild(swatchRows);
+    cWallLook.body.appendChild(el('div', { class: 'bar actions' }, [el('button', { type: 'button', class: 'btn small', text: 'Back to the look\'s own colours', 'data-nodirty': '1', onclick: function () { SWATCHES.forEach(function (sw) { wall[sw[0]] = ''; $('#w-on-' + sw[0]).checked = false; $('#w-' + sw[0]).disabled = true; }); markDirty(); } })]));
+    var fWinMode = el('select', { id: 'w-mode' }, [el('option', { value: 'day', text: 'The whole day, from the first minyan to the last' }), el('option', { value: 'window', text: 'Only what is near: the next few hours and what just went' })]);
+    fWinMode.value = win.mode === 'window' ? 'window' : 'day';
+    var fWinBefore = inp('w-before', win.before == null ? 180 : win.before, { type: 'number', min: '10', max: '1440', inputmode: 'numeric' });
+    var fWinAfter = inp('w-after', win.after == null ? 20 : win.after, { type: 'number', min: '0', max: '240', inputmode: 'numeric' });
+    var fWinKeep = el('input', { type: 'checkbox', id: 'w-keep' }); fWinKeep.checked = win.neverEmpty !== false;
+    var winRow = el('div', { class: 'fields' }, [field('Minutes ahead to show', stepper(fWinBefore, 30)), field('Minutes to keep one after it starts', stepper(fWinAfter, 5))]);
+    function winSync() { winRow.hidden = fWinMode.value !== 'window'; }
+    fWinMode.addEventListener('change', winSync); winSync();
+    cWallShow.body.appendChild(el('div', { class: 'fields' }, [field('What the hallway screen lists', fWinMode)]));
+    cWallShow.body.appendChild(winRow);
+    cWallShow.body.appendChild(el('div', { class: 'checks' }, [el('label', { for: 'w-keep' }, [fWinKeep, ' Never leave the screen empty: when nothing is near, show the next ones anyway'])]));
+    sp.appendChild(cWallLook); sp.appendChild(cWallShow);
+    pages.screen = sp;
+
     /* this week: add, move or cancel a minyan for today or one of the next six days, without the editor; each day is saved as its own one-date schedule */
     var tp = el('div', { class: 'col', id: 'page-today' }), quickDays = {}; /* iso -> { rd, iso, sched, quick: { tefillaId: [{start, room, note}] } } */
     if (!ui.quickRd || ui.quickRd < todayRd || ui.quickRd > todayRd + 6) ui.quickRd = todayRd;
@@ -1820,6 +1874,8 @@
         d.tefillos.forEach(function (tf) { var v = lines[t[0]][tf.id].value; if (v.trim()) o[tf.id] = v.replace(/\r/g, ''); });
         if (Object.keys(o).length) out.schedules[t[0]] = o;
       });
+      out.wallLook = {}; SWATCHES.forEach(function (sw) { if (wall[sw[0]]) out.wallLook[sw[0]] = wall[sw[0]]; });
+      out.wallWindow = { mode: fWinMode.value, before: Math.max(10, Math.min(1440, +fWinBefore.value || 180)), after: Math.max(0, Math.min(240, +fWinAfter.value || 0)), neverEmpty: fWinKeep.checked };
       out.notices = nRows.map(function (r) { return { title: r.title.value.trim(), name: r.name.value.trim(), body: r.body.value.trim(), from: r.from.value, to: r.to.value }; }).filter(function (n) { return n.title || n.name || n.body; });
       out.banner = { text: bText.value.trim(), from: bFrom.value, until: bUntil.value };
       out.overrides = oRows.map(function (r) {
@@ -1876,7 +1932,7 @@
       el('button', { type: 'button', class: 'btn ghost', 'data-nodirty': '1', onclick: function () { if (ui.adminDirty && !confirm('Lock without saving? The changes made here will be lost.')) return; pinOk = false; try { sessionStorage.removeItem('minyan-pin'); } catch (e) {} ui.adminDirty = false; closeOverlay(); showPin(); } }, [svgIcon('lock'), el('span', { text: 'Lock' })])]);
     var ghNow = mode === 'artifact' ? null : ghSettings();
     var footHint = mode === 'artifact' ? 'Save publishes a new version of this page for everyone who has the link.' : (ghConfigured(ghNow) ? 'Save keeps the changes on this device. Publish sends them to the website and the app.' : 'Save keeps the settings on this device only. Connect the website on the Publish tab to be able to publish.');
-    var main = el('div', { class: 'amain' }, [el('div', { class: 'ptitle' }, [pageTitle, pageDesc]), pages.today, pages.general, pages.schedule, pages.notices, pages.overrides, mode !== 'artifact' ? pages.publish : null, mode !== 'artifact' ? pages.send : null, pages.data,
+    var main = el('div', { class: 'amain' }, [el('div', { class: 'ptitle' }, [pageTitle, pageDesc]), pages.today, pages.general, pages.schedule, pages.notices, pages.screen, pages.overrides, mode !== 'artifact' ? pages.publish : null, mode !== 'artifact' ? pages.send : null, pages.data,
       el('div', { class: 'bar afoot' }, [el('span', { class: 'hint', text: footHint }), saveBtn.cloneNode(true)])]);
     var pubBar = el('div', { class: 'pubbar' }); pubBar.hidden = true;
     function refreshPubBar() {
@@ -1981,7 +2037,7 @@
     function lines(t) { return (t || '').split('\n').map(function (l) { return l.trim(); }).filter(Boolean); }
     function few(list) { return list.slice(0, 5).join('; ') + (list.length > 5 ? ' … (' + list.length + ')' : ''); }
     (a.tefillos || []).concat(b.tefillos || []).forEach(function (t) { names[t.id] = t.name; });
-    [['name', 'Shul name'], ['rooms', 'Rooms'], ['palette', 'Colors'], ['lang', 'Board labels'], ['bigTime', 'Big number'], ['displayScale', 'Hallway screen size'], ['dateFormat', 'Date format'], ['nowMinutes', '"Now" minutes'], ['countdownZmanim', 'Countdown zmanim'],
+    [['name', 'Shul name'], ['rooms', 'Rooms'], ['palette', 'Colors'], ['lang', 'Board labels'], ['bigTime', 'Big number'], ['displayScale', 'Hallway screen size'], ['wallLook', 'Hallway screen colours'], ['wallWindow', 'What the hallway screen lists'], ['dateFormat', 'Date format'], ['nowMinutes', '"Now" minutes'], ['countdownZmanim', 'Countdown zmanim'],
       ['candles', 'Candle lighting minutes'], ['tzeisMinutes', 'Nightfall minutes'], ['tzeisDeg', 'Nightfall degrees'], ['minchaGedola', 'Mincha gedola'], ['amidahMinutes', 'Minutes from הודו to שמונה עשרה'], ['israel', 'Eretz Yisroel calendar'], ['weeklyEarliest', 'Weekly earliest sunset'], ['clock24', '24-hour clock'],
       ['showTzeis', 'Show צאת הכוכבים'], ['showRT', 'Show Rabbeinu Tam'], ['show60', 'Show 60 minutes'], ['siteUrl', 'Website address'], ['logo', 'Logo'], ['notifyUrl', 'Notification service'], ['smsNumber', 'SMS number'], ['smsLang', 'Text reply language'],
       ['sponsorSeconds', 'Sponsor seconds'], ['remoteConfigUrl', 'Central schedule URL'], ['location', 'Location'], ['pinHash', 'PIN'], ['pin', 'PIN']].forEach(function (f) {

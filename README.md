@@ -184,6 +184,13 @@ Same address, different screens (the `#` forms also work on the claude.ai page):
 - **The rest of the day** (מנחה, מעריב) shares one frame, each tefilla named above its own tiles. A repeating line is written as one line with its rooms, "כל 10 דק׳ · 6:15–7:55", instead of a tile for each minyan, so a long Maariv list stays readable. Under it are the next three zmanim, large; the first of them is marked and carries the countdown, and once the day's are over they come from tomorrow.
 - **It sizes itself to the TV.** Everything is measured from the screen's width and height, so a 60-inch TV and a 32-inch one show the same board and a 4K TV at full resolution is simply twice as sharp; the screen then takes the largest size that fits the day, so a crowded morning shrinks a little by itself. General → "Hallway screen (TV)" caps that size and `&size=80` in the address caps one screen.
 
+## The Hallway screen tab
+
+The admin has a tab of its own for the TV:
+
+- **Colours.** One row per kind of tile: minyanim still to come, the next one, the one davening now, the one that went last, the earlier ones, the frames and the top bar. Each has a colour and a writing colour. Tick one to use your own colour; leave it and that tile keeps the colour of the look chosen in General. "Back to the look's own colours" clears them all.
+- **Which minyanim it shows.** The whole day from the first minyan to the last, or only what is near: so many minutes ahead, and so many minutes after one starts. With "never leave the screen empty", a tefilla with nothing near still shows its next few.
+
 ## Another day's minyanim
 
 Above the lists the board has a row of day chips: היום, מחר and the five days after, each with its Hebrew date. A tap shows that day's full schedule, with its own heading (the day, its date and which list it follows: ראש חודש, ערב שבת…), and the side panel shows that day's zmanim. The next-minyan box and the countdowns stay live. The choice is not remembered: a reload, or the next day, returns to today. The lobby screen and door displays have no chips.
