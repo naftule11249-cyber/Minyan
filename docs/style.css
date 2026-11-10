@@ -3,7 +3,7 @@
   --bg: #ece2cf; --panel: #fbf7ef; --panel-2: #f3ecdd; --ink: #2a1a1d; --muted: #6f5c60; --line: #d8cab2;
   --band: #223b68; --band-2: #2d4b82; --band-ink: #f6f1e7;
   --tile: #7a1d2a; --tile-2: #641622; --tile-ink: #fff3e3; --next: #1e7a3a; --next-2: #176430; --now: #b85c00;
-  --accent: #8a2537; --count: #b3261e; --focus: #2d4b82; --gold: #b8963f; --gold-2: #e3cf8a; --live: #1d6f37; --live-2: #15552a;
+  --accent: #8a2537; --count: #b3261e; --focus: #2d4b82; --gold: #b8963f; --gold-2: #e3cf8a; --live: #1d6f37; --live-2: #15552a; --live-soft: #cfe7d6; --live-soft-ink: #14502a;
   --font-display: 'Frank Ruhl Libre', 'David', 'Times New Roman', serif;
   --font-ui: 'Heebo', 'Arial Hebrew', Arial, sans-serif;
   color-scheme: light;
@@ -13,7 +13,7 @@
     --bg: #151011; --panel: #211819; --panel-2: #2a1f20; --ink: #f1e7d8; --muted: #b7a69f; --line: #3d2f30;
     --band: #16284a; --band-2: #1e3661; --band-ink: #f1e7d8;
     --tile: #6a1823; --tile-2: #52121b; --tile-ink: #ffe8d4; --next: #237a3f; --next-2: #1b6233; --now: #d07a1f;
-    --accent: #e09aa6; --count: #ff7b72; --focus: #8fb0ea; --gold: #d2b25a; --gold-2: #6b5a2a; --live: #2a8b4a; --live-2: #1d6936;
+    --accent: #e09aa6; --count: #ff7b72; --focus: #8fb0ea; --gold: #d2b25a; --gold-2: #6b5a2a; --live: #2a8b4a; --live-2: #1d6936; --live-soft: #22442f; --live-soft-ink: #cdeedb;
     color-scheme: dark;
   }
 }
@@ -21,7 +21,7 @@
   --bg: #151011; --panel: #211819; --panel-2: #2a1f20; --ink: #f1e7d8; --muted: #b7a69f; --line: #3d2f30;
   --band: #16284a; --band-2: #1e3661; --band-ink: #f1e7d8;
   --tile: #6a1823; --tile-2: #52121b; --tile-ink: #ffe8d4; --next: #237a3f; --next-2: #1b6233; --now: #d07a1f;
-  --accent: #e09aa6; --count: #ff7b72; --focus: #8fb0ea; --gold: #d2b25a; --gold-2: #6b5a2a; --live: #2a8b4a; --live-2: #1d6936;
+  --accent: #e09aa6; --count: #ff7b72; --focus: #8fb0ea; --gold: #d2b25a; --gold-2: #6b5a2a; --live: #2a8b4a; --live-2: #1d6936; --live-soft: #22442f; --live-soft-ink: #cdeedb;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -643,13 +643,14 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 #app.display .wall .tile .ms{ font-size: .85rem; }
 #app.display .wall .tile .note{ font-size: .85rem; }
 #app.display .wall .tile .mark { position: absolute; bottom: -.55rem; left: 50%; transform: translateX(-50%); white-space: nowrap; background: var(--panel); border: 1px solid var(--gold); color: var(--accent); font-size: .78rem; font-weight: 700; padding: .05rem .55rem; border-radius: 999px; } /* a pill on the edge, so a marked tile is no bigger than the rest */
-#app.display .wall .tile.next { background: var(--w-nextBg, linear-gradient(180deg, var(--next), var(--next-2))); color: var(--w-nextInk, var(--tile-ink)); }
+#app.display .wall .tile.next { background: var(--w-nextBg, linear-gradient(180deg, var(--live), var(--live-2))); color: var(--w-nextInk, #fff); }
 #app.display .wall .tile.next::after, #app.display .wall .tile.now::after{ font-size: .8rem; top: -.6rem; padding: .05rem .5rem; }
 /* how a tile reads at a glance: still to come, the next one, the one davening now, the one that just went, and the earlier ones */
 #app.display .wall .tile.past { display: block; opacity: .42; filter: saturate(.3); background: var(--w-pastBg, linear-gradient(180deg, var(--tile), var(--tile-2))); color: var(--w-pastInk, var(--tile-ink)); }
 #app.display .wall .tile.last { display: block; opacity: 1; filter: none; background: var(--w-lastBg, var(--muted)); color: var(--w-lastInk, var(--tile-ink)); }
 #app.display .wall .tile.last::after { content: var(--badge-last, "עבר"); position: absolute; top: -.6rem; inset-inline-start: .5rem; background: var(--muted); color: #fff; font-size: .8rem; padding: .05rem .5rem; border-radius: 999px; }
-#app.display .wall .tile.now { background: var(--w-nowBg, linear-gradient(180deg, var(--live), var(--live-2))); color: var(--w-nowInk, #fff); }
+#app.display .wall .tile.prev { background: var(--w-nowBg, var(--live-soft)); color: var(--w-nowInk, var(--live-soft-ink)); opacity: 1; filter: none; display: block; }
+#app.display .wall .tile.prev::after { background: var(--live-2); }
 #app.display .wall .tile.now::after { background: var(--live-2); }
 #app.display .wall .runline.past { opacity: .45; }
 /* a repeating run, written as one line instead of a tile each */
@@ -691,7 +692,7 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 /* the round clock */
 #app.display .aclock{ display: none; }
 #app.display .wall .aclock{ display: grid; justify-items: center; align-content: center; gap: .2rem; }
-#app.display .aclock svg { width: min(calc(42vh * var(--lobby-scale, 1)), 30rem, 27vw); height: auto; filter: drop-shadow(0 10px 22px rgba(0,0,0,.22)); }
+#app.display .aclock svg { width: min(calc(47vh * var(--lobby-scale, 1)), 34rem, 30vw); height: auto; filter: drop-shadow(0 10px 22px rgba(0,0,0,.22)); }
 #app.display .aclock .face{ fill: var(--panel); stroke: var(--gold); stroke-width: 5; }
 #app.display .aclock .rim{ fill: none; stroke: var(--line); stroke-width: 1; }
 #app.display .aclock .tick{ stroke: var(--muted); stroke-width: 1.5; }
@@ -702,6 +703,8 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 #app.display .aclock .minute{ stroke-width: 5; }
 #app.display .aclock .second{ stroke: var(--count); stroke-width: 2; }
 #app.display .aclock .cap{ fill: var(--gold); stroke: var(--ink); stroke-width: 1.5; }
+#app.display .aclock .digbox { fill: var(--panel-2); stroke: var(--line); stroke-width: 1; }
+#app.display .aclock .dig { fill: var(--ink); font-family: var(--font-ui); font-size: 15px; font-weight: 700; letter-spacing: .5px; text-anchor: middle; dominant-baseline: middle; direction: ltr; }
 #app.display .aclock .atime{ font-size: 1.45rem; font-weight: 700; color: var(--muted); letter-spacing: .04em; direction: ltr; }
 @media (max-width: 820px) { #app.display:not(.room) main.wall { grid-template-columns: 1fr; } }
 
