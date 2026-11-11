@@ -507,7 +507,7 @@
         var s0 = st(e), sid = e.series && e.series.id, keep = s0.indexOf('next') === 0 || s0.indexOf('prev') === 0; /* the next one and the one before it always get a tile of their own */
         if (sid && counts[sid] >= 3 && !keep) {
           if (!opened[sid]) { opened[sid] = { s: e.series, items: [] }; runs.push(opened[sid]); }
-          if (feature[sid] !== e) { opened[sid].items.push(e); return; }
+          opened[sid].items.push(e); return; /* a run is its box; only its next minyan and the one before it (above) get tiles of their own. A tile for a run's first minyan, hours ahead, read as an extra minyan beside the box. */
         }
         tiles.push(e);
       });
