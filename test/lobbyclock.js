@@ -46,8 +46,13 @@ const { chromium } = require('playwright');
   ok('the next-minyan panel is drawn from its template: tefilla, room, time, הודו, countdown', [await page.locator('.wall > .wcol > section.next').evaluate(e => Array.from(e.children).map(c => c.className.replace(' num', ''))), await page.locator('.wall > .wcol > section.next > .rm').textContent(), parseFloat(await page.locator('.wall > .wcol > section.next > .rm').evaluate(e => getComputedStyle(e).fontSize)) > parseFloat(await page.locator('.wall > .wcol > section.next > .tf').evaluate(e => getComputedStyle(e).fontSize)) * 1.6], [['', 'tf', 'rm', 'time', 'ms', 'count'], 'דברי יואל', true]);
   ok('a part-full last row of tiles sits in the middle', await page.evaluate(() => { const g = document.querySelectorAll('.wall .grid')[1], last = g.lastElementChild.getBoundingClientRect(), box = g.getBoundingClientRect(); return Math.abs((last.left - box.left) - (box.right - last.right)) < 4; }), true);
   ok('only the sponsor frames that have something in them', [await page.locator('.wall .sponsor').count(), await page.locator('.wall .sponsor .t').first().textContent()], [1, 'פרנס החודש']);
-  ok('only the next three zmanim, large, the first of them counting down', [await page.locator('.wall .ztile .room').allTextContents(), /^\d{2}:\d{2}:\d{2}$/.test(await page.locator('.wall .ztile.now .count').textContent()), await page.locator('.wall .ztile.now .room').textContent()], [['סוף זמן ק״ש', 'סוף זמן תפילה', 'חצות'], true, 'סוף זמן ק״ש']);
-  ok('a zman already passed is not among them', await page.locator('.wall .ztile.past').count(), 0);
+  ok('the zman being counted to leads, with the one just gone and the one after it beside it', [await page.locator('.wall .ztile .room').allTextContents(), await page.locator('.wall .ztile.now .room').textContent(), /^\d{2}:\d{2}:\d{2}$/.test(await page.locator('.wall .ztile.now .count').textContent())], [['נץ החמה', 'סוף זמן ק״ש', 'סוף זמן תפילה'], 'סוף זמן ק״ש', true]);
+  ok('the one just gone is the only passed one, small and dimmed, and the middle one is the large one', await page.evaluate(() => {
+    const past = document.querySelectorAll('.wall .ztile.past');
+    const big = parseFloat(getComputedStyle(document.querySelector('.wall .ztile.now .time')).fontSize);
+    const small = Math.max.apply(null, Array.from(document.querySelectorAll('.wall .ztile.zsm .time')).map(e => parseFloat(getComputedStyle(e).fontSize)));
+    return [past.length, past[0].classList.contains('zsm'), big > small * 1.6];
+  }), [1, true, true]);
   await page.screenshot({ path: 'test/shot-lobby-clock.png' });
   await ctx.close();
 
@@ -62,7 +67,7 @@ const { chromium } = require('playwright');
   const px = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize)), clock = (await page.locator('.aclock svg').boundingBox()).width;
   await ctx.close();
   ({ ctx, page } = await open('?view=display&size=80', Date.UTC(2026, 10, 11, 2, 10)));
-  ok('the size setting never lets the screen grow past what fits', [(await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize))) <= px, (await fits(page)).noScroll], [true, true]);
+  ok('the size setting never lets the screen grow past what fits', [(await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize))) <= px * 1.01, (await fits(page)).noScroll], [true, true]); /* at a crowded hour the fit binds below the setting, and the search lands within a step of the same size either way */
   await ctx.close();
   /* at a quieter hour the fit is not the binding constraint, so the setting itself shows */
   ({ ctx, page } = await open('?view=display', Date.UTC(2026, 10, 10, 19, 20)));

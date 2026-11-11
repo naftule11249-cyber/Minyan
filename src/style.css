@@ -61,10 +61,12 @@ button { cursor: pointer; }
 .sponsor .frame::after { bottom: -6px; inset-inline-end: -6px; }
 .sponsor.sp-big { --sp: 1.45; }
 .sponsor.sp-sm { --sp: .78; }
+.sponsor.sp-xs { --sp: .6; }
 .sponsor .t { font-size: calc(1.4rem * var(--sp)); color: var(--accent); letter-spacing: .02em; display: flex; align-items: center; justify-content: center; gap: 10px; }
 .sponsor .t::before, .sponsor .t::after { content: ""; flex: 0 0 34px; height: 2px; background: linear-gradient(90deg, transparent, var(--gold)); }
 .sponsor .t::after { background: linear-gradient(90deg, var(--gold), transparent); }
-.sponsor .b { white-space: pre-wrap; font-size: calc(1.2rem * var(--sp)); line-height: 1.5; margin-top: 8px; font-family: var(--font-display); font-weight: 700; text-wrap: balance; }
+.sponsor .b .hon { font-size: .76em; font-weight: 600; opacity: .85; }
+.sponsor .b { white-space: pre-wrap; font-size: calc(.95rem * var(--sp)); line-height: 1.5; margin-top: 8px; font-family: var(--font-display); font-weight: 700; text-wrap: balance; }
 
 .sponsor .b:first-line { font-size: 1.05em; }
 
@@ -499,9 +501,14 @@ footer { max-width: 1120px; margin: 0 auto; padding-block: 0 30px; padding-left:
 /* the sponsor's name above the text on the board */
 .sponsor .n { font-family: var(--font-display); font-weight: 700; font-size: calc(1.45rem * var(--sp)); margin-top: 6px; line-height: 1.18; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: .08em .3em; text-wrap: balance; }
 .sponsor .n .hon { font-size: .56em; font-weight: 600; opacity: .82; } /* מו״ה, ב״ר, הי״ו: the titles, small beside the name */
-.sponsor .nrow { display: flex; flex-wrap: nowrap; align-items: center; justify-content: center; gap: .9em; } /* the business's mark stands beside the name, as it does on the plaque */
+.sponsor .lead { font-size: calc(.92rem * var(--sp)); line-height: 1.35; margin-top: 7px; color: var(--muted); font-family: var(--font-display); font-weight: 700; white-space: pre-wrap; }
+.sponsor .lead + .n, .sponsor .lead + .nrow .n { margin-top: 2px; }
+/* the name keeps the middle of the panel and the business's mark stands off to the side, as it does on the plaque:
+   two equal side columns hold the middle one centred, and the mark lives in one of them, so it can never reach the name */
+.sponsor .nrow { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; column-gap: .6em; }
+.sponsor .nrow .n { grid-column: 2; grid-row: 1; }
 .sponsor .nrow .n { margin-top: 0; }
-.sponsor .slogo { height: 1.9em; width: auto; max-width: 30%; object-fit: contain; flex: 0 1 auto; min-width: 0; }
+.sponsor .slogo { grid-column: 3; grid-row: 1; justify-self: end; height: 1.7em; width: auto; max-width: 100%; object-fit: contain; }
 #app.display .wall .sponsor .n { font-size: calc(1.7rem * var(--sp)); }
 /* this week: a card per day */
 .daychips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 6px; scrollbar-width: none; }
@@ -656,9 +663,9 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 #app.display .wall .wcol{ min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: .75rem; overflow: hidden; }
 #app.display .wall .wcol > *{ flex: none; } /* a card keeps its height, so a column that does not fit says so and the screen shrinks */
 #app.display .wall > .wcol > section.tefilla:first-child { flex: 1 0 auto; } /* the first frame of a column fills what is left, so the column reads as one board */
-#app.display .wall .wcol.mid{ align-items: center; justify-content: center; }
+#app.display .wall .wcol.mid{ align-items: center; justify-content: flex-start; } /* the clock sits at the top of the column, the frames under it */
 #app.display .wall .wcol.mid > *{ width: 100%; }
-#app.display .wall .wcol.mid .aclock{ margin-top: .2rem; }
+#app.display .wall .wcol.mid .aclock{ margin-top: 0; }
 /* a card: the tefilla's name on a plaque at the top, its minyanim as tiles below */
 #app.display .wall .tefilla{ background: var(--w-frameBg, var(--panel)); border: 2px solid var(--w-frameLine, var(--line)); border-radius: 1rem; padding: 1.5rem .8rem 1.15rem; position: relative; min-height: 0;
   display: flex; flex-direction: column; justify-content: center; justify-content: safe center; } /* the card that fills the column holds its minyanim in the middle, not against the plaque */
@@ -703,6 +710,13 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 #app.display .wall .ztile.now{ background: linear-gradient(180deg, var(--next), var(--next-2)); border-color: var(--next-2); color: #fff; }
 #app.display .wall .ztile.now .room{ color: rgba(255,255,255,.85); }
 #app.display .wall .ztile.now .count{ font-size: 1.1rem; font-weight: 700; letter-spacing: .04em; direction: ltr; }
+/* the zman being counted to leads; the one just gone and the one after it sit small on either side */
+#app.display .wall .zgrid > .ztile.now { flex: 1.6 1 11rem; padding: .5rem .4rem .45rem; }
+#app.display .wall .ztile.now .room{ font-size: 1.2rem; }
+#app.display .wall .ztile.now .time{ font-size: 2.4rem; }
+#app.display .wall .zgrid > .ztile.zsm { flex: 1 1 7rem; }
+#app.display .wall .ztile.zsm .room{ font-size: .9rem; }
+#app.display .wall .ztile.zsm .time{ font-size: 1.25rem; }
 /* the middle: the clock, the next minyan, the sponsors */
 /* the next-minyan panel; the > keeps these off the tile that also carries the class "next" */
 #app.display .wall > .wcol > section.next { padding: .8rem 1rem .9rem; border-radius: 1rem; }
@@ -720,12 +734,12 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 #app.display .wall .sponsor{ padding: .8rem 1rem 1rem; }
 #app.display .wall .sponsor{ padding: .6rem .9rem .8rem; }
 #app.display .wall .sponsor .t{ font-size: calc(1.4rem * var(--sp)); }
-#app.display .wall .sponsor .b{ font-size: calc(1.15rem * var(--sp)); margin-top: .3rem; }
-#app.display .wall .sponsor .slogo{ height: 2.4em; }
+#app.display .wall .sponsor .b{ font-size: calc(.92rem * var(--sp)); margin-top: .35rem; } /* the lines under the name sit well below it, so the name carries the panel */
+#app.display .wall .sponsor .slogo{ height: 1.9em; }
 /* the round clock */
 #app.display .aclock{ display: none; }
 #app.display .wall .aclock{ display: grid; justify-items: center; align-content: center; gap: .2rem; }
-#app.display .aclock svg { width: min(calc(47vh * var(--lobby-scale, 1)), 34rem, 30vw); height: auto; filter: drop-shadow(0 10px 22px rgba(0,0,0,.22)); }
+#app.display .aclock svg { width: min(100%, calc(62vh * var(--lobby-scale, 1)), 44rem); height: auto; filter: drop-shadow(0 10px 22px rgba(0,0,0,.22)); }
 #app.display .aclock .face{ fill: var(--panel); stroke: var(--gold); stroke-width: 5; }
 #app.display .aclock .rim{ fill: none; stroke: var(--line); stroke-width: 1; }
 #app.display .aclock .tick{ stroke: var(--muted); stroke-width: 1.5; }

@@ -493,8 +493,25 @@
   }
   /* the hallway screen: only the next three zmanim, large; the first of them carries the countdown. Once the day's are over they come
      from tomorrow, and a tomorrow one that fills the row late in the day is marked. */
+  var ZMAN_ORDER = ['alos', 'sunrise', 'shema', 'tefilla', 'chatzos', 'minchag', 'plag', 'candles', 'sunset', 'tzeis', 'tzeis60', 'tzeis72'];
+  /* the zman that has just gone, so the hallway screen can show one on either side of the one it is counting to */
+  function prevZman(info, z, rd, now) {
+    var tz = loc().tz, best = null;
+    function day(d, dInfo, dz) {
+      ZMAN_ORDER.forEach(function (k) {
+        if (k === 'candles' && !(dInfo.dow === 5 || dInfo.erevYT)) return;
+        if (zmanHidden(k)) return;
+        var v = dz[k]; if (v == null || isNaN(v)) return;
+        var ms = Cal.epochFromWall(d, Math.round(v), tz);
+        if (ms <= now && (!best || ms > best.ms)) best = { key: k, min: v, ms: ms, past: true };
+      });
+    }
+    day(rd, info, z);
+    if (!best) { var d0 = rd - 1; day(d0, Cal.dayInfo(d0, !!cfg.israel), zmanimFor(d0)); }
+    return best;
+  }
   function nextZmanim(info, z, rd, now, n) {
-    var keys = ['alos', 'sunrise', 'shema', 'tefilla', 'chatzos', 'minchag', 'plag', 'candles', 'sunset', 'tzeis', 'tzeis60', 'tzeis72'], tz = loc().tz, out = [];
+    var keys = ZMAN_ORDER, tz = loc().tz, out = [];
     function day(d, dInfo, dz, ahead) {
       keys.forEach(function (k) {
         if (k === 'candles' && !(dInfo.dow === 5 || dInfo.erevYT)) return;
@@ -511,7 +528,10 @@
   }
   function wallZmanim(info, z, rd, now) {
     var sec = el('section', { class: 'tefilla zcard' }), grid = el('div', { class: 'grid zgrid' }), L = S();
-    var list = nextZmanim(info, z, rd, now, 3), allTomorrow = list.length && list.every(function (x) { return x.tomorrow; });
+    /* the one that has just gone, the one being counted to, and the one after it: the middle one large, its neighbours small */
+    var ahead = nextZmanim(info, z, rd, now, 2), gone = prevZman(info, z, rd, now);
+    var list = (gone ? [gone] : []).concat(ahead), hereIdx = gone ? 1 : 0;
+    var allTomorrow = ahead.length && ahead.every(function (x) { return x.tomorrow; });
     sec.appendChild(el('h3', null, [allTomorrow ? L.zmanimOf + L.tomorrow : L.zmanim]));
     function tile(name, time, cls, tag) {
       return el('div', { class: 'ztile' + (cls ? ' ' + cls : '') }, [
@@ -528,8 +548,9 @@
     }
     ui.zcount = null; ui.zcountMs = 0;
     list.forEach(function (x, i) {
-      var t = tile(zmanName(x.key), fmtTime(x.min), i === 0 ? 'now' : '', x.tomorrow && !allTomorrow ? L.tomorrow : '');
-      if (i === 0) { ui.zcountMs = x.ms; ui.zcount = el('div', { class: 'count num', text: fmtCountdown(x.ms - now) }); t.appendChild(ui.zcount); }
+      var here = i === hereIdx;
+      var t = tile(zmanName(x.key), fmtTime(x.min), (here ? 'now' : 'zsm') + (x.past ? ' past' : ''), x.tomorrow && !allTomorrow ? L.tomorrow : '');
+      if (here) { ui.zcountMs = x.ms; ui.zcount = el('div', { class: 'count num', text: fmtCountdown(x.ms - now) }); t.appendChild(ui.zcount); }
       grid.appendChild(t);
     });
     if (!list.length) grid.appendChild(el('div', { class: 'hint', text: L.none }));
@@ -656,6 +677,18 @@
     });
     return runs;
   }
+  /* the lines under the name read the same way: a title small, everything else as it is */
+  function honLines(text) {
+    return (text || '').split('\n').map(function (line) {
+      var toks = line.split(/(\s+)/), out = [];
+      toks.forEach(function (t) {
+        if (!t) return;
+        if (/^\s+$/.test(t)) { out.push(t); return; }
+        out.push(HONS[normHon(t)] ? el('span', { class: 'hon', text: t }) : t);
+      });
+      return out;
+    });
+  }
   /* Sponsor boxes (פרנס החודש and friends) in a framed strip under the header */
   function sponsorsStrip(rd) {
     var items = [];
@@ -664,11 +697,15 @@
       var nameEl = nm ? el('div', { class: 'n' }, nameRuns(nm).map(function (r) {
         return el('span', { class: r.small ? 'hon' : 'nm', text: r.text });
       })) : null;
-      items.push(el('section', { class: 'sponsor' + (n.size === 'big' ? ' sp-big' : n.size === 'small' ? ' sp-sm' : '') }, [
+      items.push(el('section', { class: 'sponsor' + (n.size === 'big' ? ' sp-big' : n.size === 'small' ? ' sp-sm' : n.size === 'tiny' ? ' sp-xs' : '') }, [
         el('div', { class: 'frame' }),
         el('h2', { class: 't', text: n.title || '' }),
+        (n.lead || '').trim() ? el('div', { class: 'lead', text: n.lead.trim() }) : null, /* the line that leads into the name: נתנדב לעילוי נשמת and its like */
         nameEl && logo ? el('div', { class: 'nrow' }, [el('img', { class: 'slogo', src: logo, alt: '', loading: 'lazy' }), nameEl]) : nameEl,
-        el('div', { class: 'b', text: (n.body || '').trim() })]));
+        el('div', { class: 'b' }, honLines((n.body || '').trim()).reduce(function (acc, parts, i) {
+          if (i) acc.push(el('br'));
+          return acc.concat(parts);
+        }, []))]));
     });
     if (ui.sponsorTimer) { clearInterval(ui.sponsorTimer); ui.sponsorTimer = null; }
     if (!items.length) return null;
@@ -1606,9 +1643,10 @@
   }
   function addNotice(n) {
       var id = ++uid, r = { title: inp('n-title-' + id, n.title), name: inp('n-name-' + id, n.name || '', { dir: 'auto' }), body: el('textarea', { id: 'n-body-' + id, dir: 'auto' }), from: inp('n-from-' + id, n.from || '', { type: 'date' }), to: inp('n-to-' + id, n.to || '', { type: 'date' }),
-        size: el('select', { id: 'n-size-' + id }, [el('option', { value: 'big', text: 'Big: the panel that leads' }), el('option', { value: '', text: 'Normal' }), el('option', { value: 'small', text: 'Small' })]),
+        lead: inp('n-lead-' + id, n.lead || '', { dir: 'auto' }),
+        size: el('select', { id: 'n-size-' + id }, [el('option', { value: 'big', text: 'Big: the panel that leads' }), el('option', { value: '', text: 'Normal' }), el('option', { value: 'small', text: 'Small' }), el('option', { value: 'tiny', text: 'Smallest' })]),
         logo: inp('n-logo-' + id, n.logo || '', { dir: 'ltr', placeholder: 'logo-name.png' }) };
-      r.size.value = n.size === 'big' || n.size === 'small' ? n.size : '';
+      r.size.value = n.size === 'big' || n.size === 'small' || n.size === 'tiny' ? n.size : '';
       r.body.value = n.body || ''; r.body.style.minHeight = '64px';
       var FRAMES = ['פרנס החודש', 'פרנס השבוע', 'פרנס היום', 'נר למאור לחודש', 'נר למאור'];
       var frame = el('select', { id: 'n-frame-' + id }, FRAMES.map(function (f) { return el('option', { value: f, text: f }); }).concat([el('option', { value: '', text: 'אחר…' })]));
@@ -1619,10 +1657,10 @@
       var num = el('span', { class: 'onum', text: '' }), headT = el('span', { class: 'otitle' }), chip = el('span', { class: 'ochip' });
       function head() {
         headT.textContent = (frame.value || r.title.value).trim() || 'ספונסר';
-        var st = noticeState({ title: r.title.value, name: r.name.value, body: r.body.value, from: r.from.value, to: r.to.value });
+        var st = noticeState({ title: r.title.value, name: r.name.value, lead: r.lead.value, body: r.body.value, from: r.from.value, to: r.to.value });
         chip.textContent = st.t; chip.className = 'ochip ' + st.k;
       }
-      [r.name, r.body, r.from, r.to].forEach(function (x) { x.addEventListener('input', head); x.addEventListener('change', head); });
+      [r.name, r.lead, r.body, r.from, r.to].forEach(function (x) { x.addEventListener('input', head); x.addEventListener('change', head); });
       function move(dir) {
         var i = nRows.indexOf(r), j = i + dir;
         if (j < 0 || j >= nRows.length) return;
@@ -1638,6 +1676,7 @@
           el('button', { type: 'button', class: 'btn small', text: '▼', title: 'Move down', 'data-nodirty': '1', onclick: function () { move(1); } }),
           el('button', { type: 'button', class: 'btn small danger', text: 'Remove', onclick: function () { nRows.splice(nRows.indexOf(r), 1); r.wrap.remove(); nRows.forEach(function (x, k) { x.num.textContent = (k + 1) + '.'; }); } })]),
         el('div', { class: 'fields' }, [field('Which frame', frame, r.title), field('Name', r.name)]),
+        el('div', { class: 'fields' }, [field('Line above the name (blank = none)', r.lead)]),
         el('div', { class: 'fields' }, [field('Text under the name', r.body)]),
         el('div', { class: 'fields' }, [field('How big on the screen', r.size), field('Picture beside the name (blank = none)', r.logo)]),
         el('div', { class: 'fields' }, [
@@ -2037,7 +2076,7 @@
         d.tefillos.forEach(function (tf) { if ((r.lines[tf.id].value || '').trim()) ln[tf.id] = r.lines[tf.id].value; });
         return { name: r.name.value.trim(), type: r.type.value, priority: +r.priority.value || 0, active: r.active.checked, dows: dows.length === 7 ? [] : dows, from: r.from.value, to: r.to.value, lines: ln };
       }).filter(function (r) { return r.name || Object.keys(r.lines).length; });
-      out.notices = nRows.map(function (r) { return { title: r.title.value.trim(), name: r.name.value.trim(), body: r.body.value.trim(), size: r.size.value, logo: r.logo.value.trim(), from: r.from.value, to: r.to.value }; }).filter(function (n) { return n.title || n.name || n.body; });
+      out.notices = nRows.map(function (r) { return { title: r.title.value.trim(), lead: r.lead.value.trim(), name: r.name.value.trim(), body: r.body.value.trim(), size: r.size.value, logo: r.logo.value.trim(), from: r.from.value, to: r.to.value }; }).filter(function (n) { return n.title || n.name || n.lead || n.body; });
       out.banner = { text: bText.value.trim(), from: bFrom.value, until: bUntil.value };
       out.overrides = oRows.map(function (r) {
         var lines = {};
