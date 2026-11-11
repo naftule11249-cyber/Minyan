@@ -473,7 +473,7 @@
     return sec;
   }
   function wallSections(s, now, up, force) {
-    var out = [];
+    var out = [], latestMs = (s.all || []).reduce(function (m, e) { return e.tefilla.kind !== 'event' && e.ms <= now && e.ms > m ? e.ms : m; }, 0);
     tefillaLists(s, now, !force).forEach(function (x) {
       var t = x.t, list = wallWindowList(x.list, now, up), counts = {}, feature = {};
       if (!list.length) return;
@@ -481,7 +481,7 @@
       var started = list.filter(function (e) { return e.ms <= now; }), lastStarted = started[started.length - 1];
       function st(e) {
         var s0 = entryState(e, now, up);
-        if (e === lastStarted) return 'prev' + (s0 === 'now' ? ' now' : ''); /* the one before the next: light green, with עכשיו while it is fresh */
+        if (e === lastStarted) return 'prev' + (s0 === 'now' && e.ms >= latestMs ? ' now' : ''); /* עכשיו belongs to the minyan that started last on the whole screen: Mincha's last one gives it up the moment a Maariv starts */ /* the one before the next: light green, with עכשיו while it is fresh */
         if (s0 === 'next' && !nextMarkedNow(e, now)) return 'next-quiet'; /* still the next one (it keeps a tile of its own), not yet marked as such */
         return s0 === 'now' ? 'past' : s0;
       }
