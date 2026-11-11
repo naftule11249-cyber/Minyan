@@ -221,7 +221,8 @@ var MinyanEngine = (function () {
           /* a repeating line ("every 10 from … to …") marks its minyanim, so a screen can write the run as one line instead of a tile each */
           var run = p && p.spec && p.spec.kind === 'series' && items.length ? { id: t.id + ':' + li, every: p.spec.every, rooms: p.rooms || [], from: items[0].start, to: items[items.length - 1].start, count: items.length } : null;
           items.forEach(function (x) {
-            list.push({ tefilla: t, room: x.room, note: x.note, start: x.start, ms: Cal.epochFromWall(rd, x.start, tz), milestone: x.start + offset, rd: rd, series: run });
+            list.push({ tefilla: t, room: x.room, note: x.note, start: x.start, ms: Cal.epochFromWall(rd, x.start, tz), milestone: x.start + offset, rd: rd, series: run,
+              zman: p.spec.kind === 'zman' ? p.spec.zman : '', zoff: p.spec.kind === 'zman' ? p.spec.offset : 0 }); /* the zman a single minyan goes by ("minchag", "sunset" …), for a screen that names it */
           });
         });
         list.sort(function (a, b) { return a.start - b.start || rank(a.room) - rank(b.room); });

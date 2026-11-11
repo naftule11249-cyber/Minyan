@@ -175,4 +175,10 @@ if (fails) { console.log(fails + ' FAILING'); process.exit(1); } else console.lo
   const e3 = (E.MinyanEngine || E)(Object.assign({}, base, { schedules: Object.assign({}, base.schedules, { yomtov: { mincha: '17:00 לב אהרן' } }) }));
   ok('with a מנחה list of its own, Yom Tov uses it on a Thursday and Friday\'s on a Friday', [e3.scheduleFor(D.pesach1).byTefilla.mincha.map(e => e3.fmtTime(e.start)), rel(e3.scheduleFor(D.pesach2Fri), 'mincha')], [['5:00'], 10]);
 }
+{
+  /* a minyan remembers the zman its line goes by, so the screen can name it */
+  const m0 = mon.byTefilla.mincha[0], fixed = mon.byTefilla.mincha.filter(e => eng.fmtTime(e.start) === '2:00')[0];
+  ok('the weekday מנחה at מנחה גדולה knows that it goes by that zman; a fixed-time one goes by none', [m0.zman, m0.zoff, eng.fmtTime(m0.start) === eng.fmtTime(Math.round(eng.zmanimFor(mon.rd).minchag)), fixed && fixed.zman], ['minchag', 0, true, '']);
+  ok('a minyan in a run goes by no zman of its own', mon.byTefilla.maariv.filter(e => e.series).every(e => e.zman === ''), true);
+}
 ok('צאת (60) is 60 minutes after sunset', Math.round(Cal.zmanim(sunRd, cfg.location).tzeis60 - Cal.zmanim(sunRd, cfg.location).sunset), 60);
