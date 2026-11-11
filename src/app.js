@@ -774,11 +774,13 @@
   }
   /* The kinds of donation a shul sells, each with how its panel reads: the title ({month} and {parsha} are filled in from the
      start date), how big it stands on the screen, the line that leads into the name, and how long it usually runs. */
+  /* Every kind starts at the large size: a donation has to read from the hallway, whichever kind it is. On the hallway screen the
+     clock gives up the room for it (see .aclock in the stylesheet). A smaller size is still there to choose, per kind or per donation. */
   var DONATION_KINDS = [
     { id: 'month', name: 'פרנס החודש', title: 'פרנס חודש {month}', size: 'big', lead: '', period: 'month' },
-    { id: 'ner', name: 'נר למאור', title: 'נר למאור לחודש {month}', size: 'small', lead: 'נתנדב לעילוי נשמת', period: 'month' },
-    { id: 'week', name: 'פרנס השבוע', title: 'פרנס השבוע', size: 'normal', lead: '', period: 'week' },
-    { id: 'day', name: 'פרנס היום', title: 'פרנס היום', size: 'tiny', lead: '', period: 'day' }];
+    { id: 'ner', name: 'נר למאור', title: 'נר למאור לחודש {month}', size: 'big', lead: 'נתנדב לעילוי נשמת', period: 'month' },
+    { id: 'week', name: 'פרנס השבוע', title: 'פרנס השבוע', size: 'big', lead: '', period: 'week' },
+    { id: 'day', name: 'פרנס היום', title: 'פרנס היום', size: 'big', lead: '', period: 'day' }];
   /* Sponsor boxes (פרנס החודש and friends) in a framed strip under the header */
   function sponsorsStrip(rd, min) {
     var items = [];

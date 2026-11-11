@@ -78,7 +78,7 @@ const THREE = [
   ok('saving with nothing typed is refused, beside the name, in a plain sentence', [await page.locator('.dn-err').first().textContent(), await formOpen(page), await page.evaluate(() => document.activeElement.id.replace(/-\d+$/, ''))], ['Enter the name of the donor.', 1, 'dn-name']);
   await page.click('.dn-kindbtn[data-kind="day"]'); await page.waitForTimeout(150);
   ok('choosing פרנס היום turns the dates to today and offers today and tomorrow', [await page.inputValue('[id^="dn-from-"]'), await page.inputValue('[id^="dn-to-"]'), await page.locator('.dn-sheet .dn-quick .dn-chip').allTextContents(), await page.locator('.dn-stage .t').textContent(), await page.locator('.dn-stage .sponsor').getAttribute('class')],
-    ['2026-11-18', '2026-11-18', ['Today', 'Tomorrow'], 'פרנס היום', 'sponsor sp-xs']);
+    ['2026-11-18', '2026-11-18', ['Today', 'Tomorrow'], 'פרנס היום', 'sponsor sp-big']); /* every kind starts at the large size: a donation has to read from the hallway */
   await page.locator('.dn-sheet .dn-quick .dn-chip', { hasText: 'Tomorrow' }).click(); await page.waitForTimeout(100);
   ok('"Tomorrow" sets both days and shows them in Hebrew and in the civil calendar; the preview waits for a name',
     [await page.inputValue('[id^="dn-from-"]'), await page.inputValue('[id^="dn-to-"]'), await page.locator('.dn-sheet .dn-civil').first().textContent(), await page.locator('.dn-date .dn-hebd').allTextContents(), await page.locator('.dn-note').textContent()],
@@ -100,7 +100,7 @@ const THREE = [
   await page.press('[id^="dn-name-"]', 'Enter'); await saved(page);
   list = await cards(page);
   ok('Enter in the name saves; quotes, < and &, an emoji and an apostrophe are kept as typed, as text', [list.length, list.filter(c => c.no === '#005').map(c => [c.name, c.st]), await page.locator('.dn-card b, .sponsors b').count()], [5, [['יואל "פרנס" <b>&amp; 🎉 O\'Brien', 'On the board']], 0]);
-  ok('and it is on the board behind, between נר למאור and פרנס היום, at its kind\'s size', (await boardPanels(page)).map(p => [p[0], p[2]]), [['פרנס חודש כסלו', 'sp-big'], ['נר למאור לחודש כסלו', 'sp-sm'], ['פרנס השבוע', '']]);
+  ok('and it is on the board behind, between נר למאור and פרנס היום, at its kind\'s size, which is large; נר למאור, saved small before, keeps the size it was given', (await boardPanels(page)).map(p => [p[0], p[2]]), [['פרנס חודש כסלו', 'sp-big'], ['נר למאור לחודש כסלו', 'sp-sm'], ['פרנס השבוע', 'sp-big']]);
 
   /* ---- it is still there after closing and coming back ---- */
   await page.reload({ waitUntil: 'networkidle' }); await enter(page);
@@ -242,9 +242,10 @@ const THREE = [
   await page.locator('.dn-krow').last().locator('[id^="dk-name-"]').fill('קידוש');
   await page.locator('.dn-krow').last().locator('[id^="dk-title-"]').fill('קידוש פרשת {parsha}');
   await page.locator('.dn-krow').last().locator('[id^="dk-period-"]').selectOption('week');
-  await page.locator('.dn-krow').nth(1).locator('[id^="dk-size-"]').selectOption('big'); /* נר למאור, large from now on */
+  ok('every kind starts at the large size', await page.locator('.dn-krow [id^="dk-size-"]').evaluateAll(s => s.slice(0, 4).map(x => x.value)), ['big', 'big', 'big', 'big']);
+  await page.locator('.dn-krow').nth(0).locator('[id^="dk-size-"]').selectOption('normal'); /* פרנס החודש, medium from now on */
   await page.click('#dk-save'); await saved(page);
-  ok('the board follows a kind\'s new size for the donations of that kind (the two פרנס החודש first, as their kind stands first)', (await boardPanels(page)).map(p => [p[0], p[2]]), [['פרנס חודש כסלו', 'sp-big'], ['פרנס חודש כסלו', 'sp-big'], ['נר למאור לחודש כסלו', 'sp-big']]);
+  ok('the board follows a kind\'s new size for the donations of that kind (the two פרנס החודש first, as their kind stands first); one with a size of its own keeps it', (await boardPanels(page)).map(p => [p[0], p[2]]), [['פרנס חודש כסלו', ''], ['פרנס חודש כסלו', ''], ['נר למאור לחודש כסלו', 'sp-sm']]);
   await page.click('#dn-add'); await page.waitForTimeout(200);
   ok('the new kind is there to choose', await page.locator('.dn-kindbtn').allTextContents(), ['פרנס החודש', 'נר למאור', 'פרנס השבוע', 'פרנס היום', 'קידוש', 'Other']);
   await page.locator('.dn-kindbtn', { hasText: 'קידוש' }).click(); await page.waitForTimeout(100);
@@ -317,7 +318,7 @@ const THREE = [
   ok('with the website connected the main button saves and publishes, with "Save only" beside it', [await page.locator('#dn-save').textContent(), await page.locator('#dn-save-only').textContent()], ['Save and publish', 'Save only']);
   await page.fill('[id^="dn-name-"]', 'מו״ה חיים גרין הי״ו'); await page.click('.dn-kindbtn[data-kind="day"]'); await page.click('#dn-save'); await page.waitForTimeout(1500);
   const pub = sent.length ? JSON.parse(Buffer.from(sent[sent.length - 1].content, 'base64').toString('utf8')) : { notices: [] };
-  ok('what goes to the website holds the new donation as the board reads it', [sent.length >= 1, pub.notices.filter(n => n.name === 'מו״ה חיים גרין הי״ו').map(n => [n.title, n.size, n.from, n.to, n.no])], [true, [['פרנס היום', 'tiny', '2026-11-18', '2026-11-18', 4]]]);
+  ok('what goes to the website holds the new donation as the board reads it', [sent.length >= 1, pub.notices.filter(n => n.name === 'מו״ה חיים גרין הי״ו').map(n => [n.title, n.size, n.from, n.to, n.no])], [true, [['פרנס היום', 'big', '2026-11-18', '2026-11-18', 4]]]);
   ok('and the back end says it was published', /Published/.test(await page.locator('#toast').textContent().catch(() => '')), true);
   await ctx.close();
 

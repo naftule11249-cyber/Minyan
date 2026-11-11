@@ -906,6 +906,11 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 #app.display .wall .wcol.mid{ align-items: center; justify-content: flex-start; } /* the clock sits at the top of the column, the frames under it */
 #app.display .wall .wcol.mid > *{ width: 100%; }
 #app.display .wall .wcol.mid .aclock{ margin-top: 0; }
+/* The clock is what gives up room first. On a day with a donation more than usual (a פרנס היום) it gets smaller, down to a floor,
+   and the minyanim and the donations keep their size; the day after, it is back at its full size by itself. Only when the clock
+   is at its floor and the column still does not fit does the whole screen shrink, as before. */
+#app.display .wall .wcol.mid > .aclock{ flex: 0 1 auto; min-height: calc(44vh * var(--lobby-scale, 1)); grid-template-rows: minmax(0, 1fr); }
+#app.display .wall .wcol.mid > .aclock svg{ max-height: 100%; }
 /* a card: the tefilla's name on a plaque at the top, its minyanim as tiles below */
 #app.display .wall .tefilla{ background: var(--w-frameBg, var(--panel)); border: 2px solid var(--w-frameLine, var(--line)); border-radius: 1rem; padding: 1.5rem .8rem 1.15rem; position: relative; min-height: 0;
   display: flex; flex-direction: column; justify-content: center; justify-content: safe center; } /* the card that fills the column holds its minyanim in the middle, not against the plaque */
@@ -982,7 +987,7 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 #app.display .wall > .wcol > section.next.held > h2 { color: var(--live); }
 #app.display .wall > .wcol > section.next > .then { display: flex; justify-content: center; align-items: baseline; flex-wrap: wrap; gap: 0 .6rem; margin-top: .45rem; padding-top: .4rem; border-top: 1px solid var(--line); font-size: 1.5rem; font-weight: 700; color: var(--ink); }
 #app.display .wall > .wcol > section.next > .then .lbl { font-family: var(--font-display); font-size: 1.2rem; color: var(--accent); }
-#app.display .wall .wcol.mid .sponsors { flex: 0 1 auto; min-height: 0; } /* the frames take the room they need; they and the clock sit together in the middle */
+#app.display .wall .wcol.mid .sponsors { flex: none; min-height: 0; } /* the frames take the room they need and keep it: when room is short it is the clock above them that gives way (see .aclock), not the frames */
 #app.display .wall .sponsors{ max-width: none; padding: 0; min-height: 0; }
 #app.display .wall .sponsors-inner { gap: .8rem; grid-template-columns: 1fr; max-width: none; }
 #app.display .wall .sponsor{ display: flex; flex-direction: column; justify-content: center; background: var(--w-frameBg, linear-gradient(180deg, var(--panel), var(--panel-2))); }
