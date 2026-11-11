@@ -689,24 +689,33 @@
       return out;
     });
   }
+  /* One sponsor panel, as the board shows it; the donation form in the back end shows the same one as its preview. */
+  function sponsorPanel(n) {
+    var nm = (n.name || '').trim(), logo = (n.logo || '').trim();
+    var nameEl = nm ? el('div', { class: 'n' }, nameRuns(nm).map(function (r) {
+      return el('span', { class: r.small ? 'hon' : 'nm', text: r.text });
+    })) : null;
+    return el('section', { class: 'sponsor' + (n.size === 'big' ? ' sp-big' : n.size === 'small' ? ' sp-sm' : n.size === 'tiny' ? ' sp-xs' : '') }, [
+      el('div', { class: 'frame' }),
+      el('h2', { class: 't', text: n.title || '' }),
+      (n.lead || '').trim() ? el('div', { class: 'lead', text: n.lead.trim() }) : null, /* the line that leads into the name: נתנדב לעילוי נשמת and its like */
+      nameEl && logo ? el('div', { class: 'nrow' }, [el('img', { class: 'slogo', src: logo, alt: '', loading: 'lazy' }), nameEl]) : nameEl,
+      el('div', { class: 'b' }, honLines((n.body || '').trim()).reduce(function (acc, parts, i) {
+        if (i) acc.push(el('br'));
+        return acc.concat(parts);
+      }, []))]);
+  }
+  /* The kinds of donation a shul sells, each with how its panel reads: the title ({month} and {parsha} are filled in from the
+     start date), how big it stands on the screen, the line that leads into the name, and how long it usually runs. */
+  var DONATION_KINDS = [
+    { id: 'month', name: 'פרנס החודש', title: 'פרנס חודש {month}', size: 'big', lead: '', period: 'month' },
+    { id: 'ner', name: 'נר למאור', title: 'נר למאור לחודש {month}', size: 'small', lead: 'נתנדב לעילוי נשמת', period: 'month' },
+    { id: 'week', name: 'פרנס השבוע', title: 'פרנס השבוע', size: 'normal', lead: '', period: 'week' },
+    { id: 'day', name: 'פרנס היום', title: 'פרנס היום', size: 'tiny', lead: '', period: 'day' }];
   /* Sponsor boxes (פרנס החודש and friends) in a framed strip under the header */
   function sponsorsStrip(rd) {
     var items = [];
-    engine.activeNotices(rd).forEach(function (n) {
-      var nm = (n.name || '').trim(), logo = (n.logo || '').trim();
-      var nameEl = nm ? el('div', { class: 'n' }, nameRuns(nm).map(function (r) {
-        return el('span', { class: r.small ? 'hon' : 'nm', text: r.text });
-      })) : null;
-      items.push(el('section', { class: 'sponsor' + (n.size === 'big' ? ' sp-big' : n.size === 'small' ? ' sp-sm' : n.size === 'tiny' ? ' sp-xs' : '') }, [
-        el('div', { class: 'frame' }),
-        el('h2', { class: 't', text: n.title || '' }),
-        (n.lead || '').trim() ? el('div', { class: 'lead', text: n.lead.trim() }) : null, /* the line that leads into the name: נתנדב לעילוי נשמת and its like */
-        nameEl && logo ? el('div', { class: 'nrow' }, [el('img', { class: 'slogo', src: logo, alt: '', loading: 'lazy' }), nameEl]) : nameEl,
-        el('div', { class: 'b' }, honLines((n.body || '').trim()).reduce(function (acc, parts, i) {
-          if (i) acc.push(el('br'));
-          return acc.concat(parts);
-        }, []))]));
-    });
+    engine.activeNotices(rd).forEach(function (n) { items.push(sponsorPanel(n)); });
     if (ui.sponsorTimer) { clearInterval(ui.sponsorTimer); ui.sponsorTimer = null; }
     if (!items.length) return null;
     var rotate = $('#app').classList.contains('room') && items.length > 1; /* a door tablet shows one at a time; the hallway screen has a column for them all */
@@ -1119,6 +1128,11 @@
     general: '<path d="M4 6h8M18 6h2M4 12h2M12 12h8M4 18h10M20 18h0"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>',
     schedule: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     notices: '<path d="M3 10v4a1 1 0 0 0 1 1h3l6 4V5L7 9H4a1 1 0 0 0-1 1z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/>',
+    donations: '<path d="M12 20.5s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.9c0 5.4-7.5 10-7.5 10z"/>',
+    search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/>',
+    edit: '<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/>',
+    copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
+    trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12M9 7V4h6v3"/>',
     overrides: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',
     publish: '<path d="M7 18a4 4 0 0 1-.6-7.95A6 6 0 0 1 18 8.5a4 4 0 0 1-1 7.5"/><path d="M12 12v9M8.5 15.5 12 12l3.5 3.5"/>',
     data: '<rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/>',
@@ -1164,7 +1178,7 @@
     d.location = d.location || {}; d.schedules = d.schedules || {}; d.overrides = d.overrides || []; d.notices = d.notices || [];
     d.tefillos = (d.tefillos && d.tefillos.length) ? d.tefillos : clone(TEFILLA_DEFAULTS);
     var todayRd = Cal.nowInTz(Date.now(), loc().tz).rd, todayInfo = Cal.dayInfo(todayRd, !!cfg.israel);
-    var tabs = [['today', 'This week', 'Move, cancel or add a minyan for today or for one of the next days; that day only.', 'Week'], ['general', 'General', 'Name, rooms, location, looks and the tefillos.'], ['schedule', 'Schedule', 'The regular minyanim for each kind of day.'], ['notices', 'Notices', 'Banner, sponsors and announcements on the board.'], ['rolls', 'Extra schedules', 'A named list that takes over for the days it covers: a season, a week, or one kind of day.', 'Extra'], ['screen', 'Hallway screen', 'The TV in the hallway: its colours, and which minyanim it shows.', 'Screen'], ['overrides', 'Special dates', 'A different schedule for one date or for a day every year.', 'Special']];
+    var tabs = [['today', 'This week', 'Move, cancel or add a minyan for today or for one of the next days; that day only.', 'Week'], ['general', 'General', 'Name, rooms, location, looks and the tefillos.'], ['schedule', 'Schedule', 'The regular minyanim for each kind of day.'], ['donations', 'Donations', 'Who sponsors what on the board, and from when to when.', 'Donors'], ['notices', 'Banner', 'One line across the top of the board, for as long as you say.'], ['rolls', 'Extra schedules', 'A named list that takes over for the days it covers: a season, a week, or one kind of day.', 'Extra'], ['screen', 'Hallway screen', 'The TV in the hallway: its colours, and which minyanim it shows.', 'Screen'], ['overrides', 'Special dates', 'A different schedule for one date or for a day every year.', 'Special']];
     if (mode !== 'artifact') tabs.push(['publish', 'Publish', 'What is waiting to go out, and the connection to the website.']);
     if (mode !== 'artifact') tabs.push(['send', 'Send', 'A notification, right now, to everyone who turned reminders on.']);
     tabs.push(['data', 'Backup', 'Previous versions and the settings as text.']);
@@ -1594,8 +1608,8 @@
     paintRoomsEditor(); roomsChanged();
     pages.schedule = sp;
 
-    /* notices */
-    var np = el('div', { class: 'col' }), nList = el('div', { class: 'col' }), nRows = [];
+    /* the banner's page */
+    var np = el('div', { class: 'col' });
     /* a Hebrew date beside a civil one: the three boxes write the civil date, and follow it when it is typed */
   function hebPicker(input) {
     var wrap = el('span', { class: 'hebpick' }), dSel = el('select', { 'aria-label': 'Hebrew day' }), mSel = el('select', { 'aria-label': 'Hebrew month' }), ySel = el('select', { 'aria-label': 'Hebrew year' }), shown = el('span', { class: 'hebshow' });
@@ -1638,68 +1652,360 @@
     wrap.appendChild(dSel); wrap.appendChild(mSel); wrap.appendChild(ySel);
     return { wrap: wrap, shown: shown, sync: fromInput };
   }
-  /* Active today, still to come, or over: from the entry's own dates */
-  function noticeState(n) {
-    var today = MinyanEngine.isoDate(Cal.nowInTz(Date.now(), loc().tz).rd);
-    if (!(n.body || '').trim() && !(n.name || '').trim()) return { k: 'empty', t: 'ריק' };
-    if (n.from && today < n.from) return { k: 'soon', t: 'עוד לא' };
-    if (n.to && today > n.to) return { k: 'done', t: 'עבר' };
-    return { k: 'on', t: 'פעיל' };
-  }
-  function addNotice(n) {
-      var id = ++uid, r = { title: inp('n-title-' + id, n.title), name: inp('n-name-' + id, n.name || '', { dir: 'auto' }), body: el('textarea', { id: 'n-body-' + id, dir: 'auto' }), from: inp('n-from-' + id, n.from || '', { type: 'date' }), to: inp('n-to-' + id, n.to || '', { type: 'date' }),
-        lead: inp('n-lead-' + id, n.lead || '', { dir: 'auto' }),
-        size: el('select', { id: 'n-size-' + id }, [el('option', { value: 'big', text: 'Big: the panel that leads' }), el('option', { value: '', text: 'Normal' }), el('option', { value: 'small', text: 'Small' }), el('option', { value: 'tiny', text: 'Smallest' })]),
-        logo: inp('n-logo-' + id, n.logo || '', { dir: 'ltr', placeholder: 'logo-name.png' }) };
-      r.size.value = n.size === 'big' || n.size === 'small' || n.size === 'tiny' ? n.size : '';
-      r.body.value = n.body || ''; r.body.style.minHeight = '64px';
-      var FRAMES = ['פרנס החודש', 'פרנס השבוע', 'פרנס היום', 'נר למאור לחודש', 'נר למאור'];
-      var frame = el('select', { id: 'n-frame-' + id }, FRAMES.map(function (f) { return el('option', { value: f, text: f }); }).concat([el('option', { value: '', text: 'אחר…' })]));
-      frame.value = FRAMES.indexOf(r.title.value) >= 0 ? r.title.value : '';
-      r.title.hidden = frame.value !== '';
-      frame.addEventListener('change', function () { r.title.hidden = frame.value !== ''; if (frame.value) { r.title.value = frame.value; } head(); markDirty(); if (!frame.value) r.title.focus(); });
-      r.title.addEventListener('input', head);
-      var num = el('span', { class: 'onum', text: '' }), headT = el('span', { class: 'otitle' }), chip = el('span', { class: 'ochip' });
-      function head() {
-        headT.textContent = (frame.value || r.title.value).trim() || 'ספונסר';
-        var st = noticeState({ title: r.title.value, name: r.name.value, lead: r.lead.value, body: r.body.value, from: r.from.value, to: r.to.value });
-        chip.textContent = st.t; chip.className = 'ochip ' + st.k;
-      }
-      [r.name, r.lead, r.body, r.from, r.to].forEach(function (x) { x.addEventListener('input', head); x.addEventListener('change', head); });
-      function move(dir) {
-        var i = nRows.indexOf(r), j = i + dir;
-        if (j < 0 || j >= nRows.length) return;
-        nRows.splice(i, 1); nRows.splice(j, 0, r);
-        nList.textContent = ''; nRows.forEach(function (x, k) { nList.appendChild(x.wrap); x.num.textContent = (k + 1) + '.'; });
-        markDirty();
-      }
-      var hFrom = hebPicker(r.from), hTo = hebPicker(r.to);
-      r.num = num;
-      r.wrap = el('div', { class: 'ovr sponsor-row' }, [
-        el('div', { class: 'ohead' }, [num, headT, chip, el('span', { class: 'sp' }),
-          el('button', { type: 'button', class: 'btn small', text: '▲', title: 'Move up', 'data-nodirty': '1', onclick: function () { move(-1); } }),
-          el('button', { type: 'button', class: 'btn small', text: '▼', title: 'Move down', 'data-nodirty': '1', onclick: function () { move(1); } }),
-          el('button', { type: 'button', class: 'btn small danger', text: 'Remove', onclick: function () { nRows.splice(nRows.indexOf(r), 1); r.wrap.remove(); nRows.forEach(function (x, k) { x.num.textContent = (k + 1) + '.'; }); } })]),
-        el('div', { class: 'fields' }, [field('Which frame', frame, r.title), field('Name', r.name)]),
-        el('div', { class: 'fields' }, [field('Line above the name (blank = none)', r.lead)]),
-        el('div', { class: 'fields' }, [field('Text under the name', r.body)]),
-        el('div', { class: 'fields' }, [field('How big on the screen', r.size), field('Picture beside the name (blank = none)', r.logo)]),
-        el('div', { class: 'fields' }, [
-          field('Show from (blank = right away)', r.from, el('div', { class: 'hebrow' }, [hFrom.wrap, hFrom.shown])),
-          field('Show until (blank = no end)', r.to, el('div', { class: 'hebrow' }, [hTo.wrap, hTo.shown]))])]);
-      nRows.push(r); nList.appendChild(r.wrap);
-      num.textContent = nRows.length + '.'; head();
-    }
-    (d.notices.length ? d.notices : [{ title: 'פרנס החודש', body: '' }, { title: 'פרנס השבוע', body: '' }, { title: 'נר למאור', body: '' }]).forEach(addNotice);
     var bText = el('textarea', { id: 'banner-text', dir: 'auto', placeholder: 'e.g. אין מעריב בלב אהרן הערב' }), bFrom = inp('banner-from', (d.banner && d.banner.from) || '', { type: 'datetime-local' }), bUntil = inp('banner-until', (d.banner && d.banner.until) || '', { type: 'datetime-local' });
     bText.value = (d.banner && d.banner.text) || ''; bText.style.minHeight = '60px';
     var cBanner = card('Temporary banner', 'One line shown across the top of the board (and at the start of text replies). Give it a start time and it appears by itself; give it an end time and it disappears by itself. Blank means right away, or for good.');
     cBanner.body.appendChild(el('div', { class: 'fields' }, [field('Banner text', bText)]));
     cBanner.body.appendChild(el('div', { class: 'fields' }, [field('Show from (shul time; blank = right away)', bFrom), field('Show until (shul time; blank = until you clear it)', bUntil, el('button', { type: 'button', class: 'btn small', text: 'Clear banner', onclick: function () { bText.value = ''; bFrom.value = ''; bUntil.value = ''; } }))]));
-    var cNotices = card('Sponsors and announcements (נדבנים)', 'Sponsor panels (פרנס החודש, פרנס השבוע, נר למאור) and announcements, shown in framed boxes at the top of the board. Give each one dates and it appears and disappears by itself; several entries with the same title form a queue. A notice with empty text is not shown.');
-    cNotices.body.appendChild(nList);
-    cNotices.body.appendChild(el('div', null, [el('button', { type: 'button', class: 'btn', id: 'add-sponsor', text: '+ Sponsor', onclick: function () { addNotice({ title: 'פרנס היום', body: '' }); } })]));
-    np.appendChild(cBanner); np.appendChild(cNotices);
+    np.appendChild(cBanner);
+    /* ---------- donations: who sponsors what on the board, and from when to when ----------
+       Each donation is a card: who, which kind, its Hebrew start and end dates, and whether it is on the board now, still to come or
+       finished. A kind (פרנס החודש, נר למאור …) carries how its panel reads — title, size, the line that leads into the name, its usual
+       length — so adding a donation is a kind, a name, a line or two and a period. They are stored as the board's notices, as before. */
+    var donPage = el('div', { class: 'col', id: 'page-donations' });
+    var kinds = clone((d.donationKinds && d.donationKinds.length) ? d.donationKinds : DONATION_KINDS);
+    var todayIso = MinyanEngine.isoDate(todayRd), donSeq = 0;
+    ui.dn = ui.dn || { q: '', filter: 'all', sort: 'board' };
+    function opt(v, t) { return el('option', { value: v, text: t }); }
+    function rdOf(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ''); return m ? Cal.rdFromGreg(+m[1], +m[2], +m[3]) : null; }
+    function kindById(kid) { return kinds.filter(function (k) { return k.id === kid; })[0] || null; }
+    function kindIndex(kid) { for (var i = 0; i < kinds.length; i++) if (kinds[i].id === kid) return i; return kinds.length; }
+    function kindSize(kid) { var k = kindById(kid); return k ? (k.size || 'normal') : 'normal'; }
+    function guessKind(n) {
+      if (n.kind && (n.kind === 'other' || kindById(n.kind))) return n.kind;
+      var t = n.title || '', hit = kinds.filter(function (k) { return k.name && t.indexOf(k.name) >= 0; })[0];
+      if (hit) return hit.id;
+      if (/נר למאור/.test(t) && kindById('ner')) return 'ner';
+      if (/פרנס ה?חודש/.test(t) && kindById('month')) return 'month';
+      if (/פרנס השבוע/.test(t) && kindById('week')) return 'week';
+      if (/פרנס היום/.test(t) && kindById('day')) return 'day';
+      return 'other';
+    }
+    /* the title a kind gives a donation that starts on that day: {month} and {parsha} are filled in from it */
+    function titleFor(kid, fromIso, toIso) {
+      var k = kindById(kid); if (!k) return '';
+      var r = rdOf(fromIso); if (r == null) r = rdOf(toIso); if (r == null) r = todayRd;
+      var h = Cal.hebFromRD(r);
+      return (k.title || k.name || '').replace(/\{month\}/g, Cal.monthName(h.y, h.m)).replace(/\{parsha\}/g, Cal.parshaOfWeek(r, !!d.israel) || '').replace(/\s+/g, ' ').trim();
+    }
+    function effTitle(x) { return (x.titleOwn || '').trim() || titleFor(x.kind, x.from, x.to); }
+    function effSize(x) { var v = x.sizeOwn || kindSize(x.kind); return v === 'normal' ? '' : v; }
+    var dons = (d.notices || []).filter(function (n) { return ((n.name || '') + (n.body || '') + (n.lead || '')).trim(); }).map(function (n) {
+      var kd = guessKind(n);
+      return { id: n.id || '', no: +n.no || 0, kind: kd, lead: n.lead || '', name: n.name || '', body: n.body || '', logo: n.logo || '', from: n.from || '', to: n.to || '',
+        titleOwn: n.titleOwn != null ? n.titleOwn : ((n.title || '') === titleFor(kd, n.from, n.to) ? '' : (n.title || '')),
+        sizeOwn: n.sizeOwn != null ? n.sizeOwn : ((n.size || 'normal') === kindSize(kd) ? '' : (n.size || 'normal')) };
+    });
+    dons.forEach(function (x) { if (x.no > donSeq) donSeq = x.no; });
+    dons.forEach(function (x) { if (!x.no) x.no = ++donSeq; if (!x.id) x.id = 'd' + x.no + Math.random().toString(36).slice(2, 7); });
+    /* on the board the panels stand in the order of their kinds, and within a kind by their start */
+    function boardOrder(a, b) { return kindIndex(a.kind) - kindIndex(b.kind) || (a.from || '').localeCompare(b.from || '') || a.no - b.no; }
+    function donNotices() {
+      return dons.slice().sort(boardOrder).map(function (x) {
+        return { id: x.id, no: x.no, kind: x.kind, title: effTitle(x), titleOwn: (x.titleOwn || '').trim(), lead: (x.lead || '').trim(), name: (x.name || '').trim(), body: (x.body || '').trim(),
+          size: effSize(x), sizeOwn: x.sizeOwn || '', logo: (x.logo || '').trim(), from: x.from || '', to: x.to || '' };
+      });
+    }
+    function donState(x) { return x.from && todayIso < x.from ? 'soon' : x.to && todayIso > x.to ? 'done' : 'on'; }
+    var STATE_TEXT = { on: 'On the board', soon: 'Coming up', done: 'Finished' };
+    function dayWord(n) { return n === 1 ? '1 day' : n + ' days'; }
+    function whenText(x, side) {
+      var r = rdOf(side === 'from' ? x.from : x.to), n;
+      if (r == null) return side === 'from' ? 'no start date' : 'no end date';
+      if (side === 'from') { n = todayRd - r; return n === 0 ? 'started today' : n === 1 ? 'started yesterday' : n > 1 ? 'started ' + dayWord(n) + ' ago' : n === -1 ? 'starts tomorrow' : 'starts in ' + dayWord(-n); }
+      n = r - todayRd; return n === 0 ? 'ends today' : n === 1 ? 'ends tomorrow' : n > 1 ? 'ends in ' + dayWord(n) : n === -1 ? 'ended yesterday' : 'ended ' + dayWord(-n) + ' ago';
+    }
+    function hebDate(iso) { var r = rdOf(iso); return r == null ? '—' : Cal.formatHeb(Cal.hebFromRD(r)); }
+    function civilDate(iso) { var r = rdOf(iso); if (r == null) return ''; var g = Cal.gregFromRD(r); return new Date(Date.UTC(g.y, g.m - 1, g.d)).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }); }
+    function donName(x) { return (x.name || '').trim() || (x.body || '').trim().split('\n')[0] || effTitle(x) || 'Donation'; }
+    function donSub(x) { var lines = (x.body || '').trim().split('\n').filter(Boolean); return (x.name || '').trim() ? (lines[0] || '') : (lines[1] || ''); }
+    function initials(x) {
+      var words = nameRuns(donName(x)).filter(function (r) { return !r.small; }).map(function (r) { return r.text; }).join(' ').split(/\s+/).filter(Boolean);
+      function first(wd) { var m = /[א-תA-Za-z0-9]/.exec(wd || ''); return m ? m[0] : ''; }
+      return (first(words[0]) + (words.length > 1 ? first(words[words.length - 1]) : '')) || '•';
+    }
+    function numText(no) { return '#' + (no < 1000 ? ('00' + no).slice(-3) : String(no)); }
+    /* this month, next month; this week, next week; today, tomorrow — how a shul gives these out */
+    function periodRange(period, ahead) {
+      var a, b, i, y, m, h;
+      if (period === 'month') {
+        h = Cal.hebFromRD(todayRd); y = h.y; m = h.m;
+        for (i = 0; i < ahead; i++) { h = Cal.hebFromRD(Cal.rdFromHeb(y, m, 1) + Cal.hebMonthLength(y, m)); y = h.y; m = h.m; }
+        a = Cal.rdFromHeb(y, m, 1); b = a + Cal.hebMonthLength(y, m) - 1;
+        return { from: MinyanEngine.isoDate(a), to: MinyanEngine.isoDate(b), text: Cal.monthName(y, m), sub: ahead ? 'next month' : 'this month' };
+      }
+      if (period === 'week') { a = todayRd - todayInfo.dow + 7 * ahead; return { from: MinyanEngine.isoDate(a), to: MinyanEngine.isoDate(a + 6), text: ahead ? 'Next week' : 'This week' }; }
+      a = todayRd + ahead; return { from: MinyanEngine.isoDate(a), to: MinyanEngine.isoDate(a), text: ahead ? 'Tomorrow' : 'Today' };
+    }
+
+    /* a form that opens over the page: Escape closes it, Tab stays inside it, and a slip outside does not throw away what was typed */
+    function dnModal(title, body, foot) {
+      var prev = document.activeElement, closeBtn = el('button', { type: 'button', class: 'dn-x', 'aria-label': 'Close' }, [svgIcon('x')]);
+      var sheet = el('div', { class: 'dn-sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': title }, [el('div', { class: 'dn-head' }, [el('h2', { text: title }), closeBtn]), body, foot]);
+      var back = el('div', { class: 'dn-modal' }, [sheet]), api = { sheet: sheet, changed: false, close: close };
+      function close() { document.removeEventListener('keydown', onKey, true); back.remove(); if (prev && prev.focus) { try { prev.focus(); } catch (e) {} } }
+      function onKey(ev) {
+        if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); close(); return; }
+        if (ev.key !== 'Tab') return;
+        var f = Array.prototype.filter.call(sheet.querySelectorAll('button, input, select, textarea, summary'), function (n) { return !n.disabled && n.offsetParent !== null; });
+        if (!f.length) return;
+        if (ev.shiftKey && document.activeElement === f[0]) { ev.preventDefault(); f[f.length - 1].focus(); }
+        else if (!ev.shiftKey && document.activeElement === f[f.length - 1]) { ev.preventDefault(); f[0].focus(); }
+      }
+      closeBtn.addEventListener('click', close);
+      back.addEventListener('mousedown', function (ev) { if (ev.target === back && !api.changed) close(); });
+      document.addEventListener('keydown', onKey, true);
+      $('#overlay').appendChild(back);
+      return api;
+    }
+    function errLine() { return el('div', { class: 'dn-err', role: 'alert' }); }
+    function isConnected() { return mode !== 'artifact' && ghConfigured(ghSettings()); }
+
+    /* add or edit one donation; `like` starts a new one from another's details */
+    function openDonation(orig, like) {
+      var isNew = !orig, fid = ++uid, src = orig || like || null, datesTouched = false, m;
+      var w = { kind: src ? src.kind : (kinds[0] ? kinds[0].id : 'other') };
+      var k0 = kindById(w.kind), r0 = periodRange(k0 ? k0.period : 'day', 0);
+      var fName = inp('dn-name-' + fid, src ? src.name : '', { autocomplete: 'off', placeholder: 'מו״ה ראובן בן יעקב הי״ו' });
+      var fBody = el('textarea', { id: 'dn-body-' + fid, dir: 'auto', rows: '3', placeholder: 'לעילוי נשמת …' }); fBody.value = src ? src.body : '';
+      var fFrom = inp('dn-from-' + fid, orig ? orig.from : r0.from, { type: 'date' }), fTo = inp('dn-to-' + fid, orig ? orig.to : r0.to, { type: 'date' });
+      var hFrom = hebPicker(fFrom), hTo = hebPicker(fTo), fromCivil = el('span', { class: 'dn-civil' }), toCivil = el('span', { class: 'dn-civil' });
+      var fLead = inp('dn-lead-' + fid, src ? src.lead : (k0 ? k0.lead || '' : ''));
+      var fTitle = inp('dn-title-' + fid, src ? src.titleOwn : '');
+      var fSize = el('select', { id: 'dn-size-' + fid }, [opt('', 'As this kind usually is'), opt('big', 'Big'), opt('normal', 'Normal'), opt('small', 'Small'), opt('tiny', 'Smallest')]);
+      fSize.value = src ? (src.sizeOwn || '') : '';
+      var fLogo = inp('dn-logo-' + fid, src ? src.logo : '', { dir: 'ltr', placeholder: 'logo.png' });
+      var errName = errLine(), errDates = errLine(), stage = el('div', { class: 'dn-stage', dir: 'rtl' }), stageNote = el('div', { class: 'dn-note' });
+      var kindRow = el('div', { class: 'dn-kinds', role: 'radiogroup', 'aria-label': 'Kind of donation' }), quick = el('div', { class: 'dn-quick' });
+      function changed() { m.changed = true; }
+      function current() {
+        var sz = fSize.value || kindSize(w.kind);
+        return { title: fTitle.value.trim() || titleFor(w.kind, fFrom.value, fTo.value), lead: fLead.value, name: fName.value, body: fBody.value, size: sz === 'normal' ? '' : sz, logo: fLogo.value.trim() };
+      }
+      function refresh() {
+        var c = current(), empty = !(c.name + c.body).trim();
+        stage.textContent = ''; stage.appendChild(sponsorPanel(c));
+        stageNote.textContent = empty ? 'The name and the lines appear here as you type.' : donState({ from: fFrom.value, to: fTo.value }) === 'on' ? 'This is on the board from the moment you publish.' : donState({ from: fFrom.value, to: fTo.value }) === 'soon' ? 'It goes on the board by itself on its first day.' : 'These dates have passed, so it will not be on the board.';
+        fTitle.placeholder = titleFor(w.kind, fFrom.value, fTo.value) || 'The words at the top of the panel';
+        fromCivil.textContent = civilDate(fFrom.value); toCivil.textContent = civilDate(fTo.value);
+      }
+      function paintKinds() {
+        kindRow.textContent = '';
+        kinds.concat([{ id: 'other', name: 'Other' }]).forEach(function (k) {
+          kindRow.appendChild(el('button', { type: 'button', role: 'radio', class: 'dn-kindbtn' + (w.kind === k.id ? ' on' : ''), 'aria-checked': String(w.kind === k.id), 'data-kind': k.id, dir: 'auto', text: k.name || 'Kind', onclick: function () { setKind(k.id); } }));
+        });
+      }
+      function ranges() {
+        var k = kindById(w.kind), per = k ? k.period : '';
+        if (per === 'month' || per === 'week' || per === 'day') return [periodRange(per, 0), periodRange(per, 1)];
+        var t = periodRange('day', 0), wk = periodRange('week', 0), mo = periodRange('month', 0);
+        return [t, wk, mo];
+      }
+      function paintQuick() {
+        quick.textContent = '';
+        ranges().forEach(function (r) {
+          var on = fFrom.value === r.from && fTo.value === r.to;
+          quick.appendChild(el('button', { type: 'button', class: 'dn-chip' + (on ? ' on' : ''), 'aria-pressed': String(on), 'data-from': r.from, 'data-to': r.to, onclick: function () { datesTouched = true; setDates(r.from, r.to); changed(); } },
+            [el('bdi', { text: r.text }), r.sub ? el('span', { class: 'dn-chipsub', text: r.sub }) : null]));
+        });
+      }
+      function setDates(a, b) { fFrom.value = a; fTo.value = b; hFrom.sync(); hTo.sync(); errDates.textContent = ''; paintQuick(); refresh(); }
+      function setKind(kid) {
+        var was = kindById(w.kind), now = kindById(kid);
+        if (!fLead.value.trim() || (was && fLead.value.trim() === (was.lead || '').trim())) fLead.value = now ? (now.lead || '') : ''; /* the lead-in follows the kind unless it was written by hand */
+        w.kind = kid;
+        if (isNew && !datesTouched) { var r = periodRange(now ? now.period : 'day', 0); fFrom.value = r.from; fTo.value = r.to; hFrom.sync(); hTo.sync(); } /* a new donation takes its kind's usual length */
+        placeTitle(); paintKinds(); paintQuick(); refresh(); changed();
+        var sel = kindRow.querySelector('.on'); if (sel) sel.focus();
+      }
+      fFrom.addEventListener('change', function () { datesTouched = true; if (fTo.value && fFrom.value && fTo.value < fFrom.value) { fTo.value = fFrom.value; hTo.sync(); } errDates.textContent = ''; paintQuick(); refresh(); });
+      fTo.addEventListener('change', function () { datesTouched = true; errDates.textContent = ''; paintQuick(); refresh(); });
+      [fName, fBody, fLead, fTitle, fLogo].forEach(function (f) { f.addEventListener('input', function () { errName.textContent = ''; refresh(); changed(); }); });
+      fSize.addEventListener('change', function () { refresh(); changed(); });
+      function save(publish) {
+        var nameV = fName.value.trim(), bodyV = fBody.value.trim();
+        errName.textContent = ''; errDates.textContent = '';
+        if (!nameV && !bodyV) { errName.textContent = 'Enter the name of the donor.'; fName.focus(); return; }
+        if (fFrom.value && fTo.value && fTo.value < fFrom.value) { errDates.textContent = 'The last day is before the first day. Pick a later last day.'; hTo.wrap.querySelector('select').focus(); return; }
+        var rec = orig || { id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), no: ++donSeq };
+        rec.kind = w.kind; rec.lead = fLead.value.trim(); rec.name = nameV; rec.body = bodyV; rec.logo = fLogo.value.trim(); rec.from = fFrom.value; rec.to = fTo.value; rec.sizeOwn = fSize.value;
+        rec.titleOwn = fTitle.value.trim() === titleFor(w.kind, fFrom.value, fTo.value) ? '' : fTitle.value.trim();
+        if (isNew) dons.push(rec);
+        ui.dn.flash = rec.id; clearTimeout(ui.dn.flashT); ui.dn.flashT = setTimeout(function () { ui.dn.flash = ''; }, 3000); /* the list shows where it landed, through the rebuild that follows a save */
+        m.close(); setDirty(true); paintList();
+        saveConfig(collect(), publish ? { publish: true } : null);
+      }
+      var titleField = field('Words at the top of the panel', fTitle, el('div', { class: 'dn-hint', text: 'Leave it empty to use the kind\'s own title.' }));
+      var moreBox = el('details', { class: 'dn-more' }, [el('summary', { text: 'More options' }),
+        el('div', { class: 'fields' }, [field('Line above the name', fLead, el('div', { class: 'dn-hint', text: 'For example נתנדב לעילוי נשמת. Leave it empty for none.' }))]),
+        el('div', { class: 'fields' }, [field('Size on the screen', fSize), field('Picture beside the name', fLogo, el('div', { class: 'dn-hint', text: 'The name of a picture file kept beside the website, such as a business logo.' }))])]);
+      /* an "Other" donation has no kind to take its title from, so the title box stands in the form itself; for the rest it is an extra */
+      var titleSlotMain = el('div', { class: 'fields' }), titleSlotMore = el('div', { class: 'fields' });
+      moreBox.insertBefore(titleSlotMore, moreBox.children[1]);
+      function placeTitle() { var to = w.kind === 'other' ? titleSlotMain : titleSlotMore; if (titleField.parentNode !== to) to.appendChild(titleField); titleSlotMain.hidden = w.kind !== 'other'; }
+      placeTitle();
+      if (src && (src.titleOwn || src.sizeOwn || src.logo)) moreBox.open = true;
+      var form = el('div', { class: 'dn-form' }, [
+        el('div', { class: 'field' }, [el('span', { class: 'dn-label', text: 'Kind of donation' }), kindRow]),
+        titleSlotMain,
+        el('div', { class: 'fields' }, [field('Name', fName, el('div', null, [errName, el('div', { class: 'dn-hint', text: 'Titles such as מו״ה and הי״ו are set small by themselves, so the name stands out.' })]))]),
+        el('div', { class: 'fields' }, [field('In honor of', fBody, el('div', { class: 'dn-hint', text: 'Each line you write is a line on the panel.' }))]),
+        el('div', { class: 'field' }, [el('span', { class: 'dn-label', text: 'When it is on the board' }), quick]),
+        el('div', { class: 'fields dn-datepair' }, [
+          el('div', { class: 'field' }, [el('label', { for: fFrom.id, text: 'First day' }), el('div', { class: 'hebrow' }, [hFrom.wrap]), el('div', { class: 'dn-civilrow' }, [fFrom, fromCivil])]),
+          el('div', { class: 'field' }, [el('label', { for: fTo.id, text: 'Last day' }), el('div', { class: 'hebrow' }, [hTo.wrap]), el('div', { class: 'dn-civilrow' }, [fTo, toCivil])])]),
+        errDates, moreBox]);
+      var body = el('div', { class: 'dn-body' }, [form, el('aside', { class: 'dn-preview' }, [el('div', { class: 'dn-label', text: 'How it looks on the board' }), stage, stageNote])]);
+      var saveMain = el('button', { type: 'button', class: 'btn primary', id: 'dn-save', text: isConnected() ? 'Save and publish' : 'Save donation', onclick: function () { save(isConnected()); } });
+      var saveOnly = isConnected() ? el('button', { type: 'button', class: 'btn', id: 'dn-save-only', text: 'Save only', onclick: function () { save(false); } }) : null;
+      var cancel = el('button', { type: 'button', class: 'btn', id: 'dn-cancel', text: 'Cancel', onclick: function () { m.close(); } });
+      var foot = el('div', { class: 'dn-foot' });
+      function footNormal() {
+        foot.textContent = '';
+        if (orig) foot.appendChild(el('button', { type: 'button', class: 'btn danger', id: 'dn-remove', text: 'Remove', onclick: footConfirm }));
+        foot.appendChild(el('span', { class: 'sp' })); foot.appendChild(cancel); if (saveOnly) foot.appendChild(saveOnly); foot.appendChild(saveMain);
+      }
+      function footConfirm() {
+        foot.textContent = '';
+        var keep = el('button', { type: 'button', class: 'btn', text: 'Keep it', onclick: footNormal });
+        foot.appendChild(el('span', { class: 'dn-ask', text: 'Remove this donation for good?' })); foot.appendChild(el('span', { class: 'sp' })); foot.appendChild(keep);
+        foot.appendChild(el('button', { type: 'button', class: 'btn danger solid', id: 'dn-remove-yes', text: 'Yes, remove', onclick: function () { m.close(); removeDonation(orig); } }));
+        keep.focus();
+      }
+      footNormal();
+      form.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' && ev.target.tagName === 'INPUT' && ev.target.type !== 'date') { ev.preventDefault(); saveMain.click(); } });
+      m = dnModal(orig ? 'Edit donation ' + numText(orig.no) : 'Add a donation', body, foot);
+      paintKinds(); paintQuick(); refresh();
+      fName.focus();
+    }
+    function removeDonation(x) {
+      var i = dons.indexOf(x); if (i < 0) return;
+      dons.splice(i, 1); setDirty(true); paintList();
+      saveConfig(collect());
+    }
+
+    /* the kinds: what a shul sells, and how each one's panel reads */
+    function openKinds() {
+      var rows = [], list = el('div', { class: 'dn-krows' }), kid = ++uid, m, err = errLine();
+      function addRow(k, isNew) {
+        var n = rows.length + 1, r = { id: k.id,
+          name: inp('dk-name-' + kid + '-' + n, k.name || '', { placeholder: 'e.g. קידוש' }),
+          title: inp('dk-title-' + kid + '-' + n, k.title || ''),
+          size: el('select', { id: 'dk-size-' + kid + '-' + n }, [opt('big', 'Big'), opt('normal', 'Normal'), opt('small', 'Small'), opt('tiny', 'Smallest')]),
+          lead: inp('dk-lead-' + kid + '-' + n, k.lead || ''),
+          period: el('select', { id: 'dk-period-' + kid + '-' + n }, [opt('month', 'A month'), opt('week', 'A week'), opt('day', 'A day')]) };
+        r.size.value = k.size || 'normal'; r.period.value = k.period || 'day';
+        function move(dir) { var i = rows.indexOf(r), j = i + dir; if (j < 0 || j >= rows.length) return; rows.splice(i, 1); rows.splice(j, 0, r); repaint(); m.changed = true; r.up.focus(); }
+        r.up = el('button', { type: 'button', class: 'btn small', text: '▲', title: 'Earlier on the board', 'aria-label': 'Move up', onclick: function () { move(-1); } });
+        r.down = el('button', { type: 'button', class: 'btn small', text: '▼', title: 'Later on the board', 'aria-label': 'Move down', onclick: function () { move(1); } });
+        r.wrap = el('div', { class: 'dn-krow' }, [
+          el('div', { class: 'dn-khead' }, [el('strong', { class: 'dn-kname', dir: 'auto' }), el('span', { class: 'sp' }), r.up, r.down,
+            el('button', { type: 'button', class: 'btn small danger', text: 'Remove', onclick: function () { rows.splice(rows.indexOf(r), 1); repaint(); m.changed = true; } })]),
+          el('div', { class: 'fields' }, [field('Name of the kind', r.name), field('Words at the top of the panel', r.title, el('div', { class: 'dn-hint', text: 'Write {month} where the month\'s name belongs, {parsha} for the week\'s parsha.' }))]),
+          el('div', { class: 'fields three' }, [field('Size on the screen', r.size), field('Usually runs for', r.period), field('Line above the name', r.lead)])]);
+        r.name.addEventListener('input', function () { r.wrap.querySelector('.dn-kname').textContent = r.name.value.trim() || 'New kind'; err.textContent = ''; m.changed = true; });
+        [r.title, r.lead, r.size, r.period].forEach(function (f) { f.addEventListener('input', function () { m.changed = true; }); f.addEventListener('change', function () { m.changed = true; }); });
+        r.wrap.querySelector('.dn-kname').textContent = (k.name || '').trim() || 'New kind';
+        rows.push(r);
+        if (isNew) { repaint(); r.name.focus(); m.changed = true; }
+      }
+      function repaint() { list.textContent = ''; rows.forEach(function (r, i) { list.appendChild(r.wrap); r.up.disabled = i === 0; r.down.disabled = i === rows.length - 1; }); if (!rows.length) list.appendChild(el('div', { class: 'dn-note', text: 'No kinds. Add one below, or every donation is an "Other" with its own title.' })); }
+      var body = el('div', { class: 'dn-body one' }, [el('div', { class: 'dn-form' }, [
+        el('p', { class: 'dn-hint', text: 'Each kind decides how its panel reads, so adding a donation is only a name and a date. The order here is the order they stand in on the board.' }), list, err,
+        el('div', null, [el('button', { type: 'button', class: 'btn', id: 'dk-add', text: '+ Add a kind', onclick: function () { addRow({ id: 'k' + Date.now().toString(36), name: '', title: '', size: 'normal', lead: '', period: 'day' }, true); } })])])]);
+      var foot = el('div', { class: 'dn-foot' }, [el('span', { class: 'sp' }), el('button', { type: 'button', class: 'btn', text: 'Cancel', onclick: function () { m.close(); } }),
+        el('button', { type: 'button', class: 'btn primary', id: 'dk-save', text: 'Save kinds', onclick: function () {
+          var bad = rows.filter(function (r) { return !r.name.value.trim(); })[0];
+          if (bad) { err.textContent = 'Give every kind a name, or remove the empty one.'; bad.name.focus(); return; }
+          kinds = rows.map(function (r) { return { id: r.id, name: r.name.value.trim(), title: r.title.value.trim() || r.name.value.trim(), size: r.size.value, lead: r.lead.value.trim(), period: r.period.value }; });
+          dons.forEach(function (x) { if (x.kind !== 'other' && !kindById(x.kind)) { x.titleOwn = x.titleOwn || x.titleWas || ''; x.sizeOwn = x.sizeOwn || x.sizeWas || ''; x.kind = 'other'; } });
+          m.close(); setDirty(true); paintList(); saveConfig(collect());
+        } })]);
+      /* a donation whose kind is removed keeps the title it had */
+      dons.forEach(function (x) { x.titleWas = effTitle(x); x.sizeWas = x.sizeOwn || kindSize(x.kind); });
+      m = dnModal('Kinds of donation', body, foot);
+      kinds.forEach(function (k) { addRow(k); }); repaint();
+      var firstBox = list.querySelector('input'); if (firstBox) firstBox.focus();
+    }
+
+    /* the list */
+    var dnGrid = el('div', { class: 'dn-grid', id: 'dn-list' }), dnFilters = el('div', { class: 'dn-filters', role: 'group', 'aria-label': 'Show' });
+    var dnSearch = inp('dn-search', ui.dn.q, { type: 'search', placeholder: 'Search by name, text or kind', 'aria-label': 'Search donations', autocomplete: 'off', 'data-nodirty': '1' });
+    var dnSort = el('select', { id: 'dn-sort', 'aria-label': 'Order', 'data-nodirty': '1' }, [opt('board', 'On the board first'), opt('new', 'Newest first'), opt('old', 'Oldest first')]);
+    dnSort.value = ui.dn.sort;
+    function donMatches(x, q) {
+      if (!q) return true;
+      var k = kindById(x.kind), hay = [x.name, x.body, x.lead, effTitle(x), k ? k.name : '', numText(x.no), String(x.no), hebDate(x.from), hebDate(x.to)].join(' ').toLowerCase();
+      return q.toLowerCase().split(/\s+/).filter(Boolean).every(function (part) { return hay.indexOf(part) >= 0; });
+    }
+    function donSorted(list) {
+      var rank = { on: 0, soon: 1, done: 2 };
+      return list.slice().sort(function (a, b) {
+        if (ui.dn.sort === 'new') return (b.from || '').localeCompare(a.from || '') || b.no - a.no;
+        if (ui.dn.sort === 'old') return (a.from || '').localeCompare(b.from || '') || a.no - b.no;
+        var sa = donState(a), sb = donState(b);
+        if (sa !== sb) return rank[sa] - rank[sb];
+        if (sa === 'done') return (b.to || '').localeCompare(a.to || '') || b.no - a.no;
+        if (sa === 'soon') return (a.from || '').localeCompare(b.from || '') || a.no - b.no;
+        return boardOrder(a, b);
+      });
+    }
+    function donCard(x) {
+      var st = donState(x), k = kindById(x.kind), sub = donSub(x), acts = el('div', { class: 'dn-acts' });
+      function actsNormal() {
+        acts.textContent = '';
+        acts.appendChild(el('button', { type: 'button', class: 'btn small', 'data-act': 'edit', 'data-nodirty': '1', onclick: function () { openDonation(x); } }, [svgIcon('edit'), el('span', { text: 'Edit' })]));
+        acts.appendChild(el('button', { type: 'button', class: 'btn small', 'data-act': 'copy', 'data-nodirty': '1', title: 'Start a new donation with these details', onclick: function () { openDonation(null, x); } }, [svgIcon('copy'), el('span', { text: 'Copy' })]));
+        acts.appendChild(el('span', { class: 'sp' }));
+        acts.appendChild(el('button', { type: 'button', class: 'btn small danger', 'data-act': 'remove', 'data-nodirty': '1', 'aria-label': 'Remove ' + donName(x), onclick: actsConfirm }, [svgIcon('trash'), el('span', { text: 'Remove' })]));
+      }
+      function actsConfirm() {
+        acts.textContent = '';
+        var keep = el('button', { type: 'button', class: 'btn small', 'data-nodirty': '1', text: 'Keep it', onclick: actsNormal });
+        acts.appendChild(el('span', { class: 'dn-ask', text: 'Remove for good?' })); acts.appendChild(el('span', { class: 'sp' })); acts.appendChild(keep);
+        acts.appendChild(el('button', { type: 'button', class: 'btn small danger solid', 'data-act': 'remove-yes', 'data-nodirty': '1', text: 'Yes, remove', onclick: function () { removeDonation(x); } }));
+        keep.focus();
+      }
+      actsNormal();
+      return el('article', { class: 'dn-card ' + st + (ui.dn.flash === x.id ? ' flash' : ''), 'data-id': x.id, 'data-no': String(x.no) }, [
+        el('div', { class: 'dn-top' }, [
+          el('span', { class: 'dn-av k' + (kindIndex(x.kind) % 5), 'aria-hidden': 'true', text: initials(x) }),
+          el('div', { class: 'dn-who' }, [el('div', { class: 'dn-name', dir: 'auto', title: donName(x), text: donName(x) }), sub ? el('div', { class: 'dn-sub', dir: 'auto', text: sub }) : null]),
+          el('div', { class: 'dn-meta' }, [el('span', { class: 'dn-no num', text: numText(x.no) }), el('span', { class: 'dn-st ' + st, text: STATE_TEXT[st] })])]),
+        el('div', { class: 'dn-chips' }, [el('span', { class: 'dn-kind', dir: 'auto', text: k ? k.name : (effTitle(x) || 'Other') })]),
+        el('div', { class: 'dn-dates' }, [
+          el('div', null, [el('span', { class: 'dn-lbl', text: 'Start' }), el('span', { class: 'dn-heb', dir: 'rtl', title: civilDate(x.from), text: hebDate(x.from) }), el('span', { class: 'dn-rel', text: whenText(x, 'from') })]),
+          el('div', null, [el('span', { class: 'dn-lbl', text: 'End' }), el('span', { class: 'dn-heb', dir: 'rtl', title: civilDate(x.to), text: hebDate(x.to) }), el('span', { class: 'dn-rel', text: whenText(x, 'to') })])]),
+        acts]);
+    }
+    function paintList() {
+      var counts = { all: dons.length, on: 0, soon: 0, done: 0 };
+      dons.forEach(function (x) { counts[donState(x)]++; });
+      dnFilters.textContent = '';
+      [['all', 'All'], ['on', 'On the board'], ['soon', 'Coming up'], ['done', 'Finished']].forEach(function (f) {
+        var on = ui.dn.filter === f[0];
+        dnFilters.appendChild(el('button', { type: 'button', class: 'dn-chip' + (on ? ' on' : ''), 'aria-pressed': String(on), 'data-filter': f[0], 'data-nodirty': '1', onclick: function () { ui.dn.filter = f[0]; paintList(); } }, [el('span', { text: f[1] }), el('span', { class: 'dn-count num', text: String(counts[f[0]]) })]));
+      });
+      var shown = donSorted(dons.filter(function (x) { return (ui.dn.filter === 'all' || donState(x) === ui.dn.filter) && donMatches(x, ui.dn.q.trim()); }));
+      dnGrid.textContent = '';
+      if (!dons.length) {
+        dnGrid.appendChild(el('div', { class: 'dn-empty' }, [svgIcon('donations'), el('h3', { text: 'No donations yet' }), el('p', { text: 'Add the first one and it goes on the board for the days you choose.' }),
+          el('button', { type: 'button', class: 'btn primary', 'data-nodirty': '1', text: '+ Add a donation', onclick: function () { openDonation(null); } })]));
+      } else if (!shown.length) {
+        dnGrid.appendChild(el('div', { class: 'dn-empty' }, [svgIcon('search'), el('h3', { text: 'Nothing matches' }), el('p', { text: ui.dn.q.trim() ? 'No donation has "' + ui.dn.q.trim() + '" in it.' : 'There is nothing under "' + STATE_TEXT[ui.dn.filter] + '" right now.' }),
+          el('button', { type: 'button', class: 'btn', 'data-nodirty': '1', text: 'Show all donations', onclick: function () { ui.dn.q = ''; ui.dn.filter = 'all'; dnSearch.value = ''; paintList(); } })]));
+      } else shown.forEach(function (x) { dnGrid.appendChild(donCard(x)); });
+      if (ui.dn.flash) { var lit = dnGrid.querySelector('.flash'); if (lit && lit.scrollIntoView) { try { lit.scrollIntoView({ block: 'nearest' }); } catch (e) {} } }
+    }
+    dnSearch.addEventListener('input', function () { ui.dn.q = dnSearch.value; paintList(); });
+    dnSort.addEventListener('change', function () { ui.dn.sort = dnSort.value; paintList(); });
+    donPage.appendChild(el('div', { class: 'dn-tools' }, [
+      el('div', { class: 'dn-search' }, [svgIcon('search'), dnSearch]), dnSort,
+      el('button', { type: 'button', class: 'btn', id: 'dn-kinds', 'data-nodirty': '1', text: 'Kinds…', title: 'The kinds of donation, and how each one\'s panel reads', onclick: openKinds }),
+      el('button', { type: 'button', class: 'btn primary', id: 'dn-add', 'data-nodirty': '1', text: '+ Add donation', onclick: function () { openDonation(null); } })]));
+    donPage.appendChild(dnFilters); donPage.appendChild(dnGrid);
+    paintList();
+    pages.donations = donPage;
     /* extra schedules: named lists that take over for the days they cover */
     var rp = el('div', { class: 'col', id: 'page-rolls' }), rollRows = [], rollList = el('div', { class: 'col' }), rollUid = 0;
     var ROLL_TYPES = [['any', 'Any day']].concat(Cal.DAY_TYPES.map(function (t) { return [t[0], t[3]]; }));
@@ -2081,7 +2387,7 @@
         d.tefillos.forEach(function (tf) { if ((r.lines[tf.id].value || '').trim()) ln[tf.id] = r.lines[tf.id].value; });
         return { name: r.name.value.trim(), type: r.type.value, priority: +r.priority.value || 0, active: r.active.checked, dows: dows.length === 7 ? [] : dows, from: r.from.value, to: r.to.value, lines: ln };
       }).filter(function (r) { return r.name || Object.keys(r.lines).length; });
-      out.notices = nRows.map(function (r) { return { title: r.title.value.trim(), lead: r.lead.value.trim(), name: r.name.value.trim(), body: r.body.value.trim(), size: r.size.value, logo: r.logo.value.trim(), from: r.from.value, to: r.to.value }; }).filter(function (n) { return n.title || n.name || n.lead || n.body; });
+      out.notices = donNotices(); out.donationKinds = clone(kinds);
       out.banner = { text: bText.value.trim(), from: bFrom.value, until: bUntil.value };
       out.overrides = oRows.map(function (r) {
         var lines = {};
@@ -2137,7 +2443,7 @@
       el('button', { type: 'button', class: 'btn ghost', 'data-nodirty': '1', onclick: function () { if (ui.adminDirty && !confirm('Lock without saving? The changes made here will be lost.')) return; pinOk = false; try { sessionStorage.removeItem('minyan-pin'); } catch (e) {} ui.adminDirty = false; closeOverlay(); showPin(); } }, [svgIcon('lock'), el('span', { text: 'Lock' })])]);
     var ghNow = mode === 'artifact' ? null : ghSettings();
     var footHint = mode === 'artifact' ? 'Save publishes a new version of this page for everyone who has the link.' : (ghConfigured(ghNow) ? 'Save keeps the changes on this device. Publish sends them to the website and the app.' : 'Save keeps the settings on this device only. Connect the website on the Publish tab to be able to publish.');
-    var main = el('div', { class: 'amain' }, [el('div', { class: 'ptitle' }, [pageTitle, pageDesc]), pages.today, pages.general, pages.schedule, pages.rolls, pages.notices, pages.screen, pages.overrides, mode !== 'artifact' ? pages.publish : null, mode !== 'artifact' ? pages.send : null, pages.data,
+    var main = el('div', { class: 'amain' }, [el('div', { class: 'ptitle' }, [pageTitle, pageDesc]), pages.today, pages.general, pages.schedule, pages.donations, pages.rolls, pages.notices, pages.screen, pages.overrides, mode !== 'artifact' ? pages.publish : null, mode !== 'artifact' ? pages.send : null, pages.data,
       el('div', { class: 'bar afoot' }, [el('span', { class: 'hint', text: footHint }), saveBtn.cloneNode(true)])]);
     var pubBar = el('div', { class: 'pubbar' }); pubBar.hidden = true;
     function refreshPubBar() {
@@ -2286,16 +2592,23 @@
     Object.keys(ob).forEach(function (k) { if (!oa[k]) out.push('Special date added: ' + k + (ob[k].label ? ' (' + ob[k].label + ')' : '')); else if (!same(oa[k], ob[k])) out.push('Special date changed: ' + k + (ob[k].label ? ' (' + ob[k].label + ')' : '')); });
     Object.keys(oa).forEach(function (k) { if (!ob[k]) out.push('Special date removed: ' + k + (oa[k].label ? ' (' + oa[k].label + ')' : '')); });
     var na = {}, nb = {};
-    (a.notices || []).forEach(function (x) { na[x.title] = x; }); (b.notices || []).forEach(function (x) { nb[x.title] = x; });
-    Object.keys(nb).forEach(function (k) { if (!na[k]) out.push('Notice added: ' + k); else if (!same(na[k], nb[k])) out.push('Notice changed: ' + k); });
-    Object.keys(na).forEach(function (k) { if (!nb[k]) out.push('Notice removed: ' + k); });
+    function donKey(x) { return x.id || (x.title || '') + '|' + (x.name || '') + '|' + (x.from || ''); }
+    function donLabel(x) { return ((x.name || '').trim() || (x.body || '').trim().split('\n')[0] || 'a donation') + (x.title ? ' (' + x.title + ')' : ''); }
+    function shown(x) { return ((x.name || '') + (x.body || '') + (x.lead || '')).trim() !== ''; } /* an entry with nothing in it was never on the board */
+    function board(x) { return { title: x.title, lead: x.lead, name: x.name, body: x.body, size: x.size, logo: x.logo, from: x.from, to: x.to }; } /* what the board reads; the back end's own notes on it are not a change */
+    (a.notices || []).filter(shown).forEach(function (x) { na[donKey(x)] = x; }); (b.notices || []).filter(shown).forEach(function (x) { nb[donKey(x)] = x; });
+    /* a donation saved before donations had their own marks is the same one once it has them */
+    Object.keys(nb).forEach(function (k) { if (na[k]) return; var y = nb[k], old = Object.keys(na).filter(function (j) { return !nb[j] && same(board(na[j]), board(y)); })[0]; if (old) { na[k] = na[old]; delete na[old]; } });
+    Object.keys(nb).forEach(function (k) { if (!na[k]) out.push('Donation added: ' + donLabel(nb[k])); else if (!same(board(na[k]), board(nb[k]))) out.push('Donation changed: ' + donLabel(nb[k])); });
+    Object.keys(na).forEach(function (k) { if (!nb[k]) out.push('Donation removed: ' + donLabel(na[k])); });
+    if (!same(a.donationKinds, b.donationKinds)) out.push('Kinds of donation changed');
     if (!same(a.banner, b.banner)) out.push(b.banner && b.banner.text ? 'Banner: ' + b.banner.text + (b.banner.from ? ' · from ' + b.banner.from.replace('T', ' ') : '') + (b.banner.until ? ' · until ' + b.banner.until.replace('T', ' ') : '') : 'Banner cleared');
     return out;
   }
   /* the settings the admin form fills in by itself, so a published file that never had them does not look changed */
   function withDefaults(c) {
     var o = clone(c), tz = (o.location || {}).tz || '';
-    var d = { palette: 'shul', lang: 'he', bigTime: 'start', dateFormat: /^America\//.test(tz) ? 'mdy' : 'dmy', nowMinutes: 20, sponsorSeconds: 8, tzeisDeg: 8.5, candles: 18, minchaGedola: 'later', displayScale: 100, smsLang: 'auto', amidahMinutes: 15, wallLogo: '', wallLook: {}, wallWindow: { mode: 'day', before: 180, after: 20, neverEmpty: true } };
+    var d = { palette: 'shul', lang: 'he', bigTime: 'start', dateFormat: /^America\//.test(tz) ? 'mdy' : 'dmy', nowMinutes: 20, sponsorSeconds: 8, tzeisDeg: 8.5, candles: 18, minchaGedola: 'later', displayScale: 100, smsLang: 'auto', amidahMinutes: 15, wallLogo: '', donationKinds: DONATION_KINDS, wallLook: {}, wallWindow: { mode: 'day', before: 180, after: 20, neverEmpty: true } };
     Object.keys(d).forEach(function (k) { if (o[k] == null || o[k] === '') o[k] = d[k]; });
     return o;
   }
