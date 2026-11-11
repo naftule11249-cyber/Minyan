@@ -101,7 +101,7 @@
   /* the zmanim after the next one, in the day's order (the lobby's next-zman box lists a few) */
   function laterZmanim(info, z, rd, afterMs, n) {
     var tz = loc().tz, out = [];
-    ['alos', 'sunrise', 'shemaMGA', 'shema', 'tefillaMGA', 'tefilla', 'chatzos', 'minchag', 'minchak', 'candles', 'sunset', 'tzeis60', 'tzeis', 'tzeis72'].forEach(function (k) {
+    ['alos', 'sunrise', 'shemaMGA', 'shema', 'tefillaMGA', 'tefilla', 'chatzos', 'minchag', 'minchak', 'candles', 'sunset', 'tzeis60', 'tzeis', 'tzeis72', 'chatzosNight'].forEach(function (k) {
       if (k === 'candles' && info.candles !== 'day') return;
       if (zmanHidden(k)) return;
       var v = z[k]; if (v == null || isNaN(v)) return;
@@ -566,7 +566,7 @@
   }
   /* the hallway screen: only the next three zmanim, large; the first of them carries the countdown. Once the day's are over they come
      from tomorrow, and a tomorrow one that fills the row late in the day is marked. */
-  var ZMAN_ORDER = ['alos', 'sunrise', 'shemaMGA', 'shema', 'tefillaMGA', 'tefilla', 'chatzos', 'minchag', 'minchak', 'candles', 'sunset', 'tzeis60', 'tzeis', 'tzeis72'];
+  var ZMAN_ORDER = ['alos', 'sunrise', 'shemaMGA', 'shema', 'tefillaMGA', 'tefilla', 'chatzos', 'minchag', 'minchak', 'candles', 'sunset', 'tzeis60', 'tzeis', 'tzeis72', 'chatzosNight'];
   /* the zman that has just gone, so the hallway screen can show one on either side of the one it is counting to */
   function prevZman(info, z, rd, now) {
     var tz = loc().tz, best = null;
@@ -718,7 +718,7 @@
     return wrap;
   }
   function zmanimPanel(info, z, title) {
-    var keys = ['alos', 'sunrise', 'shemaMGA', 'shema', 'tefillaMGA', 'tefilla', 'chatzos', 'minchag', 'minchak', 'candles', 'sunset', 'tzeis60', 'tzeis', 'tzeis72'];
+    var keys = ['alos', 'sunrise', 'shemaMGA', 'shema', 'tefillaMGA', 'tefilla', 'chatzos', 'minchag', 'minchak', 'candles', 'sunset', 'tzeis60', 'tzeis', 'tzeis72', 'chatzosNight'];
     var ul = el('ul', { class: 'zlist' }), rd = info.rd, nowMin = title ? -1 : Cal.nowInTz(Date.now(), loc().tz).min, canRemind = !title && canSetReminders(), nowMs = Date.now(), tz = loc().tz, zt = zmanimFor(rd + 1), L = S(); /* another day's panel: no "passed" marks, no reminders */
     var h = info.heb, nightFast = (h.m === 7 && h.d === 10) || (h.m === 5 && info.fast); /* Yom Kippur and Tisha B'Av begin the evening before */
     if (info.fast && !nightFast) ul.appendChild(el('li', { class: 'hi' }, [el('span', { text: L.fastStart }), el('span', { class: 'z num', text: fmtTime(z.alos) })]));
@@ -830,7 +830,7 @@
   function urlB64ToBytes(b) { b = b.replace(/-/g, '+').replace(/_/g, '/'); while (b.length % 4) b += '='; var bin = atob(b), out = new Uint8Array(bin.length), i; for (i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i); return out; }
   function notifyBase() { return cfg.notifyUrl.trim().replace(/\/+$/, ''); }
   /* ---------- reminders: which minyan, how long before, every day or today only ---------- */
-  var ZMAN_KEYS = ['alos', 'sunrise', 'shemaMGA', 'shema', 'tefillaMGA', 'tefilla', 'chatzos', 'minchag', 'minchak', 'candles', 'sunset', 'tzeis60', 'tzeis', 'tzeis72'];
+  var ZMAN_KEYS = ['alos', 'sunrise', 'shemaMGA', 'shema', 'tefillaMGA', 'tefilla', 'chatzos', 'minchag', 'minchak', 'candles', 'sunset', 'tzeis60', 'tzeis', 'tzeis72', 'chatzosNight'];
   function picksFor(t) { return t.period === 'pm' ? ['first', 'last', 'before:sunset', 'before:tzeis'] : ['first', 'last', 'before:shema', 'before:tefilla', 'before:chatzos']; }
   function pushPrefs() { var st = pushState(); return (st && st.prefs) || { reminders: [], daily: null }; }
   function isoOf(rd) { return MinyanEngine.isoDate(rd); }

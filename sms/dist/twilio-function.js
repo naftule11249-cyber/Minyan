@@ -326,11 +326,12 @@ var Cal = (function () {
       chatzos: sunrise + 6 * shaah, minchag: minchaGedola(sunrise + 6 * shaah, shaah, loc.minchaGedola), plag: sunrise + 10.75 * shaah,
       /* מנחה קטנה by the Magen Avraham: nine and a half proportional hours of the day from dawn to nightfall, 72 minutes before sunrise and after sunset */
       minchak: (sunrise - 72) + 9.5 * ((sunset - sunrise + 144) / 12),
-      candles: sunset - (loc.candles == null ? 18 : loc.candles), sunset: sunset, tzeis: tzeis, tzeis60: sunset + 60, tzeis72: sunset + 72
+      candles: sunset - (loc.candles == null ? 18 : loc.candles), sunset: sunset, tzeis: tzeis, tzeis60: sunset + 60, tzeis72: sunset + 72,
+      chatzosNight: sunrise + 6 * shaah + 720 /* twelve hours after the day's חצות */
     };
   }
   var ZMAN_NAMES = { alos: 'עלות השחר', sunrise: 'הנץ החמה', shemaMGA: 'סוזק״ש (מג״א)', shema: 'סוזק״ש (גר״א)', tefillaMGA: 'סוז״ת (מג״א)', tefilla: 'סוז״ת (גר״א)', chatzos: 'חצות היום',
-    minchag: 'מנחה גדולה', minchak: 'מנחה קטנה', plag: 'פלג המנחה', candles: 'הדלקת נרות', sunset: 'שקיעה', tzeis: 'צאת הכוכבים', tzeis60: '60 מינוט אחר השקיעה', tzeis72: 'ר״ת (72)' };
+    minchag: 'מנחה גדולה', minchak: 'מנחה קטנה', plag: 'פלג המנחה', candles: 'הדלקת נרות', sunset: 'שקיעה', tzeis: 'צאת הכוכבים', tzeis60: '60 מינוט אחר השקיעה', tzeis72: 'ר״ת (72)', chatzosNight: 'חצות לילה' };
 
   /* ---------- Time zone helpers ---------- */
   var fmtCache = {};
