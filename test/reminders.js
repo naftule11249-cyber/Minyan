@@ -32,7 +32,7 @@ const { chromium } = require('playwright'); const fs = require('fs');
     ok('a zman row hides the which-minyan choice', await page.locator('.rem-row select[aria-label="Which minyan"]').isHidden(), true);
     ok('zmanim in the list are tappable', (await page.locator('.zlist li.tap').count()) >= 9, true);
     await page.locator('.zlist li.tap').nth(2).click();
-    ok('tapping a zman opens the box with its name', /סוף זמן ק״ש/.test(await page.locator('#rem-overlay .rem-what').textContent()), true);
+    ok('tapping a zman opens the box with its name', /סוזק״ש/.test(await page.locator('#rem-overlay .rem-what').textContent()), true);
     await page.click('#rem-cancel');
     await page.evaluate(() => { window.dispatchEvent(new Event('resize')); });
     const first = page.locator('.tile.tap').first(); const tileText = (await first.textContent()).replace(/\s+/g, ' ').trim();

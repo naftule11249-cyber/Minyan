@@ -17,9 +17,9 @@ const { chromium } = require('playwright');
   }
   const DEF = ['shema', 'tefilla', 'candles', 'sunset']; /* the test's own set, so the gabbai's choice in General does not move the expectations */
   let r = await at(2026, 10, 25, 9, 30, '', DEF);
-  ok('9:30: counts down to sof zman Shema 9:59, red (under 30 min), still full width', [r.what, r.time, /^00:2[89]:/.test(r.count), r.soon, r.wide], ['סוף זמן ק״ש', '9:59', true, true, true]);
+  ok('9:30: counts down to sof zman Shema 9:59, red (under 30 min), still full width', [r.what, r.time, /^00:2[89]:/.test(r.count), r.soon, r.wide], ['סוזק״ש (גר״א)', '9:59', true, true, true]);
   r = await at(2026, 10, 25, 10, 5, '', DEF);
-  ok('10:05: sof zman tefilla 10:52, not red yet', [r.what, r.time, r.soon], ['סוף זמן תפילה', '10:52', false]);
+  ok('10:05: sof zman tefilla 10:52, not red yet', [r.what, r.time, r.soon], ['סוז״ת (גר״א)', '10:52', false]);
   r = await at(2026, 10, 25, 13, 0, '', DEF);
   ok('13:00 Sunday: shkia (no candle lighting today)', [r.what, r.time], ['שקיעה', '6:01']);
   r = await at(2026, 10, 30, 13, 0, '', DEF);
@@ -31,11 +31,11 @@ const { chromium } = require('playwright');
     await ctx.addInitScript(({ fixed, pref }) => { const real = Date.now; const start = real(); Date.now = () => fixed + (real() - start); try { localStorage.setItem('minyan-countdown', JSON.stringify(pref)); } catch (e) {} }, { fixed: Date.UTC(2026, 9, 25, 13, 30), pref: DEF });
     const page = await ctx.newPage();
     await page.goto('http://localhost:8790/index.html?view=display', { waitUntil: 'networkidle' }); await page.waitForTimeout(500);
-    ok('the hallway screen marks the same zman on its tile, with the countdown on it', [await page.locator('.wall .ztile.now .room').textContent(), await page.locator('.wall .ztile.now .time').textContent(), /^00:2[89]:/.test(await page.locator('.wall .ztile.now .count').textContent())], ['סוף זמן ק״ש', '9:59', true]);
+    ok('the hallway screen marks the same zman on its tile, with the countdown on it', [await page.locator('.wall .ztile.now .room').textContent(), await page.locator('.wall .ztile.now .time').textContent(), /^00:2[89]:/.test(await page.locator('.wall .ztile.now .count').textContent())], ['סוזק״ש (גר״א)', '9:59', true]);
     await ctx.close();
   }
   r = await at(2026, 10, 25, 9, 30, '', ['chatzos']);
-  ok('a device that picked only chatzos gets chatzos', [r.what, r.time], ['חצות', '12:40']);
+  ok('a device that picked only chatzos gets chatzos', [r.what, r.time], ['חצות היום', '12:40']);
   {
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: 'he', timezoneId: 'America/New_York', serviceWorkers: 'block' });
     const page = await ctx.newPage(); await page.goto('http://localhost:8790/index.html', { waitUntil: 'networkidle' }); await page.waitForTimeout(300);
@@ -51,9 +51,9 @@ const { chromium } = require('playwright');
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: 'he', timezoneId: 'America/New_York', serviceWorkers: 'block' });
     const page = await ctx.newPage(); await page.goto('http://localhost:8790/index.html', { waitUntil: 'networkidle' }); await page.waitForTimeout(300);
     const names = (await page.locator('.zlist li span:first-child').allTextContents()).map(n => n.replace(/(מחר|מארגן)$/, ''));
-    ok('this shul: no צאת הכוכבים line, ר״ת (72) and the 60-minute line shown', [names.indexOf('צאת הכוכבים') < 0, names.indexOf('ר״ת (72)') >= 0, names.indexOf('60 מינוט אחר השקיעה') >= 0], [true, true, true]);
+    ok('this shul: צאת הכוכבים shown (it is 72 minutes, so no separate ר״ת line), and the 60-minute line', [names.indexOf('צאת הכוכבים') >= 0, names.indexOf('ר״ת (72)') < 0, names.indexOf('60 מינוט אחר השקיעה') >= 0], [true, true, true]);
     await page.click('#settings-open'); await page.waitForTimeout(200); await page.click('#zc-open');
-    ok('…and the chooser matches', [await page.locator('#zc-tzeis').count(), await page.locator('#zc-tzeis72').count()], [0, 1]);
+    ok('…and the chooser matches', [await page.locator('#zc-tzeis').count(), await page.locator('#zc-tzeis72').count()], [1, 0]);
     await ctx.close();
   }
   await browser.close();
