@@ -51,8 +51,8 @@ const MAARIV = '17:41 היכל אדל\n17:53 דברי יואל\nevery 10 from 18
 
   /* the morning: everything still to come */
   let { ctx, page, r } = await look(at(9, 30), MAARIV);
-  ok('the Maariv part reads in the order of the clock: the tiles, the two runs as boxes, and the 12:00 last', r.seq, ['5:41', '5:53', '6:05', '10:30', 'LINE 6:05–10:25', 'LINE 10:30–11:30', '12:00']);
-  ok('on the screen too: the earlier tiles stand above the boxes and the 12:00 under them', [order(r), r.after, r.inside, r.fits], [['above', 'above', 'above', 'above', 'L', 'L', 'below'], 1, true, true]);
+  ok('the Maariv part reads in the order of the clock: the tiles, the two runs as boxes, and the 12:00 last', r.seq, ['5:41', '5:53', 'LINE 6:05–10:25', 'LINE 10:30–11:30', '12:00']);
+  ok('on the screen too: the earlier tiles stand above the boxes and the 12:00 under them', [order(r), r.after, r.inside, r.fits], [['above', 'above', 'L', 'L', 'below'], 1, true, true]);
   ok('the boxes wear the minyan tiles\' colour and ink, and every line in them reads clearly on it', [r.sameBg, r.sameInk, r.contrast], [true, true, [true, true, true]]);
   ok('each box says how often and from when to when in the gabbai\'s words, with the rooms under it', r.words, [['יעדע 10 מינוט · פון 6:05 ביז 10:25', 'ברך משה · דברי יואל · לב אהרן'], ['יעדע 15 מינוט · פון 10:30 ביז 11:30', 'ברך משה · דברי יואל']]);
   ok('the two times stand as large as a tile\'s time, "פון" and "ביז" small beside them, all on the box', r.wordSizes, [true, true, true]);
@@ -75,10 +75,10 @@ const MAARIV = '17:41 היכל אדל\n17:53 דברי יואל\nevery 10 from 18
 
   /* a single minyan in the middle of a run stays with the tiles; one after the runs goes under them */
   ({ ctx, page, r } = await look(at(9, 30), MAARIV + '\n21:00 שלמה יודא'));
-  ok('a single minyan in the middle of a run stays above the boxes, in its place among the tiles', [r.seq, order(r)], [['5:41', '5:53', '6:05', '9:00', '10:30', 'LINE 6:05–10:25', 'LINE 10:30–11:30', '12:00'], ['above', 'above', 'above', 'above', 'above', 'L', 'L', 'below']]);
+  ok('a single minyan in the middle of a run stays above the boxes, in its place among the tiles', [r.seq, order(r)], [['5:41', '5:53', '9:00', 'LINE 6:05–10:25', 'LINE 10:30–11:30', '12:00'], ['above', 'above', 'above', 'L', 'L', 'below']]);
   await ctx.close();
   ({ ctx, page, r } = await look(at(9, 30), '17:41 היכל אדל\nevery 10 from 18:05 to 22:25 rooms ברך משה, דברי יואל'));
-  ok('with nothing after the run there is no second group of tiles', [r.seq, r.after, r.fits], [['5:41', '6:05', 'LINE 6:05–10:25'], 0, true]);
+  ok('with nothing after the run there is no second group of tiles', [r.seq, r.after, r.fits], [['5:41', 'LINE 6:05–10:25'], 0, true]);
   await ctx.close();
   ({ ctx, page, r } = await look(at(9, 30), '17:41 היכל אדל\n18:05 ברך משה\n00:00 היכל ביהמ״ד'));
   ok('with no run at all the frame is as it always was: one group of tiles', [r.seq, r.after, r.kinds.indexOf('L')], [['5:41', '6:05', '12:00'], 0, -1]);
@@ -98,11 +98,11 @@ const MAARIV = '17:41 היכל אדל\n17:53 דברי יואל\nevery 10 from 18
   /* the other looks, and a small TV */
   for (const look2 of ['shul', 'classic', 'contrast']) {
     ({ ctx, page, r } = await look(at(9, 30), MAARIV, { palette: look2 }));
-    ok('in the ' + look2 + ' look: tile colour on the boxes, every line readable, the order kept', [r.sameBg, r.contrast, order(r).join(' ')], [true, [true, true, true], 'above above above above L L below']);
+    ok('in the ' + look2 + ' look: tile colour on the boxes, every line readable, the order kept', [r.sameBg, r.contrast, order(r).join(' ')], [true, [true, true, true], 'above above L L below']);
     await ctx.close();
   }
   ({ ctx, page, r } = await look(at(9, 30), MAARIV, null, { width: 1280, height: 720 }));
-  ok('on a 1280 × 720 TV the order holds and everything fits', [order(r).join(' '), r.inside, r.fits], ['above above above above L L below', true, true]);
+  ok('on a 1280 × 720 TV the order holds and everything fits', [order(r).join(' '), r.inside, r.fits], ['above above L L below', true, true]);
   await ctx.close();
 
   await browser.close();
