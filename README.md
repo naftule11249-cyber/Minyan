@@ -12,7 +12,7 @@ Three ways to use it, all from the same code:
 |---|---|---|
 | Shareable page | https://claude.ai/artifact/5CiKzUDtdy3eTAeNzQrqwA | Owner opens the link with `#admin`, saves for everyone |
 | Website + installable app (PWA) | `docs/` on any static host (GitHub Pages, Netlify…) | `admin.html` (PIN) → publishes `config.json` to GitHub |
-| App Store / Play Store app | `app/` (Capacitor, Android + iOS projects) | Reads the website's `config.json` |
+| App Store / Play Store app | `app/` (Capacitor, Android + iOS projects) | Opens the website itself, so it is always current |
 | Text message (SMS) | `sms/` (Twilio Functions, Cloudflare Worker or Node) | Reads the website's `config.json` |
 
 ## Files
@@ -94,8 +94,13 @@ app icons and splash screens in place (app id `org.minyanboard.app`, name "מנ�
 3. Android: `npx cap open android` (needs Android Studio) → Build → Generate Signed Bundle → upload to Play Console.
    iOS: `npx cap open ios` on a Mac with Xcode → set your Team → Product → Archive → upload to App Store Connect.
 
-The app bundles the site for instant offline start and refreshes the schedule from the
-website every 15 minutes and whenever it is opened.
+The app opens the website itself (`server.url` in `app/capacitor.config.json`, which `build.js` keeps in step with
+the site address under General), so it always shows what the website shows: a change to the board, the look or the
+schedule needs no new build of the app. Build and upload the app once; after that only a change to the app's own
+name, icon or splash needs another build. On Android the site's offline copy keeps the board working without a
+connection after the first opening; when the phone has no connection and no copy, the app shows `offline.html`, a
+page that stands on its own, looks again by itself and opens the board when the connection is back. Inside the app
+the site does not offer to "install the app".
 
 ## Next minyan by text message (SMS)
 
@@ -240,7 +245,8 @@ Four palettes: **Hallway** (the lobby itself: limestone walls, polished brass, a
 
 ## Board extras
 
-- **How fast a publish reaches everyone**: the website within about two minutes (GitHub Pages builds it); the installed app and the lobby screens the next time they check, every five minutes and whenever the app comes back to the front; the text replies within a minute or two. Both fetch the schedule with an address that changes by the minute, so the site's CDN copy (kept up to ten minutes) is passed by.
+- **How fast a publish reaches everyone**: the website within about two minutes (GitHub Pages builds it); the installed app and the lobby screens the next time they check, every five minutes and whenever the app comes back to the front; the text replies within a minute or two.
+- **How a new version of the board itself reaches a phone**: the page looks for one the moment it opens, every five minutes, when it comes back to the front and when the phone comes back online. A new version takes every file straight from the network (the host lets a browser keep a file for ten minutes, and a version built from those kept files would be the old one under a new name), then the page reloads by itself onto it. "Check for updates" in Settings does the same on demand. Both fetch the schedule with an address that changes by the minute, so the site's CDN copy (kept up to ten minutes) is passed by.
 - **Texting, the language**: General → "Text replies are written in" picks לשון קודש always, English always, or the sender's language (the default). HELP is always answered in the sender's language, as the carriers expect.
 - **The last minyan before sof zman Shema / sof zman tefilla / chatzos** (reminder picks, on the board and by text): the last minyan whose הודו is 15 minutes before the zman, so that the davening is said in time. The 15 is General → "Minutes from הודו to שמונה עשרה". Sunset and nightfall picks go by the start time.
 - **Texting, the last minyan**: a text that arrives after a minyan has begun, but 3 minutes or more before its הודו (the tefilla's milestone), gets that minyan first as מנין העבר, since one can still run for it, and then the next two. Tefillos without a milestone have no such window.

@@ -20,6 +20,17 @@ const { chromium } = require('playwright');
   ok('Android Chrome: the menu, add to home screen, install', [/אנדרואיד/.test(r.lead), /⋮/.test(r.steps[0]), /התקן/.test(r.steps[2])], [true, true, true]);
   r = await guide(null);
   ok('computer: the install icon in the address bar', [/במחשב/.test(r.lead), /שורת הכתובת/.test(r.steps[0]), /התקן Cascade Zmanim/.test(r.steps[1])], [true, true, true]);
+  /* inside the store app (which opens this same website and marks itself in the browser's name) nothing offers to install the app */
+  {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'he', timezoneId: 'America/New_York', serviceWorkers: 'block',
+      userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36 MinyanBoardApp' });
+    const page = await ctx.newPage(); page.on('pageerror', e => errors.push(e.message));
+    await page.goto('http://localhost:8790/index.html', { waitUntil: 'networkidle' }); await page.waitForTimeout(300);
+    ok('in the store app the footer has no "install the app" button', [await page.locator('#install-guide').isVisible(), await page.locator('footer .btn.primary:visible').count()], [false, 0]);
+    await page.click('#settings-open'); await page.waitForTimeout(300);
+    ok('and the settings sheet keeps only the check for updates, under "the app"', [await page.locator('#sset-app h3').textContent(), await page.locator('#sset-app .guide').count(), await page.locator('#check-updates').isVisible()], ['האפליקציה', 0, true]);
+    await ctx.close();
+  }
   await browser.close();
   console.log(errors.length ? 'ERRORS:\n' + errors.join('\n') : 'no console errors');
   console.log(fails ? fails + ' FAILING' : 'install: all good');

@@ -56,6 +56,19 @@ fs.writeFileSync(path.join(dist, '404.html'), jump('', 'Page not found',
   'var to={admin:"admin.html",screen:"screen.html",tv:"tv.html",sign:"sign.html",sms:"sms.html",board:"index.html"}[seg];' +
   'if(to&&base+to!==location.pathname)location.replace(base+to+location.search+location.hash);' +
   'else document.getElementById("m").textContent="That page is not here.";})();<\/script>'));
+// offline.html: what the store app shows when the phone has no connection (the app opens the website itself; see app/capacitor.config.json).
+// It stands on its own — no file beside it, nothing from the network — waits, looks again by itself, and opens the board when the connection is back.
+const OFFLINE = {
+  he: { dir: 'rtl', title: 'אין חיבור לאינטרנט', text: 'הלוח ייפתח מעצמו ברגע שהחיבור יחזור.', button: 'לנסות שוב', waiting: 'ממתין לחיבור…', checking: 'בודק את החיבור…', found: 'החיבור חזר. פותח את הלוח…' },
+  yi: { dir: 'rtl', title: 'קיין אינטערנעט', text: 'דער לוח עפנט זיך אליין ווי נאר די פארבינדונג קומט צוריק.', button: 'פרובירן נאכאמאל', waiting: 'מען ווארט אויף די פארבינדונג…', checking: 'מען קוקט נאך די פארבינדונג…', found: 'די פארבינדונג איז צוריק. דער לוח עפנט זיך…' },
+  en: { dir: 'ltr', title: 'No internet connection', text: 'The board will open by itself as soon as the connection is back.', button: 'Try again', waiting: 'Waiting for the connection…', checking: 'Checking the connection…', found: 'Back online. Opening the board…' }
+};
+if (site) {
+  const o = OFFLINE[cfg.lang] || OFFLINE.he, lang = OFFLINE[cfg.lang] ? cfg.lang : 'he';
+  const fill = { LANG: lang, DIR: o.dir, NAME: esc(name), TITLE: esc(o.title), TEXT: esc(o.text), BUTTON: esc(o.button),
+    SITE: JSON.stringify(site).replace(/</g, '\\u003c'), STRINGS: JSON.stringify({ waiting: o.waiting, checking: o.checking, found: o.found }).replace(/</g, '\\u003c') };
+  fs.writeFileSync(path.join(dist, 'offline.html'), fs.readFileSync(path.join(__dirname, 'src/offline.html'), 'utf8').replace(/\{\{(\w+)\}\}/g, (m, k) => fill[k]));
+}
 for (const f of ['style.css', 'cal.js', 'engine.js', 'template.js', 'app.js', 'manifest.webmanifest']) fs.copyFileSync(path.join(__dirname, 'src', f), path.join(dist, f));
 fs.writeFileSync(path.join(dist, 'config.json'), json);
 fs.writeFileSync(path.join(dist, '.nojekyll'), '');
@@ -72,7 +85,17 @@ const core = ['src/cal.js', 'src/engine.js', 'src/sms.js', 'src/notify.js'].map(
 fs.mkdirSync(path.join(__dirname, 'sms/dist'), { recursive: true });
 fs.writeFileSync(path.join(__dirname, 'sms/dist/twilio-function.js'), core + '\n' + fs.readFileSync(path.join(__dirname, 'sms/twilio.js'), 'utf8'));
 fs.writeFileSync(path.join(__dirname, 'sms/dist/worker.js'), core + '\n' + strip(fs.readFileSync(path.join(__dirname, 'sms/webpush.js'), 'utf8')) + '\n' + fs.readFileSync(path.join(__dirname, 'sms/worker.js'), 'utf8'));
-// Capacitor app: copy the site into app/www when the app project exists
+// Capacitor app: copy the site into app/www when the app project exists, and point the app at the website itself.
+// The app then shows whatever the website shows — a change published to the site needs no new build of the app — and falls back
+// to offline.html, which stands on its own, when the phone has no connection.
+const capFile = path.join(__dirname, 'app', 'capacitor.config.json');
+if (fs.existsSync(capFile) && /^https:\/\//.test(site)) {
+  const before = fs.readFileSync(capFile, 'utf8'), cap = JSON.parse(before);
+  cap.server = Object.assign({}, cap.server, { url: site.replace(/\/$/, ''), errorPath: 'offline.html' });
+  cap.appendUserAgent = ' MinyanBoardApp'; /* how the site knows it is inside the app, so it does not offer to "install the app" there */
+  const after = JSON.stringify(cap, null, 2) + '\n';
+  if (after !== before) fs.writeFileSync(capFile, after);
+}
 const www = path.join(__dirname, 'app', 'www');
 if (fs.existsSync(path.join(__dirname, 'app'))) {
   fs.rmSync(www, { recursive: true, force: true }); fs.mkdirSync(www, { recursive: true });

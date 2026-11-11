@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="{{LANG}}" dir="{{DIR}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#4a3a28">
+<title>{{NAME}}</title>
+<style>
+  /* The page the store app shows when the phone has no connection. It stands entirely on its own: no file beside it, nothing from
+     the network, because it is shown exactly when the network is not there. It waits, looks again by itself, and opens the board
+     the moment the connection is back. Colours: the hallway look. */
+  :root {
+    --bg: #cdc5b6; --panel: #ebe6db; --ink: #2e2923; --muted: #6d6456; --line: #b5a991;
+    --band: #4a3a28; --band-2: #5c4a33; --band-ink: #f4ece0; --brass: #b3904a; --accent: #87662e; --live: #2d6a42;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1b1814; --panel: #26221c; --ink: #f0e9dc; --muted: #b3a894; --line: #4a4237;
+      --band: #5a4430; --band-2: #6b5239; --band-ink: #f8f1e5; --brass: #c9a65e; --accent: #d6b878; --live: #5fb07c; color-scheme: dark; }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "Arial Hebrew", Arial, sans-serif;
+    display: flex; flex-direction: column; -webkit-text-size-adjust: 100%; }
+  header { background: linear-gradient(180deg, var(--band-2), var(--band)); color: var(--band-ink); text-align: center; font-weight: 600; letter-spacing: .02em;
+    padding: calc(14px + env(safe-area-inset-top, 0px)) 16px 14px; border-bottom: 2px solid var(--brass); }
+  main { flex: 1; display: grid; place-items: center; padding: 24px max(16px, env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+  .card { width: 100%; max-width: 420px; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 32px 24px 24px; text-align: center;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, .12); }
+  .mark { width: 72px; height: 72px; margin: 0 auto 16px; border-radius: 50%; display: grid; place-items: center; background: rgba(179, 144, 74, .16); color: var(--accent); }
+  .mark svg { width: 38px; height: 38px; }
+  h1 { font-size: 1.45rem; line-height: 1.25; margin: 0 0 8px; }
+  p { margin: 0; color: var(--muted); }
+  button { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; min-width: 180px; margin-top: 24px; padding: 12px 24px;
+    font: inherit; font-weight: 600; color: var(--band-ink); background: var(--band); border: 0; border-radius: 12px; cursor: pointer;
+    transition: background-color .16s ease, transform .16s ease, opacity .16s ease; -webkit-tap-highlight-color: transparent; }
+  button:hover { background: var(--band-2); }
+  button:active { transform: translateY(1px); }
+  button:focus-visible { outline: 3px solid var(--brass); outline-offset: 3px; }
+  button:disabled { opacity: .6; cursor: default; transform: none; }
+  .status { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 24px; margin-top: 16px; font-size: .95rem; color: var(--muted); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--brass); flex: none; animation: breathe 1.8s ease-in-out infinite; }
+  .status.checking .dot { width: 16px; height: 16px; background: none; border: 2px solid var(--line); border-top-color: var(--accent); animation: turn .8s linear infinite; }
+  .status.found { color: var(--live); font-weight: 600; }
+  .status.found .dot { background: var(--live); animation: none; }
+  @keyframes breathe { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+  @keyframes turn { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .dot { animation: none !important; } button { transition: none; } }
+</style>
+</head>
+<body>
+<header>{{NAME}}</header>
+<main>
+  <section class="card" aria-labelledby="t">
+    <div class="mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 8.8a15 15 0 0 1 4.2-2.7M10.7 5.1A15 15 0 0 1 22 8.8"/><path d="M5 12.6a10.6 10.6 0 0 1 4.2-2.4M14.3 10.1a10.6 10.6 0 0 1 4.7 2.5"/><path d="M8.5 16.1a6 6 0 0 1 7 0"/><path d="M12 20h.01"/><path d="M3 3l18 18"/>
+      </svg>
+    </div>
+    <h1 id="t">{{TITLE}}</h1>
+    <p>{{TEXT}}</p>
+    <button type="button" id="retry">{{BUTTON}}</button>
+    <div class="status waiting" id="status" role="status" aria-live="polite"><span class="dot" aria-hidden="true"></span><span id="status-text"></span></div>
+  </section>
+</main>
+<script>
+(function () {
+  var SITE = {{SITE}}, T = {{STRINGS}};
+  var btn = document.getElementById('retry'), box = document.getElementById('status'), text = document.getElementById('status-text');
+  var busy = false, going = false, timer = null, delay = 4000;
+  function show(state) { box.className = 'status ' + state; text.textContent = T[state]; btn.disabled = state !== 'waiting'; }
+  /* When the connection only looks as if it is back, the board fails to open and the app returns here. Hold off for a while then,
+     so the screen does not flicker between the two. */
+  function justCameBack() { try { return Date.now() - (+sessionStorage.getItem('minyan-offline-left') || 0) < 12000; } catch (e) { return false; } }
+  function openBoard() {
+    if (going) return; going = true;
+    try { sessionStorage.setItem('minyan-offline-left', String(Date.now())); } catch (e) {}
+    show('found');
+    setTimeout(function () { location.replace(SITE); }, 600);
+  }
+  function look(byHand) {
+    if (busy || going) return;
+    busy = true; clearTimeout(timer); show('checking');
+    var began = Date.now(), settled = false;
+    function settle(reached) {
+      if (settled) return; settled = true; clearTimeout(giveUp);
+      /* a press of the button is answered visibly, even when the answer comes at once */
+      setTimeout(function () {
+        busy = false;
+        if (reached) return openBoard();
+        show('waiting');
+        delay = Math.min(Math.round(delay * 1.5), 30000);
+        timer = setTimeout(look, delay);
+      }, Math.max(0, (byHand ? 700 : 0) - (Date.now() - began)));
+    }
+    var giveUp = setTimeout(function () { settle(false); }, 8000);
+    try {
+      /* any answer at all from the website means the connection is there; nothing is read from it */
+      fetch(SITE + 'favicon.png?t=' + Date.now(), { mode: 'no-cors', cache: 'no-store' }).then(function () { settle(true); }, function () { settle(false); });
+    } catch (e) { settle(false); }
+  }
+  btn.addEventListener('click', function () { delay = 4000; look(true); });
+  window.addEventListener('online', function () { look(false); });
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') look(false); });
+  show('waiting');
+  timer = setTimeout(look, justCameBack() ? 15000 : 1500);
+})();
+</script>
+</body>
+</html>

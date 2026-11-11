@@ -3,7 +3,9 @@
   "appName": "Cascade Zmanim",
   "webDir": "www",
   "server": {
-    "androidScheme": "https"
+    "androidScheme": "https",
+    "url": "https://minyan.cascadeshul.org",
+    "errorPath": "offline.html"
   },
   "android": {
     "backgroundColor": "#4a3a28"
@@ -11,5 +13,6 @@
   "ios": {
     "contentInset": "automatic",
     "backgroundColor": "#4a3a28"
-  }
+  },
+  "appendUserAgent": " MinyanBoardApp"
 }
