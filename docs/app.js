@@ -634,9 +634,17 @@
     if (!main) return;
     var want = ui.lobbyScale || 1, pass, lo = 0.5, hi = want, best = 0, over;
     function set(v) { html.style.setProperty('--lobby-scale', String(v)); }
+    /* how far the last frame of a column (and what it holds, where the frame itself gives way) reaches past the column's edge, to
+       the fraction of a pixel */
+    function reach(c) {
+      var last = c.lastElementChild, inner = last && last.lastElementChild;
+      return last ? Math.max(last.getBoundingClientRect().bottom, inner ? inner.getBoundingClientRect().bottom : -Infinity) - c.getBoundingClientRect().bottom : 0;
+    }
     function overflow() {
       var worst = Math.max(0, html.scrollHeight - window.innerHeight);
-      Array.prototype.forEach.call(main.children, function (c) { worst = Math.max(worst, c.scrollHeight - c.clientHeight); });
+      /* scrollHeight counts in whole pixels, and a pixel over is let through. That pixel is the bottom line of the column's last
+         frame, which the column then cuts off: so the last frame is measured exactly as well, and may not reach past the edge at all. */
+      Array.prototype.forEach.call(main.children, function (c) { worst = Math.max(worst, c.scrollHeight - c.clientHeight, reach(c) > 0.05 ? 2 : 0); });
       return worst;
     }
     set(want); over = overflow();
@@ -656,21 +664,37 @@
         if (!cards.length) break;
         var card = cards.sort(function (a, b) { return b.offsetHeight - a.offsetHeight; })[0], grid = card.querySelector('.grid'), tiles = grid.children;
         if (!tiles.length) { card.dataset.paged = '1'; continue; }
-        var cs = getComputedStyle(grid), gap = parseFloat(cs.rowGap) || 0, rowH = tiles[0].offsetHeight + gap;
-        var rows = Math.max(1, Math.floor((grid.clientHeight + spare + gap) / rowH)), hgt = rows * rowH - gap;
-        if (hgt >= grid.scrollHeight - 1) { card.dataset.paged = '1'; break; }
-        grid.style.height = hgt + 'px'; grid.style.overflow = 'hidden'; card.dataset.paged = '1';
-        var pages = Math.ceil(grid.scrollHeight / hgt), dots = el('span', { class: 'pg', 'aria-hidden': 'true' });
+        /* the rows as they stand: which row each tile is in, and the tallest tile, which every row of a paged frame is made as tall as,
+           so a page is a whole number of rows wherever it starts */
+        var cs = getComputedStyle(grid), gap = parseFloat(cs.rowGap) || 0, tileH = 0, tops = [], rowOf = [];
+        Array.prototype.forEach.call(tiles, function (t) { tileH = Math.max(tileH, Math.ceil(t.getBoundingClientRect().height)); if (tops.indexOf(t.offsetTop) < 0) tops.push(t.offsetTop); rowOf.push(tops.indexOf(t.offsetTop)); });
+        var rowH = tileH + gap, rows = Math.max(1, Math.floor((grid.clientHeight + spare + gap - 1) / rowH)); /* less a pixel: the heights it is worked out from are rounded */
+        if (rows >= tops.length) { card.dataset.paged = '1'; break; }
+        /* The window is exactly so many rows high and keeps that height (it once grew with its frame, and showed the top of a row it
+           had no room for). The stylesheet draws it a little larger all round and pulls it back by as much, so that what reaches
+           outside a tile shows whole: the הבא badge above it, the ring around the next minyan, the tab that hangs below. */
+        grid.classList.add('paged'); grid.style.setProperty('--row-h', tileH + 'px'); card.dataset.paged = '1';
+        cs = getComputedStyle(grid);
+        grid.style.height = (rows * rowH - gap + (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0)) + 'px';
+        var dots = el('span', { class: 'pg', 'aria-hidden': 'true' });
         card.querySelector('h3').appendChild(dots);
-        var p = { grid: grid, step: hgt + gap, pages: pages, idx: 0, dots: dots };
-        paintDots(p); ui.pages.push(p);
+        var p = { grid: grid, rowH: rowH, rows: rows, count: tops.length, rowOf: rowOf, pages: Math.ceil(tops.length / rows), idx: 0, dots: dots };
+        showPage(p); ui.pages.push(p);
         spare = col.clientHeight - col.scrollHeight;
       }
     });
     if (!ui.pageAt) ui.pageAt = Date.now();
   }
   function paintDots(p) { var t = '', i; for (i = 0; i < p.pages; i++) t += (i ? ' ' : '') + (i === p.idx ? '●' : '○'); p.dots.textContent = t; }
-  function turnPage(p) { p.idx = (p.idx + 1) % p.pages; p.grid.scrollTo({ top: p.idx * p.step, behavior: 'smooth' }); paintDots(p); }
+  /* A page is the rows that fit, whole; the last page is the last rows that fit, so it ends on the last minyan instead of standing
+     half empty. The rows of the other pages are put out of sight, so nothing of theirs shows at the window's edge. */
+  function showPage(p) {
+    var first = Math.min(p.idx * p.rows, p.count - p.rows), i;
+    for (i = 0; i < p.rowOf.length; i++) p.grid.children[i].classList.toggle('off-page', p.rowOf[i] < first || p.rowOf[i] >= first + p.rows);
+    p.grid.scrollTo({ top: first * p.rowH, behavior: 'smooth' });
+    paintDots(p);
+  }
+  function turnPage(p) { p.idx = (p.idx + 1) % p.pages; showPage(p); }
   /* phones: one tefilla at a time behind tabs, each minyan a row, the past ones folded away */
   function isPhone() { return !!(window.matchMedia && window.matchMedia('(max-width: 640px)').matches); }
   function phoneSections(s, now, up, isToday) {
