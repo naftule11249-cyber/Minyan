@@ -134,7 +134,7 @@
  "overrides": [],
  "smsNumber": "+1 929 828 7677",
  "remoteConfigUrl": "",
- "savedAt": 1794427690719,
+ "savedAt": 1794429078116,
  "siteUrl": "https://minyan.cascadeshul.org/",
  "logo": "",
  "wallLogo": "logo-name.png",
@@ -156,6 +156,7 @@
   "tefilla",
   "chatzos",
   "candles",
+  "tzeis60",
   "tzeis72"
  ],
  "showTzeis": false,
