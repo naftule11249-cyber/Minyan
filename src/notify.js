@@ -147,7 +147,7 @@ var MinyanNotify = (function () {
       if (r.once && r.once !== iso) return;
       if (r.zman) {
         /* a zman of the day; candle lighting only on a day that has it */
-        if (r.zman === 'candles' && !(sched.info.dow === 5 || sched.info.erevYT)) return;
+        if (r.zman === 'candles' && sched.info.candles !== 'day') return;
         var zm = zmanim[r.zman];
         if (zm == null || isNaN(zm)) return;
         var zMs = Cal.epochFromWall(rd, Math.round(zm), tz), zFire = zMs - r.lead * 60000;

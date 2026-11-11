@@ -156,7 +156,19 @@ var Cal = (function () {
   }
 
   /* ---------- Holidays / day info ---------- */
+  /* A day, and what its evening is. Candle lighting and the end of Shabbos or Yom Tov depend on the day after:
+       candles: 'day'   lit before sunset — an ordinary day, or a Yom Tov, whose night brings Shabbos or Yom Tov in (Friday, Erev
+                        Yom Tov, a Yom Tov that falls on Friday)
+                'night' lit after nightfall — Shabbos going into Yom Tov, or the first day of Yom Tov going into the second
+                ''      no candles that evening
+       motzaei: 'shabbos' | 'yomtov' when this day's nightfall ends it, '' when it runs on into another holy day or is an ordinary day */
   function dayInfo(rd, israel) {
+    var o = baseInfo(rd, israel), t = baseInfo(rd + 1, israel), holy = o.shabbos || o.yomtov, holyNext = t.shabbos || t.yomtov;
+    o.candles = !holyNext ? '' : (o.shabbos || (o.yomtov && !t.shabbos)) ? 'night' : 'day';
+    o.motzaei = holy && !holyNext ? (o.shabbos ? 'shabbos' : 'yomtov') : '';
+    return o;
+  }
+  function baseInfo(rd, israel) {
     var h = hebFromRD(rd), y = h.y, m = h.m, d = h.d, dow = mod(rd, 7);
     var o = { rd: rd, heb: h, dow: dow, shabbos: dow === 6, yomtov: false, yomKippur: false, cholHamoed: false,
       erevYT: false, fast: false, roshChodesh: false, chanukah: false, purim: false, labels: [] };
@@ -524,12 +536,37 @@ var MinyanEngine = (function () {
       }
       return best;
     }
+    /* The kind of day one tefilla goes by. Yom Tov on a Friday: Shabbos comes in that evening, so its afternoon and evening
+       tefillos are Erev Shabbos's, not the Yom Tov's own (whose Maariv is a night-after-Yom-Tov Maariv, long after candle lighting). */
+    function kindFor(type, info, t) { return type === 'yomtov' && info.dow === 5 && t.period === 'pm' ? 'friday' : type; }
+    /* What a tefilla is called, and what its second time is, can differ by the kind of day (Schedule → a kind of day → a tefilla →
+       "On …"): on Shabbos שחרית may have another second time or none, Friday's מעריב may be called קבלת שבת.
+       The second time: a kind of day that sets nothing follows the one it follows for its lists (Yom Tov → Shabbos; Rosh Chodesh on a
+       Sunday → Sunday), and in the end the tefilla as it is every day. The name belongs to its own kind of day only: קבלת שבת is
+       Friday's, and must not turn up on Erev Yom Tov because that day borrows Friday's times. */
+    function tefillaOn(t, kind, info) {
+      var set = cfg.dayTefilla || {}, k = kind, name = null, second = null, o = set[kind] && set[kind][t.id], d = null;
+      if (o && o.name != null && String(o.name).trim()) name = String(o.name).trim();
+      while (k && second == null) {
+        o = set[k] && set[k][t.id];
+        if (o && (o.second === 'none' || o.second === 'own')) second = o;
+        k = fallbackFor(k, info);
+      }
+      if (name == null && second == null) return t;
+      d = {}; Object.keys(t).forEach(function (key) { d[key] = t[key]; });
+      if (name != null) d.name = name;
+      if (second) {
+        var label = second.second === 'own' ? String(second.milestone == null ? '' : second.milestone).trim() : '';
+        d.milestone = label; d.offset = label ? Math.max(0, +second.offset || 0) : 0; /* "its own" with no name given is no second time, not a nameless one */
+      }
+      return d;
+    }
     function dayTexts(rd, info) {
       var type = Cal.dayType(info), iso = isoDate(rd);
       var ovr = pickOverride(rd, info), roll = pickRoll(rd, info, type);
       var out = { type: type, override: ovr, roll: roll, texts: {} };
       tefillos().forEach(function (t) {
-        var text = null, src = null, k = type, s;
+        var text = null, src = null, k = kindFor(type, info, t), s;
         if (ovr && ovr.lines && ovr.lines[t.id] && ovr.lines[t.id].trim()) { text = ovr.lines[t.id]; src = 'override'; }
         if (text == null && roll && roll.lines && (roll.lines[t.id] || '').trim()) { text = roll.lines[t.id]; src = 'roll'; }
         while (text == null && k) {
@@ -545,9 +582,9 @@ var MinyanEngine = (function () {
       return function (room) { return m[room] == null ? 1e6 : m[room]; };
     }
     function scheduleFor(rd) {
-      var info = Cal.dayInfo(rd, !!cfg.israel), dt = dayTexts(rd, info), tz = loc().tz, byT = {}, all = [], rank = roomRank();
-      tefillos().forEach(function (t) {
-        var list = [];
+      var info = Cal.dayInfo(rd, !!cfg.israel), dt = dayTexts(rd, info), tz = loc().tz, byT = {}, tefOf = {}, all = [], rank = roomRank();
+      tefillos().forEach(function (t0) {
+        var list = [], t = tefillaOn(t0, kindFor(dt.type, info, t0), info); /* the tefilla as it is on this kind of day */
         var offset = (t.offset == null || t.offset === '') ? 0 : +t.offset;
         dt.texts[t.id].text.split('\n').forEach(function (line, li) {
           var p = parseLine(line, t), items = expand(p, rd, dt.type);
@@ -558,10 +595,10 @@ var MinyanEngine = (function () {
           });
         });
         list.sort(function (a, b) { return a.start - b.start || rank(a.room) - rank(b.room); });
-        byT[t.id] = list; all = all.concat(list);
+        byT[t.id] = list; tefOf[t.id] = t; all = all.concat(list);
       });
       all.sort(function (a, b) { return a.start - b.start || rank(a.room) - rank(b.room); });
-      return { rd: rd, info: info, type: dt.type, override: dt.override, roll: dt.roll, byTefilla: byT, all: all };
+      return { rd: rd, info: info, type: dt.type, override: dt.override, roll: dt.roll, byTefilla: byT, tefillos: tefOf, all: all }; /* tefillos: each tefilla as this day has it (name, second time) */
     }
     /* All minyanim after nowMs within the next `days` days, in order. */
     function after(nowMs, nowRd, days, tefillaId) {
@@ -688,8 +725,9 @@ var MinyanSms = (function () {
       [rd - 1, rd].forEach(function (d) {
         var s = engine.scheduleFor(d);
         engine.tefillos().forEach(function (t) {
-          if (!t.milestone || t.kind === 'event' || (tefillaId && t.id !== tefillaId)) return;
+          if (t.kind === 'event' || (tefillaId && t.id !== tefillaId)) return;
           (s.byTefilla[t.id] || []).forEach(function (e) {
+            if (!e.tefilla.milestone) return; /* the tefilla as that day has it: Shabbos may have another second time, or none */
             if (e.ms <= nowMs && Cal.epochFromWall(d, e.milestone, tz) - nowMs >= 3 * 60000 && (!best || e.ms > best.ms)) best = e;
           });
         });
@@ -702,7 +740,7 @@ var MinyanSms = (function () {
     else if (k === 'zmanim') {
       var z = engine.zmanimFor(rd), info = Cal.dayInfo(rd, !!cfg.israel), keys = ['sunrise', 'shema', 'chatzos', 'plag', 'candles', 'sunset', 'tzeis'], parts = [];
       keys.forEach(function (key) {
-        if (key === 'candles' && !(info.dow === 5 || info.erevYT)) return;
+        if (key === 'candles' && info.candles !== 'day') return;
         parts.push((lang === 'he' ? Cal.ZMAN_NAMES[key] : EN_ZMANIM[key]) + ' ' + engine.fmtTime(z[key]));
       });
       out = L.zmanim + ' (' + dayHeader(rd) + '): ' + parts.join(', ');
@@ -711,7 +749,7 @@ var MinyanSms = (function () {
       var d = k === 'today' ? rd : rd + 1, sched = engine.scheduleFor(d), lines = [];
       engine.tefillos().forEach(function (t) {
         var items = (sched.byTefilla[t.id] || []).filter(function (e) { return e.ms > nowMs; });
-        if (items.length) lines.push(tName(t) + ': ' + shortList(items));
+        if (items.length) lines.push(tName(items[0].tefilla) + ': ' + shortList(items)); /* by the name it has on that day (קבלת שבת on a Friday night, if the gabbai calls it so) */
       });
       if (lines.length) out = (k === 'today' ? L.today : L.tomorrow) + ' – ' + dayHeader(d) + '\n' + lines.join('\n');
       else if (k === 'today') { list = engine.after(nowMs, rd, 10); out = L.noneToday + '.' + (list.length ? ' ' + L.next + ': ' + dayPrefix(list[0]) + ', ' + entry(list[0].entry, true) + '.' : ''); }
@@ -896,7 +934,7 @@ var MinyanNotify = (function () {
       if (r.once && r.once !== iso) return;
       if (r.zman) {
         /* a zman of the day; candle lighting only on a day that has it */
-        if (r.zman === 'candles' && !(sched.info.dow === 5 || sched.info.erevYT)) return;
+        if (r.zman === 'candles' && sched.info.candles !== 'day') return;
         var zm = zmanim[r.zman];
         if (zm == null || isNaN(zm)) return;
         var zMs = Cal.epochFromWall(rd, Math.round(zm), tz), zFire = zMs - r.lead * 60000;

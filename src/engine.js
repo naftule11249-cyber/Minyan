@@ -166,12 +166,37 @@ var MinyanEngine = (function () {
       }
       return best;
     }
+    /* The kind of day one tefilla goes by. Yom Tov on a Friday: Shabbos comes in that evening, so its afternoon and evening
+       tefillos are Erev Shabbos's, not the Yom Tov's own (whose Maariv is a night-after-Yom-Tov Maariv, long after candle lighting). */
+    function kindFor(type, info, t) { return type === 'yomtov' && info.dow === 5 && t.period === 'pm' ? 'friday' : type; }
+    /* What a tefilla is called, and what its second time is, can differ by the kind of day (Schedule → a kind of day → a tefilla →
+       "On …"): on Shabbos שחרית may have another second time or none, Friday's מעריב may be called קבלת שבת.
+       The second time: a kind of day that sets nothing follows the one it follows for its lists (Yom Tov → Shabbos; Rosh Chodesh on a
+       Sunday → Sunday), and in the end the tefilla as it is every day. The name belongs to its own kind of day only: קבלת שבת is
+       Friday's, and must not turn up on Erev Yom Tov because that day borrows Friday's times. */
+    function tefillaOn(t, kind, info) {
+      var set = cfg.dayTefilla || {}, k = kind, name = null, second = null, o = set[kind] && set[kind][t.id], d = null;
+      if (o && o.name != null && String(o.name).trim()) name = String(o.name).trim();
+      while (k && second == null) {
+        o = set[k] && set[k][t.id];
+        if (o && (o.second === 'none' || o.second === 'own')) second = o;
+        k = fallbackFor(k, info);
+      }
+      if (name == null && second == null) return t;
+      d = {}; Object.keys(t).forEach(function (key) { d[key] = t[key]; });
+      if (name != null) d.name = name;
+      if (second) {
+        var label = second.second === 'own' ? String(second.milestone == null ? '' : second.milestone).trim() : '';
+        d.milestone = label; d.offset = label ? Math.max(0, +second.offset || 0) : 0; /* "its own" with no name given is no second time, not a nameless one */
+      }
+      return d;
+    }
     function dayTexts(rd, info) {
       var type = Cal.dayType(info), iso = isoDate(rd);
       var ovr = pickOverride(rd, info), roll = pickRoll(rd, info, type);
       var out = { type: type, override: ovr, roll: roll, texts: {} };
       tefillos().forEach(function (t) {
-        var text = null, src = null, k = type, s;
+        var text = null, src = null, k = kindFor(type, info, t), s;
         if (ovr && ovr.lines && ovr.lines[t.id] && ovr.lines[t.id].trim()) { text = ovr.lines[t.id]; src = 'override'; }
         if (text == null && roll && roll.lines && (roll.lines[t.id] || '').trim()) { text = roll.lines[t.id]; src = 'roll'; }
         while (text == null && k) {
@@ -187,9 +212,9 @@ var MinyanEngine = (function () {
       return function (room) { return m[room] == null ? 1e6 : m[room]; };
     }
     function scheduleFor(rd) {
-      var info = Cal.dayInfo(rd, !!cfg.israel), dt = dayTexts(rd, info), tz = loc().tz, byT = {}, all = [], rank = roomRank();
-      tefillos().forEach(function (t) {
-        var list = [];
+      var info = Cal.dayInfo(rd, !!cfg.israel), dt = dayTexts(rd, info), tz = loc().tz, byT = {}, tefOf = {}, all = [], rank = roomRank();
+      tefillos().forEach(function (t0) {
+        var list = [], t = tefillaOn(t0, kindFor(dt.type, info, t0), info); /* the tefilla as it is on this kind of day */
         var offset = (t.offset == null || t.offset === '') ? 0 : +t.offset;
         dt.texts[t.id].text.split('\n').forEach(function (line, li) {
           var p = parseLine(line, t), items = expand(p, rd, dt.type);
@@ -200,10 +225,10 @@ var MinyanEngine = (function () {
           });
         });
         list.sort(function (a, b) { return a.start - b.start || rank(a.room) - rank(b.room); });
-        byT[t.id] = list; all = all.concat(list);
+        byT[t.id] = list; tefOf[t.id] = t; all = all.concat(list);
       });
       all.sort(function (a, b) { return a.start - b.start || rank(a.room) - rank(b.room); });
-      return { rd: rd, info: info, type: dt.type, override: dt.override, roll: dt.roll, byTefilla: byT, all: all };
+      return { rd: rd, info: info, type: dt.type, override: dt.override, roll: dt.roll, byTefilla: byT, tefillos: tefOf, all: all }; /* tefillos: each tefilla as this day has it (name, second time) */
     }
     /* All minyanim after nowMs within the next `days` days, in order. */
     function after(nowMs, nowRd, days, tefillaId) {

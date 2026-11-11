@@ -54,6 +54,21 @@ empty (Sunday → weekday for the tefillos it has no list for, Rosh Chodesh → 
 Maariv a time like `6:45` means 6:45 PM (set per tefilla under General → Tefillos); `00:30` or `01:15` (as the time picker writes them) is a Maariv after midnight,
 which still belongs to that night: it sorts at the end of the list and the board counts down to it past midnight. The cut-off is 4:00 AM ("Night cut-off" per tefilla).
 
+## Shabbos and Yom Tov
+
+The Schedule tab has a page for every kind of day. **Erev Shabbos (Friday)**, **Shabbos**, **Yom Tov**, **Erev Yom Tov** and **Yom Kippur** are the ones that matter here.
+
+- **Shabbos** has lists of its own and follows no other day. **Yom Tov** uses Shabbos's lists for any tefilla it has no list of its own for, **Erev Yom Tov** uses Friday's, **Yom Kippur** uses Yom Tov's.
+- Friday's Mincha is usually written from candle lighting (`candles+10 ברך משה`), Shabbos's Mincha and Maariv from sunset or nightfall (`sunset-25~5 …`, `sunset+50~5 …`, `rt …`), so they move by themselves through the year. For a winter and a summer that differ by more than that, use Extra schedules; for one particular Shabbos or Yom Tov, Special dates (one civil date, or "A calendar day, every year" for a Yom Tov by name: סוכות, שמחת תורה, שבועות …).
+- **A Yom Tov on a Friday** keeps Yom Tov's Shacharis, and takes Erev Shabbos's Mincha and Maariv: Shabbos is coming in.
+- Each tefilla on each of these pages has a small box, **"On Shabbos: …"** (or "On Yom Tov: …", and so on). In it:
+  - **Its name on that day**: Friday's Maariv can be called קבלת שבת. A name belongs to its own kind of day only; Erev Yom Tov borrows Friday's times but not that name.
+  - **The second time under each minyan** (the small הודו time of a weekday morning): as usual, none on that day, or one of its own with its name and how many minutes after the start (נשמת, 30). Yom Tov follows Shabbos here unless it is given its own.
+- The little preview on every row is worked out for **the coming day of that kind** ("Sat Nov 14 4:10"), not for today, so a time that goes by the sun shows what it will really be. A special date with a civil date previews that date.
+- **See the screen on …** at the top of each page opens Home on that day, so the screen can be looked at as it will be on the coming Shabbos or Yom Tov (Save first). Home's "Another day" also has a Yom Tov button, and under the picture Home says in words what that day's evening is (candle lighting and when, or when Shabbos or Yom Tov ends).
+- The evening is told by what the next day is: candle lighting before sunset on Erev Shabbos and Erev Yom Tov, and on a Yom Tov that runs into Shabbos; candle lighting **after nightfall** on a Shabbos or Yom Tov that runs into Yom Tov (the second night, Motzaei Shabbos that is Yom Tov); and מוצאי שבת or מוצאי יום טוב only on the day whose nightfall really ends it. On the hallway screen that line stands in a band of its own above the three zmanim.
+- The marks "last minyan for סוף זמן תפילה" and "last before חצות" are a weekday matter (they are reckoned at the weekday pace of davening) and are not shown on Shabbos or Yom Tov.
+
 ## Quick changes for today
 
 The admin page is a full page of its own, styled like a phone app (navy header, gold for the one action that matters, big white cards and large controls; on a phone the sections are a bottom tab bar, the Schedule tab shows one tefilla at a time behind a switch, and minute boxes have − and + steppers). A sidebar lists its sections (Today, General, Schedule, Notices, Special dates, Publish, Backup), the header holds Save, Close and a "Saved …" / "Unsaved changes" marker, Ctrl+S (Cmd+S) saves, and the sidebar also offers "View the board" and "Lock". On a phone the sections become a scrolling strip under the header. Settings are grouped into cards (The board, Look and labels, Location and zmanim, Tefillos, Website and services, Security).
@@ -245,7 +260,7 @@ Four palettes: **Hallway** (the lobby itself: limestone walls, polished brass, a
 - Once all of today's minyanim of a tefilla are over (for Shacharis, around chatzos), that section shows tomorrow's list, headed מחר with the day's name; the lobby screen does the same.
 - The civil date next to the Hebrew date is written Month/Day/Year in US time zones (General → "Civil date" switches to Day.Month.Year or Year-Month-Day).
 
-- Fast days show when the fast begins and ends; Shabbos and Yom Tov show when they end; during Sefirah the board shows the count (tonight's after sunset).
+- Fast days show when the fast begins and ends; Shabbos and Yom Tov show when they end, on the day they really end (see "Shabbos and Yom Tov" above); during Sefirah the board shows the count (tonight's after sunset).
 - Special dates (Edit → Special dates) can be one civil date, a Hebrew date every year, or a calendar day every year (Chol Hamoed Sukkos, Purim, Tisha B'Av, Rosh Chodesh…).
 - Categories (Edit → General → "+ Add category"): a shiur or event list such as Daf Yomi appears on the board and in text replies ("today", or the category's name) but is never the "next minyan".
 

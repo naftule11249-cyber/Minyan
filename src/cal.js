@@ -156,7 +156,19 @@ var Cal = (function () {
   }
 
   /* ---------- Holidays / day info ---------- */
+  /* A day, and what its evening is. Candle lighting and the end of Shabbos or Yom Tov depend on the day after:
+       candles: 'day'   lit before sunset — an ordinary day, or a Yom Tov, whose night brings Shabbos or Yom Tov in (Friday, Erev
+                        Yom Tov, a Yom Tov that falls on Friday)
+                'night' lit after nightfall — Shabbos going into Yom Tov, or the first day of Yom Tov going into the second
+                ''      no candles that evening
+       motzaei: 'shabbos' | 'yomtov' when this day's nightfall ends it, '' when it runs on into another holy day or is an ordinary day */
   function dayInfo(rd, israel) {
+    var o = baseInfo(rd, israel), t = baseInfo(rd + 1, israel), holy = o.shabbos || o.yomtov, holyNext = t.shabbos || t.yomtov;
+    o.candles = !holyNext ? '' : (o.shabbos || (o.yomtov && !t.shabbos)) ? 'night' : 'day';
+    o.motzaei = holy && !holyNext ? (o.shabbos ? 'shabbos' : 'yomtov') : '';
+    return o;
+  }
+  function baseInfo(rd, israel) {
     var h = hebFromRD(rd), y = h.y, m = h.m, d = h.d, dow = mod(rd, 7);
     var o = { rd: rd, heb: h, dow: dow, shabbos: dow === 6, yomtov: false, yomKippur: false, cholHamoed: false,
       erevYT: false, fast: false, roshChodesh: false, chanukah: false, purim: false, labels: [] };

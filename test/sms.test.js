@@ -43,4 +43,16 @@ check('keyword punctuation', MinyanSms.keyword('Mincha?'), /^mincha$/);
   const en = JSON.parse(JSON.stringify(cfg)); en.smsLang = 'en';
   check('English always: a Hebrew מנחה is answered in English', MinyanSms.buildReply(en, 'מנחה', at(10, 0)).text, /^Mincha Today \(3 left\)/);
 }
+/* Shabbos and Yom Tov: the name and the second time a tefilla has on that kind of day reach the texts too */
+{
+  const c = JSON.parse(JSON.stringify(cfg)); c.smsLang = 'he';
+  c.dayTefilla = { friday: { maariv: { name: 'קבלת שבת' } }, shabbos: { shacharis: { second: 'own', milestone: 'נשמת', offset: 30 } } };
+  const on = (y, m, d, h, min) => Cal.epochFromWall(Cal.rdFromGreg(y, m, d), h * 60 + min, 'America/New_York'), A = (t, now) => MinyanSms.buildReply(c, t, now).text;
+  check('Friday\'s list names מעריב as the gabbai does on a Friday', A('היום', on(2026, 11, 13, 12, 0)), /\nקבלת שבת: /);
+  check('a weekday\'s list keeps the everyday name', A('היום', on(2026, 11, 16, 12, 0)), /\nמעריב: /);
+  check('Shabbos morning: the next minyan with Shabbos\'s own second time', A('מנין', on(2026, 11, 14, 8, 40)), /^מנין הבא: שחרית – דברי יואל 9:00 \(נשמת 9:30\)/);
+  check('and the one that has begun still leads, because נשמת is half an hour on', A('מנין', on(2026, 11, 14, 8, 10)), /^מנין העבר: שחרית – ברך משה 8:00 \(נשמת 8:30\)/);
+  check('zmanim on the first day of Pesach: no "candle lighting before sunset" line, since tonight\'s is after nightfall', A('זמנים', on(2027, 4, 22, 10, 0)), /^(?!.*הדלקת נרות)/s);
+  check('zmanim on the second day, a Friday: candle lighting is there', A('זמנים', on(2027, 4, 23, 10, 0)), /הדלקת נרות/);
+}
 console.log(fails ? fails + ' FAILURES' : 'ALL PASS');

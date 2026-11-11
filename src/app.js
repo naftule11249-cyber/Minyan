@@ -89,7 +89,7 @@
   function nextZman(info, z, rd, now) {
     var tz = loc().tz, best = null;
     countdownKeys().forEach(function (k) {
-      if (k === 'candles' && !(info.dow === 5 || info.erevYT)) return;
+      if (k === 'candles' && info.candles !== 'day') return;
       if (zmanHidden(k)) return;
       var v = z[k]; if (v == null || isNaN(v)) return;
       var ms = Cal.epochFromWall(rd, Math.round(v), tz);
@@ -101,7 +101,7 @@
   function laterZmanim(info, z, rd, afterMs, n) {
     var tz = loc().tz, out = [];
     ['alos', 'sunrise', 'shema', 'tefilla', 'chatzos', 'minchag', 'plag', 'candles', 'sunset', 'tzeis', 'tzeis60', 'tzeis72'].forEach(function (k) {
-      if (k === 'candles' && !(info.dow === 5 || info.erevYT)) return;
+      if (k === 'candles' && info.candles !== 'day') return;
       if (zmanHidden(k)) return;
       var v = z[k]; if (v == null || isNaN(v)) return;
       var ms = Cal.epochFromWall(rd, Math.round(v), tz);
@@ -336,15 +336,16 @@
       for (var d = 0; d < 7; d++) {
         var rd = first + d, info = Cal.dayInfo(rd, !!cfg.israel), sched = scheduleFor(rd), z = zmanimFor(rd), day = el('div', { class: 'wday' + (rd === rd0 ? ' today' : '') });
         var zs = [];
-        if (info.dow === 5 || info.erevYT) zs.push('הדלקת נרות ' + fmtTime(z.candles));
+        if (info.candles) zs.push('הדלקת נרות ' + fmtTime(info.candles === 'night' ? z.tzeis : z.candles)); /* before sunset, or after nightfall when Shabbos or Yom Tov is already in */
         if (info.fast && !((info.heb.m === 7 && info.heb.d === 10) || info.heb.m === 5)) zs.push('תחילת הצום ' + fmtTime(z.alos));
         zs.push('שקיעה ' + fmtTime(z.sunset));
-        if (info.shabbos || info.yomtov || info.fast) zs.push((info.fast && !info.yomKippur ? 'צאת הצום ' : info.shabbos ? 'מוצאי שבת ' : 'מוצאי יום טוב ') + fmtTime(z.tzeis));
+        if (info.fast || info.yomKippur) zs.push('צאת הצום ' + fmtTime(z.tzeis)); /* Yom Kippur too: the screen says the same */
+        else if (info.motzaei) zs.push((info.motzaei === 'shabbos' ? 'מוצאי שבת ' : 'מוצאי יום טוב ') + fmtTime(z.tzeis)); /* only on the day whose nightfall really ends it */
         day.appendChild(el('div', { class: 'whead' }, [el('strong', { text: Cal.DAY_NAMES[info.dow] }), el('span', { text: Cal.formatHeb(info.heb) + ' · ' + engine.fmtDate(rd) }), info.labels.length ? el('span', { class: 'wlabels', text: info.labels.join(', ') }) : null, el('span', { class: 'wz num', text: zs.join(' · ') })]));
         tefillos().forEach(function (t) {
           var list = sched.byTefilla[t.id] || [];
           if (!list.length) return;
-          day.appendChild(el('div', { class: 'wline' }, [el('b', { text: t.name + ': ' }), el('span', { class: 'num', text: list.map(function (e) { return fmtTime(e.start) + (e.room ? ' ' + e.room : ''); }).join(' · ') })]));
+          day.appendChild(el('div', { class: 'wline' }, [el('b', { text: list[0].tefilla.name + ': ' }), el('span', { class: 'num', text: list.map(function (e) { return fmtTime(e.start) + (e.room ? ' ' + e.room : ''); }).join(' · ') })]));
         });
         sec.appendChild(day);
       }
@@ -368,12 +369,15 @@
       var list = s.byTefilla[t.id] || [], fromTomorrow = false;
       if (tomorrow && t.kind !== 'event' && list.every(function (e) { return now - e.ms >= nowWindowMs(); }) && (tomorrow.byTefilla[t.id] || []).length) { list = tomorrow.byTefilla[t.id]; fromTomorrow = true; }
       if (!fromTomorrow && t.kind !== 'event') allSwitched = false;
-      out.push({ t: t, list: list, fromTomorrow: fromTomorrow, tomorrow: tomorrow });
+      var day = fromTomorrow ? tomorrow : s;
+      out.push({ t: (day.tefillos && day.tefillos[t.id]) || t, list: list, fromTomorrow: fromTomorrow, tomorrow: tomorrow }); /* the tefilla as that day has it: its name and second time can differ by the kind of day */
     });
     if (isToday) ui.todayAllSwitched = allSwitched;
     return out;
   }
-  function sectionTitle(x) { return x.t.kind === 'event' ? x.t.name : S().minyanim(x.t.name) + (x.fromTomorrow ? ' – ' + S().tomorrow + ', ' + S().days[x.tomorrow.info.dow] : ''); }
+  /* a day by the name people call it: Shabbos, a Yom Tov by its own name (פסח, שבועות …), otherwise the day of the week */
+  function dayName(info) { return info.shabbos ? S().days[6] : info.yomtov && info.labels && info.labels.length ? info.labels[0] : S().days[info.dow]; }
+  function sectionTitle(x) { return x.t.kind === 'event' ? x.t.name : S().minyanim(x.t.name) + (x.fromTomorrow ? ' – ' + S().tomorrow + ', ' + dayName(x.tomorrow.info) : ''); }
   function entryState(e, now, up) { if (up && sameEntry(e, up.entry)) return 'next'; if (e.ms <= now) return now - e.ms < nowWindowMs() ? 'now' : 'past'; return ''; }
   function dayHead(s, isToday) { return el('div', { class: 'day-head' }, [el('h2', { text: isToday ? S().today : S().days[s.info.dow] + ' – ' + Cal.formatHeb(s.info.heb) }), el('span', { class: 'sub', text: typeLabel(s) })]); }
   /* the board's day chips: today, tomorrow and the five days after, each with its Hebrew date; a tap shows that day's minyanim and zmanim */
@@ -485,8 +489,8 @@
         if (!feature[e.series.id] || (feature[e.series.id].ms <= now && e.ms > now)) feature[e.series.id] = e;
       });
       /* the last minyan that still says שמונה עשרה before סוף זמן תפילה, and the last before חצות */
-      var marks = {}, zz = zmanimFor(list[0].rd), am = amidahMinutes();
-      if (t.milestone) {
+      var marks = {}, zz = zmanimFor(list[0].rd), am = amidahMinutes(), dayOf = Cal.dayInfo(list[0].rd, !!cfg.israel);
+      if (t.milestone && !dayOf.shabbos && !dayOf.yomtov) { /* "the last minyan to reach שמונה עשרה in time" is reckoned at the weekday pace: on Shabbos and Yom Tov davening runs longer, and the mark would mislead */
         [['tefilla', S().lastTefilla], ['chatzos', S().lastChatzos]].forEach(function (pair) {
           var lim = zz[pair[0]], best = null;
           if (lim == null || isNaN(lim)) return;
@@ -511,7 +515,7 @@
           el('span', { class: 'num' }, [el('span', { class: 'ev', text: S().runEvery(r.s.every) }), el('span', { class: 'dot', text: ' · ' }), el('span', { class: 'hrs', text: fmtTime(r.s.from) + '–' + fmtTime(r.s.to) })]),
           r.s.rooms && r.s.rooms.length ? el('span', { class: 'rooms', text: r.s.rooms.join(' · ') }) : null]));
       });
-      out.push({ t: t, title: sectionTitle(x), sub: t.name + (x.fromTomorrow ? ' – ' + S().tomorrow + ', ' + S().days[x.tomorrow.info.dow] : ''), nodes: nodes });
+      out.push({ t: t, title: sectionTitle(x), sub: t.name + (x.fromTomorrow ? ' – ' + S().tomorrow + ', ' + dayName(x.tomorrow.info) : ''), nodes: nodes });
     });
     return out;
   }
@@ -555,7 +559,7 @@
     var tz = loc().tz, best = null;
     function day(d, dInfo, dz) {
       ZMAN_ORDER.forEach(function (k) {
-        if (k === 'candles' && !(dInfo.dow === 5 || dInfo.erevYT)) return;
+        if (k === 'candles' && dInfo.candles !== 'day') return;
         if (zmanHidden(k)) return;
         var v = dz[k]; if (v == null || isNaN(v)) return;
         var ms = Cal.epochFromWall(d, Math.round(v), tz);
@@ -570,7 +574,7 @@
     var keys = ZMAN_ORDER, tz = loc().tz, out = [];
     function day(d, dInfo, dz, ahead) {
       keys.forEach(function (k) {
-        if (k === 'candles' && !(dInfo.dow === 5 || dInfo.erevYT)) return;
+        if (k === 'candles' && dInfo.candles !== 'day') return;
         if (zmanHidden(k)) return;
         var v = dz[k]; if (v == null || isNaN(v)) return;
         var ms = Cal.epochFromWall(d, Math.round(v), tz);
@@ -594,14 +598,21 @@
         el('div', { class: 'room', text: name }), tag ? el('div', { class: 'tag', text: tag }) : null, el('div', { class: 'time num', text: time })]);
     }
     var h = info.heb, nightFast = (h.m === 7 && h.d === 10) || (h.m === 5 && info.fast), nowMin = Cal.nowInTz(now, loc().tz).min;
-    if (info.fast && !nightFast) grid.appendChild(tile(L.fastStart, fmtTime(z.alos), 'hi'));
-    if (info.fast || info.yomKippur) grid.appendChild(tile(L.fastEnd, fmtTime(z.tzeis), 'hi'));
-    if (info.shabbos || info.yomtov) grid.appendChild(tile(info.shabbos ? L.motzaeiShabbos : L.motzaeiYT, fmtTime(z.tzeis), 'hi'));
+    /* What the day itself has to say stands in a row of its own above the three zmanim, so those keep their order: gone, now, next.
+       A line with a time leaves the card once that time is an hour gone and the three below are already tomorrow's: last night's
+       "מוצאי שבת" is not left standing under "זמני מחר". */
+    var dayRow = el('div', { class: 'zday' });
+    function dayTile(name, value, at) { if (at != null && !isNaN(at) && allTomorrow && nowMin > at + 60) return; dayRow.appendChild(tile(name, value, 'hi')); }
+    if (info.fast && !nightFast) dayTile(L.fastStart, fmtTime(z.alos), z.alos);
+    if (info.fast || info.yomKippur) dayTile(L.fastEnd, fmtTime(z.tzeis), z.tzeis);
+    if (info.motzaei && !info.yomKippur) dayTile(info.motzaei === 'shabbos' ? L.motzaeiShabbos : L.motzaeiYT, fmtTime(z.tzeis), z.tzeis); /* only on the day whose nightfall ends it */
+    else if (info.candles === 'night') dayTile(zmanName('candles'), fmtTime(z.tzeis), z.tzeis); /* Shabbos or Yom Tov running into Yom Tov: candles after nightfall */
     var omer = rd - Cal.rdFromHeb(h.m <= 6 ? h.y : h.y + 1, 1, 15);
     if (omer >= 0 && omer <= 49) {
-      if (!isNaN(z.sunset) && nowMin >= z.sunset && omer + 1 <= 49) grid.appendChild(tile(L.omerTonight, (omer + 1) + L.laomer, 'hi'));
-      else if (omer >= 1) grid.appendChild(tile(L.omer, omer + L.laomer, 'hi'));
+      if (!isNaN(z.sunset) && nowMin >= z.sunset && omer + 1 <= 49) dayTile(L.omerTonight, (omer + 1) + L.laomer);
+      else if (omer >= 1) dayTile(L.omer, omer + L.laomer);
     }
+    if (dayRow.children.length) sec.appendChild(dayRow);
     ui.zcount = null; ui.zcountMs = 0;
     list.forEach(function (x, i) {
       var here = i === hereIdx;
@@ -699,7 +710,8 @@
     var h = info.heb, nightFast = (h.m === 7 && h.d === 10) || (h.m === 5 && info.fast); /* Yom Kippur and Tisha B'Av begin the evening before */
     if (info.fast && !nightFast) ul.appendChild(el('li', { class: 'hi' }, [el('span', { text: L.fastStart }), el('span', { class: 'z num', text: fmtTime(z.alos) })]));
     if (info.fast || info.yomKippur) ul.appendChild(el('li', { class: 'hi' }, [el('span', { text: L.fastEnd }), el('span', { class: 'z num', text: fmtTime(z.tzeis) })]));
-    if (info.shabbos || info.yomtov) ul.appendChild(el('li', { class: 'hi' }, [el('span', { text: info.shabbos ? L.motzaeiShabbos : L.motzaeiYT }), el('span', { class: 'z num', text: fmtTime(z.tzeis) })]));
+    if (info.motzaei && !info.yomKippur) ul.appendChild(el('li', { class: 'hi' }, [el('span', { text: info.motzaei === 'shabbos' ? L.motzaeiShabbos : L.motzaeiYT }), el('span', { class: 'z num', text: fmtTime(z.tzeis) })]));
+    else if (info.candles === 'night') ul.appendChild(el('li', { class: 'hi' }, [el('span', { text: zmanName('candles') }), el('span', { class: 'z num', text: fmtTime(z.tzeis) })])); /* Shabbos or Yom Tov running into Yom Tov: candles after nightfall */
     var omer = rd - Cal.rdFromHeb(h.m <= 6 ? h.y : h.y + 1, 1, 15); /* days since 15 Nisan of this spring */
     if (omer >= 0 && omer <= 49) {
       var tonight = omer + 1, today = omer;
@@ -707,10 +719,10 @@
       else if (today >= 1) ul.appendChild(el('li', { class: 'hi' }, [el('span', { text: L.omer }), el('span', { class: 'z num', text: today + L.laomer })]));
     }
     keys.forEach(function (k) {
-      if (k === 'candles' && !(info.dow === 5 || info.erevYT)) return;
+      if (k === 'candles' && info.candles !== 'day') return;
       if (zmanHidden(k)) return;
-      if (k === 'tzeis' && (info.shabbos || info.yomtov || info.fast)) return;
-      var hi = k === 'candles' || (k === 'tzeis' && (info.shabbos || info.yomtov)), v = z[k];
+      if (k === 'tzeis' && (info.motzaei || info.candles === 'night' || info.fast)) return; /* it already stands at the head of the list under its own name */
+      var hi = k === 'candles', v = z[k];
       /* a zman that has passed keeps today's time, dimmed; tapping it then sets a reminder for tomorrow's */
       var passed = !isNaN(v) && nowMs >= Cal.epochFromWall(rd, Math.round(v), tz) + 60000, nextDay = passed && !isNaN(zt[k]);
       var li = el('li', { class: (hi ? 'hi' : '') + (passed ? ' past' : '') }, [el('span', { text: zmanName(k) }), el('span', { class: 'z num', text: fmtTime(v) })]);
@@ -1438,27 +1450,37 @@
       return out.length ? out : [str];
     }
     /* store = {value: lines text}; tfIndex = index into d.tefillos; typeKeyFn() = day type used for the "today" preview */
-    function minyanEditor(store, tfIndex, typeKeyFn, copyFrom) {
+    /* The day a row's little preview is worked out for. The Shabbos page shows the coming Shabbos, the Yom Tov page the coming Yom Tov,
+       a special date its own date: "today 4:12" on the Shabbos page would be Wednesday's sunset, which is nobody's question. */
+    var MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], DAYS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    function previewDay(rd) { if (rd === todayRd) return 'today'; var g = Cal.gregFromRD(rd); return DAYS_EN[Cal.dayInfo(rd, !!d.israel).dow] + ' ' + MONTHS_EN[g.m - 1] + ' ' + g.d; }
+    var nextOfType = null;
+    function nextDayOfType(key) { /* the first day from today on that is this kind of day; every kind comes round within a year */
+      if (!nextOfType) { nextOfType = {}; for (var i = 0; i < 400; i++) { var k = Cal.dayType(Cal.dayInfo(todayRd + i, !!d.israel)); if (nextOfType[k] == null) nextOfType[k] = todayRd + i; } }
+      return nextOfType[key] == null ? todayRd : nextOfType[key];
+    }
+    function minyanEditor(store, tfIndex, typeKeyFn, copyFrom, dayFn) {
       var wrap = el('div', { class: 'editor' }), list = el('div', { class: 'rows' }), rows = [], ta = null;
+      function pday() { var rd = dayFn ? dayFn() : null; return rd == null || isNaN(rd) ? todayRd : rd; }
       function tf() { return liveTefilla(tfIndex); }
       function sync() { store.value = rows.map(function (r) { return rowToLine(r); }).join('\n'); if (ta) ta.value = store.value; refreshRooms(); markTabs(); }
       /* rows are kept in time order (by today's time for zman-based ones); unreadable lines go last */
       function sortRows() { rows.sort(function (x, y) { var a = previewOf(x), b = previewOf(y); return (isNaN(a) ? 1e9 : a) - (isNaN(b) ? 1e9 : b); }); }
       function load() { rows = []; store.value.split('\n').forEach(function (l) { var r = lineToRow(l, tf()); if (r) rows.push(r); }); sortRows(); }
-      function timesOf(r) { return expandLine(parseLine(rowToLine(r, true), tf()), todayRd, typeKeyFn()).map(function (x) { return x.start; }); }
+      function timesOf(r) { return expandLine(parseLine(rowToLine(r, true), tf()), pday(), typeKeyFn()).map(function (x) { return x.start; }); }
       function previewOf(r) { var t = timesOf(r); return t.length ? t[0] : NaN; }
       function condText(r) {
         if (!r.cond || !r.cond.op) return '';
-        var lim = engine.condLimit(parseLine(rowToLine(r, true), tf()), todayRd, typeKeyFn()), name = Cal.ZMAN_NAMES[r.cond.zman] || r.cond.zman;
-        return (r.cond.op === 'until' ? 'before ' : 'from ') + name + (r.cond.off ? (r.cond.off < 0 ? ' −' : ' +') + Math.abs(r.cond.off) + ' min' : '') + (isNaN(lim) ? '' : ', today ' + fmtTime(lim));
+        var lim = engine.condLimit(parseLine(rowToLine(r, true), tf()), pday(), typeKeyFn()), name = Cal.ZMAN_NAMES[r.cond.zman] || r.cond.zman;
+        return (r.cond.op === 'until' ? 'before ' : 'from ') + name + (r.cond.off ? (r.cond.off < 0 ? ' −' : ' +') + Math.abs(r.cond.off) + ' min' : '') + (isNaN(lim) ? '' : ', ' + previewDay(pday()) + ' ' + fmtTime(lim));
       }
       function previewText(r) { var b = previewBase(r); return r.disabled ? 'off' + (b ? ' · ' + b : '') : b; }
       function previewBase(r) {
-        var t = timesOf(r), c = condText(r);
-        if (!t.length) return c ? 'not today: only ' + c : (r.series ? 'no minyanim today (check the times)' : '');
-        if (!r.series) return 'today ' + fmtTime(t[0]) + (c ? ' · only ' + c : '');
+        var t = timesOf(r), c = condText(r), rd = pday(), w = previewDay(rd), on = rd === todayRd ? 'today' : 'on ' + w;
+        if (!t.length) return c ? 'not ' + on + ': only ' + c : (r.series ? 'no minyanim ' + on + ' (check the times)' : '');
+        if (!r.series) return w + ' ' + fmtTime(t[0]) + (c ? ' · only ' + c : '');
         var head = t.slice(0, 3).map(fmtTime).join(', ');
-        return 'today ' + head + (t.length > 4 ? ' … ' : t.length === 4 ? ', ' : '') + (t.length > 3 ? fmtTime(t[t.length - 1]) : '') + (c ? ' · only ' + c : '');
+        return w + ' ' + head + (t.length > 4 ? ' … ' : t.length === 4 ? ', ' : '') + (t.length > 3 ? fmtTime(t[t.length - 1]) : '') + (c ? ' · only ' + c : '');
       }
       /* the "when" widget: fixed time picker, or zman + minutes before/after + rounding. Mutates w and calls onChange. */
       function timeWidget(w, onChange, label, roundLabel) {
@@ -1606,11 +1628,43 @@
     var sp = el('div', { class: 'col' });
     sp.appendChild(roomsList);
     sp.appendChild(el('details', { class: 'help' }, [el('summary', { text: 'How this works' }), el('div', { class: 'hint' }, [
-      el('p', { text: 'Pick a day type, then add one row per minyan: a fixed time, or a zman (sunset, chatzos, candle lighting…) with minutes before or after. Type the room name; names you already used are suggested. "today" shows what that row gives today.' }),
+      el('p', { text: 'Pick a day type, then add one row per minyan: a fixed time, or a zman (sunset, chatzos, candle lighting…) with minutes before or after. Type the room name; names you already used are suggested. The small label on each row shows what it gives on the coming day of that kind: "today", or a date such as "Sat Nov 14" on the Shabbos page.' }),
       el('p', { text: '"+ Add repeating" makes one row that stands for a whole run: every N minutes, from a time or a zman, until a time or zman, in the rooms you pick, taken in turn in the order shown. It is recalculated every day, so a run that starts at sunrise moves with sunrise. Mix repeating rows and single rows freely; the board shows them all sorted by time.' }),
       el('p', { text: '"Copy from…" starts a day type from another one. A day type with no rows uses the more general one (Rosh Chodesh empty → Weekdays; Yom Tov empty → Shabbos).' }),
+      el('p', { text: 'Shabbos and Yom Tov: Friday\'s Mincha is usually set from candle lighting, and Shabbos\'s Mincha and Maariv from sunset, so they move through the year by themselves. Yom Tov uses the Shabbos lists unless you give it its own; for one particular Yom Tov, use Special dates and choose "A calendar day, every year". On these pages every tefilla has a small box, "On Shabbos: …", for another name or another second time on that kind of day. "See the screen on …" shows the screen as it will be on that day.' }),
       el('p', null, ['"Edit as text" shows the same rows as lines like ', el('code', { text: '6:20 ברך משה' }), ', ', el('code', { text: 'sunset-15 דברי יואל // note' }), ' or ', el('code', { text: 'every 10 from sunrise-30 to chatzos-30 rooms ברך משה, דברי יואל' }), ', handy for pasting a whole list.'])])]));
     var typeTabs = el('div', { class: 'tabs daytypes', role: 'tablist' }), typePages = {};
+    /* What a tefilla is called and what its second time is on one kind of day (the engine's tefillaOn reads these). Shabbos's
+       שחרית can have another second time or none; Friday's מעריב can be called קבלת שבת; Yom Tov follows Shabbos unless set. */
+    var dayTef = clone(d.dayTefilla || {});
+    function whole(text) { return '\u2068' + text + '\u2069'; } /* a Hebrew name inside an English line stays in one piece, with the numbers after it where they were written */
+    function dayTefillaBox(key, tf, typeName) {
+      var cur = (dayTef[key] && dayTef[key][tf.id]) || {}, idb = key + '-' + tf.id, follows = TYPE_EN[FALLBACK[key]] || '';
+      var fName = inp('dt-name-' + idb, cur.name || '', { placeholder: tf.name, dir: 'auto', autocomplete: 'off' });
+      var fSecond = el('select', { id: 'dt-second-' + idb }, [el('option', { value: '', text: follows ? 'As on ' + follows : 'The usual one' }), el('option', { value: 'none', text: 'None on ' + typeName }), el('option', { value: 'own', text: 'Its own' })]);
+      fSecond.value = cur.second === 'none' || cur.second === 'own' ? cur.second : '';
+      var fMs = inp('dt-ms-' + idb, cur.milestone || '', { placeholder: 'נשמת', dir: 'auto', autocomplete: 'off' }), fOff = inp('dt-off-' + idb, cur.offset == null ? 30 : cur.offset, { type: 'number', min: '0', max: '180', inputmode: 'numeric', 'aria-label': 'Minutes after the start' });
+      var msErr = el('div', { class: 'hint err', id: 'dt-err-' + idb, role: 'alert', text: 'Write what this time is called, like ' + whole('נשמת') + ', or choose “None”.' });
+      var ownRow = el('div', { class: 'fields' }, [field('What the second time is called', fMs, msErr), field('How many minutes after the start', stepper(fOff, 5))]);
+      var sum = el('summary'), box = el('details', { class: 'dayset', id: 'dt-box-' + idb }, [sum,
+        el('div', { class: 'fields' }, [field('Its name on ' + typeName, fName, el('div', { class: 'hint', text: 'Leave empty to keep ' + whole(tf.name) + '.' + (key === 'friday' && tf.id === 'maariv' ? ' Many call it ' + whole('קבלת שבת') + '.' : '') }))]),
+        el('div', { class: 'fields' }, [field('The second time under each minyan', fSecond, el('div', { class: 'hint', text: 'The small time under a minyan, like ' + whole('הודו') + ' on a weekday morning.' }))]), ownRow]);
+      function sync() {
+        ownRow.hidden = fSecond.value !== 'own';
+        var o = { name: fName.value.trim(), second: fSecond.value }, has = !!(o.name || o.second), nameless = fSecond.value === 'own' && !fMs.value.trim();
+        msErr.hidden = !nameless || !box.classList.contains('asked'); fMs.setAttribute('aria-invalid', String(nameless && box.classList.contains('asked'))); /* said once Save has been tried, not while the gabbai is still on his way to the box */
+        if (o.second === 'own') { o.milestone = fMs.value.trim(); o.offset = Math.max(0, Math.min(180, Math.round(+fOff.value) || 0)); }
+        dayTef[key] = dayTef[key] || {};
+        if (has) dayTef[key][tf.id] = o; else delete dayTef[key][tf.id];
+        if (!Object.keys(dayTef[key]).length) delete dayTef[key];
+        sum.textContent = 'On ' + typeName + ': ' + (has ? [o.name ? 'called ' + whole(o.name) : '', o.second === 'none' ? 'no second time' : o.second === 'own' ? 'second time ' + whole(o.milestone || '…') + ', ' + o.offset + ' min after the start' : ''].filter(Boolean).join(' · ') : follows ? 'the usual name · second time as on ' + follows : 'the usual name and second time');
+        box.classList.toggle('set', has);
+      }
+      [fName, fSecond, fMs, fOff].forEach(function (f) { f.addEventListener('input', sync); f.addEventListener('change', sync); });
+      box.ask = function () { box.classList.add('asked'); box.open = true; sync(); try { fMs.focus(); } catch (e) {} };
+      sync();
+      return box;
+    }
     sp.appendChild(typeTabs);
     var infoUpdaters = [];
     /* which day type actually supplies this tefilla for `key` when its own box is empty */
@@ -1620,18 +1674,21 @@
       return null;
     }
     Cal.DAY_TYPES.forEach(function (t) {
-      var key = t[0], b = el('button', { type: 'button', id: 'dt-' + key, text: t[3], 'aria-selected': 'false', onclick: function () { showType(key); } });
+      var key = t[0], b = el('button', { type: 'button', id: 'dt-' + key, text: t[3], 'aria-selected': 'false', 'data-nodirty': '1', onclick: function () { showType(key); } }); /* looking at another kind of day changes nothing */
       typeTabs.appendChild(b);
       var page = el('div', { class: 'col dtp tef-0', id: 'dtp-' + key });
       page.hidden = true;
       var onSunday = FALLBACK[key] === 'weekday' && key !== 'sunday' && key !== 'friday' ? ' When it lands on a Sunday it follows the Sunday list.' : '';
-      page.appendChild(el('div', { class: 'hint', text: FALLBACK[key] ? t[3] + ': each tefilla either follows the ' + TYPE_EN[FALLBACK[key]] + ' schedule or gets its own list for this day.' + onSunday : t[3] + ' is the base schedule: every day that has no list of its own for a tefilla (Sunday, Friday, Rosh Chodesh…) uses it.' }));
+      page.appendChild(el('div', { class: 'hint', text: FALLBACK[key] ? t[3] + ': each tefilla either follows the ' + TYPE_EN[FALLBACK[key]] + ' schedule or gets its own list for this day.' + onSunday + (key === 'yomtov' ? ' When Yom Tov is on a Friday, its Mincha and Maariv are Erev Shabbos\'s: Shabbos is coming in.' : '')
+        : key === 'weekday' ? t[3] + ' is the base schedule: every day that has no list of its own for a tefilla (Sunday, Friday, Rosh Chodesh…) uses it.'
+        : t[3] + ' has its own lists; it follows no other day. Yom Tov uses these wherever it has no list of its own.' }));
       var row = el('div', { class: 'fields three' });
       d.tefillos.forEach(function (tf, i) {
         var store = lines[key][tf.id], fb = FALLBACK[key];
         var sources = Cal.DAY_TYPES.filter(function (o) { return o[0] !== key; }).map(function (o) { return { key: o[0], label: o[3], store: function () { return lines[o[0]][tf.id]; } }; });
-        var editor = minyanEditor(store, i, function () { return key; }, sources);
+        var editor = minyanEditor(store, i, function () { return key; }, sources, function () { return nextDayOfType(key); });
         var block = el('div', { class: 'field tefcard' }, [el('label', { class: 'tefname', text: tf.name })]);
+        if (key !== 'weekday' && tf.kind !== 'event') block.appendChild(dayTefillaBox(key, tf, t[3])); /* a shiur or other category has no second time; the tefillos do */
         if (fb) {
           var same = el('input', { type: 'checkbox', id: 'same-' + key + '-' + tf.id }), info = el('div', { class: 'hint same-info' });
           same.checked = !store.value.trim();
@@ -1654,6 +1711,11 @@
         block.appendChild(editor);
         row.appendChild(block);
       });
+      /* the coming day of this kind, on the screen: Home's "Another day", set to it */
+      var seeRd = nextDayOfType(key);
+      page.appendChild(el('div', { class: 'see-day' }, [el('button', { type: 'button', class: 'btn small', id: 'see-' + key, 'data-nodirty': '1', onclick: function () { seeDayOnScreen(seeRd, key === 'shabbos' || key === 'yomtov' || key === 'yomkippur' ? '09:00' : null); } },
+        [el('span', { text: 'See the screen on ' + (seeRd === todayRd ? 'this day (today)' : previewDay(seeRd)) }), svgIcon('tv')]),
+        el('span', { class: 'hint', text: 'Opens Home on the coming day of this kind. Save first to see your changes there.' })]));
       var seg = el('div', { class: 'seg', role: 'tablist' });
       d.tefillos.forEach(function (tf, i) {
         seg.appendChild(el('button', { type: 'button', role: 'tab', 'aria-selected': String(i === 0), text: tf.name, 'data-nodirty': '1', onclick: function () {
@@ -1866,7 +1928,14 @@
     function homeMin() { var m = /^(\d{2}):(\d{2})/.exec(fHTime.value || ''); return m ? +m[1] * 60 + +m[2] : null; }
     function homeUrl() { return 'index.html?view=display&full=1' + (H.mode === 'at' && homeRd() != null && homeMin() != null ? '&at=' + fHDate.value + 'T' + fHTime.value.slice(0, 5) : ''); }
     function nextDay(test) { for (var i = 1; i <= 60; i++) if (test(Cal.dayInfo(todayRd + i, !!d.israel))) return todayRd + i; return todayRd + 1; }
-    var HOME_DAYS = [['Tomorrow', todayRd + 1], ['Friday', nextDay(function (x) { return x.dow === 5; })], ['Shabbos', nextDay(function (x) { return x.dow === 6; })], ['Rosh Chodesh', nextDay(function (x) { return x.roshChodesh; })]];
+    var HOME_DAYS = [['Tomorrow', todayRd + 1], ['Friday', nextDay(function (x) { return x.dow === 5; })], ['Shabbos', nextDay(function (x) { return x.dow === 6; })], ['Rosh Chodesh', nextDay(function (x) { return x.roshChodesh; })], ['Yom Tov', nextDayOfType('yomtov')]];
+    function seeDayOnScreen(rd, time) { /* from the Schedule page: Home, on that day */
+      var iso = MinyanEngine.isoDate(rd);
+      H.mode = 'at'; H.date = iso; fHDate.value = iso; hHDate.sync();
+      if (time) { H.time = time; fHTime.value = time; }
+      selectTab('home'); paintHome();
+      try { window.scrollTo(0, 0); } catch (e) {}
+    }
     var HOME_TIMES = [['Morning', '07:30'], ['Midday', '13:00'], ['Evening', '18:00'], ['Night', '21:30']];
     function clock12(min) { var h = Math.floor(min / 60), m = min % 60; return ((h + 11) % 12 + 1) + ':' + pad2(m) + (h < 12 ? ' AM' : ' PM'); }
     function fitHome() {
@@ -1907,7 +1976,13 @@
       var on = engine.activeNotices(rd, min), ms = Cal.epochFromWall(rd, min, loc().tz), ban = engine.activeBanner(ms);
       homeFacts.textContent = '';
       fact('Day', dayLine(info, rd) + ' · ' + Cal.formatHeb(info.heb) + (info.labels && info.labels.length ? ' · ' + info.labels.join(' · ') : ''), true);
+      if (sc.type === 'yomtov' && info.dow === 5 && !sc.override && !(sc.roll && sc.roll.name)) kindOfDay += ' · Mincha and Maariv as on Erev Shabbos (Friday)';
       fact('Schedule in use', kindOfDay);
+      /* what the evening of that day is: the one thing about Shabbos and Yom Tov that is easy to get wrong */
+      var zEve = zmanimFor(rd);
+      if (info.candles) fact('Evening', info.candles === 'night' ? 'Candle lighting after nightfall, ' + fmtTime(zEve.tzeis) : 'Candle lighting ' + fmtTime(zEve.candles));
+      else if (info.yomKippur) fact('Evening', 'The fast ends ' + fmtTime(zEve.tzeis));
+      else if (info.motzaei) fact('Evening', (info.motzaei === 'shabbos' ? 'Shabbos' : 'Yom Tov') + ' ends ' + fmtTime(zEve.tzeis));
       fact('Donations on the board', on.length ? on.map(function (n) { return ((n.name || '').trim() || (n.body || '').trim().split('\n')[0]) + (n.title ? ' (' + n.title + ')' : ''); }).join('  ·  ') : 'None that day');
       if (ban && ban.text) fact('Banner', ban.text);
       fitHome();
@@ -2692,7 +2767,7 @@
       d.tefillos.forEach(function (tf, i) {
         r.lines[tf.id] = { value: (o.lines && o.lines[tf.id]) || '' };
         var sources = Cal.DAY_TYPES.map(function (t) { return { key: t[0], label: t[3], store: function () { return lines[t[0]][tf.id]; } }; });
-        row.appendChild(el('div', { class: 'field tefcard' }, [el('label', { class: 'tefname', text: tf.name + ' (no rows = as usual)' }), minyanEditor(r.lines[tf.id], i, typeOfDate, sources)]));
+        row.appendChild(el('div', { class: 'field tefcard' }, [el('label', { class: 'tefname', text: tf.name + ' (no rows = as usual)' }), minyanEditor(r.lines[tf.id], i, typeOfDate, sources, function () { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(r.date.value); return r.when.value === 'date' && m ? Cal.rdFromGreg(+m[1], +m[2], +m[3]) : null; })]));
       });
       var headO = el('span', { text: o.label || 'Special date' }); r.label.addEventListener('input', function () { headO.textContent = r.label.value.trim() || 'Special date'; });
       r.wrap = el('div', { class: 'ovr' }, [el('div', { class: 'ohead' }, [headO, el('button', { type: 'button', class: 'btn small danger', text: 'Remove', onclick: function () { oRows.splice(oRows.indexOf(r), 1); r.wrap.remove(); } })]),
@@ -2851,6 +2926,9 @@
       out.nextTemplate = fNextT.value.trim() === NEXT_TEMPLATE ? '' : fNextT.value;
       out.wallLogo = fWallLogo.value.trim();
       out.wallTopBar = fTopBar.checked;
+      out.dayTefilla = clone(dayTef);
+      var tefIds = {}; out.tefillos.forEach(function (t) { if (t.kind !== 'event') tefIds[t.id] = 1; }); /* nothing is kept for a tefilla that is no longer there */
+      Object.keys(out.dayTefilla).forEach(function (k) { Object.keys(out.dayTefilla[k] || {}).forEach(function (id) { if (!tefIds[id]) delete out.dayTefilla[k][id]; }); if (!Object.keys(out.dayTefilla[k] || {}).length) delete out.dayTefilla[k]; });
       out.nextPanel = fNextPanel.checked; out.nextHold = Math.max(0, Math.min(30, Math.round(+fNextHold.value) || 0));
       out.wallLook = {}; SWATCHES.forEach(function (sw) { if (wall[sw[0]]) out.wallLook[sw[0]] = wall[sw[0]]; });
       out.wallWindow = winNow();
@@ -2884,11 +2962,19 @@
     function validate(c) {
       if (isNaN(c.location.lat) || isNaN(c.location.lng)) return 'Enter the latitude and longitude';
       try { new Intl.DateTimeFormat('en-US', { timeZone: c.location.tz }); } catch (e) { return 'Invalid time zone'; }
+      var miss = null; /* a second time "of its own" with no name would show as nothing: say so instead of saving it that way */
+      Object.keys(c.dayTefilla || {}).forEach(function (k) { Object.keys(c.dayTefilla[k] || {}).forEach(function (id) { var o = c.dayTefilla[k][id]; if (!miss && o && o.second === 'own' && !String(o.milestone || '').trim()) miss = [k, id]; }); });
+      if (miss) {
+        var tfm = (c.tefillos || []).filter(function (x) { return x.id === miss[1]; })[0];
+        validate.show = function () { selectTab('schedule'); showType(miss[0]); var bx = document.getElementById('dt-box-' + miss[0] + '-' + miss[1]); if (bx && bx.ask) { bx.ask(); try { bx.scrollIntoView({ block: 'center' }); } catch (e) {} } }; /* take the gabbai to the box that needs him */
+        return 'Schedule → ' + (TYPE_EN[miss[0]] || miss[0]) + ' → ' + whole(tfm ? tfm.name : miss[1]) + ': the second time needs a name.';
+      }
       return null;
     }
     function saveConfig(c, opts) {
+      validate.show = null;
       var err = validate(c);
-      if (err) { toast(err); return; }
+      if (err) { toast(err); if (validate.show) validate.show(); return; }
       saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
       if (mode !== 'artifact') saveGh();
       var ready = Promise.resolve();
@@ -3033,8 +3119,25 @@
       ['sponsorSeconds', 'Sponsor seconds'], ['remoteConfigUrl', 'Central schedule URL'], ['location', 'Location'], ['pinHash', 'PIN'], ['pin', 'PIN']].forEach(function (f) {
       if (same(a[f[0]], b[f[0]])) return;
       var v = b[f[0]];
-      out.push(f[1] + (f[0] === 'location' || f[0] === 'pinHash' || f[0] === 'pin' ? ' changed' : ': ' + (v == null || v === '' ? '(blank)' : typeof v === 'object' ? JSON.stringify(v) : String(v))));
+      out.push(f[1] + (f[0] === 'location' || f[0] === 'pinHash' || f[0] === 'pin' || (v && typeof v === 'object') ? ' changed' : ': ' + (v == null || v === '' ? '(blank)' : String(v))));
     });
+    /* a tefilla's name and second time on one kind of day (Schedule → the kind of day → "On …"), each in words */
+    (function () {
+      var da = a.dayTefilla || {}, db = b.dayTefilla || {}, kinds = {};
+      Object.keys(da).concat(Object.keys(db)).forEach(function (k) { kinds[k] = 1; });
+      Cal.DAY_TYPES.forEach(function (t) {
+        if (!kinds[t[0]]) return;
+        var ids = {}; Object.keys(da[t[0]] || {}).concat(Object.keys(db[t[0]] || {})).forEach(function (id) { ids[id] = 1; });
+        Object.keys(ids).forEach(function (id) {
+          var x = (da[t[0]] || {})[id], y = (db[t[0]] || {})[id], parts = [];
+          if (same(x, y)) return;
+          if (y && String(y.name || '').trim()) parts.push('called \u2068' + String(y.name).trim() + '\u2069');
+          if (y && y.second === 'none') parts.push('no second time');
+          if (y && y.second === 'own') parts.push('second time \u2068' + (String(y.milestone || '').trim() || '…') + '\u2069, ' + (+y.offset || 0) + ' min after the start');
+          out.push(t[3] + ' · \u2068' + (names[id] || id) + '\u2069: ' + (parts.length ? parts.join(' · ') : 'back to the usual name and second time'));
+        });
+      });
+    })();
     if (!same(a.tefillos, b.tefillos)) out.push('Tefillos / categories changed');
     /* extra schedules, by name */
     (function () {
@@ -3091,7 +3194,7 @@
   /* the settings the admin form fills in by itself, so a published file that never had them does not look changed */
   function withDefaults(c) {
     var o = clone(c), tz = (o.location || {}).tz || '';
-    var d = { palette: 'shul', lang: 'he', bigTime: 'start', dateFormat: /^America\//.test(tz) ? 'mdy' : 'dmy', nowMinutes: 20, sponsorSeconds: 8, tzeisDeg: 8.5, candles: 18, minchaGedola: 'later', displayScale: 100, smsLang: 'auto', amidahMinutes: 15, wallLogo: '', wallTopBar: false, nextPanel: true, nextHold: 0, nextMark: 0, pageSeconds: 8, countTo: '', donationKinds: DONATION_KINDS, wallLook: {}, wallWindow: { mode: 'day', before: 180, after: 20, neverEmpty: true } };
+    var d = { palette: 'shul', lang: 'he', bigTime: 'start', dateFormat: /^America\//.test(tz) ? 'mdy' : 'dmy', nowMinutes: 20, sponsorSeconds: 8, tzeisDeg: 8.5, candles: 18, minchaGedola: 'later', displayScale: 100, smsLang: 'auto', amidahMinutes: 15, wallLogo: '', wallTopBar: false, dayTefilla: {}, nextPanel: true, nextHold: 0, nextMark: 0, pageSeconds: 8, countTo: '', donationKinds: DONATION_KINDS, wallLook: {}, wallWindow: { mode: 'day', before: 180, after: 20, neverEmpty: true } };
     Object.keys(d).forEach(function (k) { if (o[k] == null || o[k] === '') o[k] = d[k]; });
     /* settings saved before "by number" existed have no numbers for it: they stand at the usual ones, and are not a change */
     if (o.wallWindow && typeof o.wallWindow === 'object') { if (o.wallWindow.next == null) o.wallWindow.next = 6; if (o.wallWindow.recent == null) o.wallWindow.recent = 2; }

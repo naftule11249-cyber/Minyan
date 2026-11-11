@@ -138,4 +138,41 @@ if (fails) { console.log(fails + ' FAILING'); process.exit(1); } else console.lo
   ok('an end time with no first day still ends it; times that are not times are ignored, not obeyed', [on(day, 7 * 60 + 59).indexOf('סוף') >= 0, on(day, 8 * 60).indexOf('סוף') >= 0, on(day, 5).indexOf('bad') >= 0], [true, false, true]);
   ok('asked about a day with no time of day, the whole day counts', mkN(H).activeNotices(day).map(n => n.name), ['בוקר', 'שבוע', 'סוף', 'bad']);
 }
+/* Shabbos and Yom Tov: a tefilla's name and second time by the kind of day, and Yom Tov on a Friday */
+{
+  const base = JSON.parse(JSON.stringify(cfg));
+  base.rolls = []; base.overrides = [];
+  base.schedules.friday = Object.assign({}, base.schedules.friday, { mincha: 'candles+10 ברך משה', maariv: 'candles+45~5 ברך משה' });
+  base.schedules.shabbos = { shacharis: '08:30 לב אהרן\n09:30 דברי יואל', mincha: 'sunset-40~5 דברי יואל', maariv: 'sunset+50~5 דברי יואל' };
+  delete base.schedules.yomtov; delete base.schedules.erev_yomtov;
+  const mk = dayTefilla => (E.MinyanEngine || E)(Object.assign({}, base, dayTefilla ? { dayTefilla } : {}));
+  const D = { fri: Cal.rdFromGreg(2026, 11, 13), shab: Cal.rdFromGreg(2026, 11, 14), mon: Cal.rdFromGreg(2026, 11, 16), erevPesach: Cal.rdFromGreg(2027, 4, 21), pesach1: Cal.rdFromGreg(2027, 4, 22), pesach2Fri: Cal.rdFromGreg(2027, 4, 23), shavuosFri: Cal.rdFromGreg(2027, 6, 11) };
+  const second = (e, rd, id) => { const s = e.scheduleFor(rd).byTefilla[id][0]; return [s.tefilla.name, s.tefilla.milestone, e.fmtTime(s.start), e.fmtTime(s.milestone)]; };
+  const plain = mk();
+  ok('with nothing set, Shabbos שחרית is the tefilla as it is every day: הודו ten minutes on', second(plain, D.shab, 'shacharis'), ['שחרית', 'הודו', '8:30', '8:40']);
+  const e1 = mk({ shabbos: { shacharis: { second: 'own', milestone: 'נשמת', offset: 30 } }, friday: { maariv: { name: 'קבלת שבת' } } });
+  ok('Shabbos given a second time of its own: נשמת, half an hour on', second(e1, D.shab, 'shacharis'), ['שחרית', 'נשמת', '8:30', '9:00']);
+  ok('a weekday is untouched by it', second(e1, D.mon, 'shacharis').slice(0, 2), ['שחרית', 'הודו']);
+  ok('Yom Tov follows Shabbos for the second time', second(e1, D.pesach1, 'shacharis'), ['שחרית', 'נשמת', '8:30', '9:00']);
+  ok('Friday\'s מעריב called קבלת שבת', second(e1, D.fri, 'maariv').slice(0, 1), ['קבלת שבת']);
+  ok('the name is Friday\'s alone: Erev Yom Tov borrows Friday\'s times, not its name', [e1.scheduleFor(D.erevPesach).type, second(e1, D.erevPesach, 'maariv')[0], second(e1, D.erevPesach, 'maariv')[2] !== ''], ['erev_yomtov', 'מעריב', true]);
+  const e2 = mk({ shabbos: { shacharis: { second: 'none' } }, yomtov: { shacharis: { second: 'own', milestone: 'הלל', offset: 45 }, maariv: { name: 'מעריב יום טוב' } } });
+  ok('"None" on Shabbos: no second time there', second(e2, D.shab, 'shacharis'), ['שחרית', '', '8:30', '8:30']);
+  ok('Yom Tov with its own setting does not follow Shabbos', second(e2, D.pesach1, 'shacharis'), ['שחרית', 'הלל', '8:30', '9:15']);
+  ok('a name given to Yom Tov shows on Yom Tov and not on Shabbos', [second(e2, D.pesach1, 'maariv')[0], second(e2, D.shab, 'maariv')[0]], ['מעריב יום טוב', 'מעריב']);
+  ok('"its own" with no name written is no second time, not a nameless one', second(mk({ shabbos: { shacharis: { second: 'own', milestone: '  ', offset: 30 } } }), D.shab, 'shacharis'), ['שחרית', '', '8:30', '8:30']);
+  ok('a day tells each tefilla as it has it, also one with no minyanim that day', [e1.scheduleFor(D.fri).tefillos.maariv.name, e1.scheduleFor(D.mon).tefillos.maariv.name, (E.MinyanEngine || E)(Object.assign({}, base, { dayTefilla: { friday: { maariv: { name: 'קבלת שבת' } } }, schedules: Object.assign({}, base.schedules, { friday: { mincha: 'candles+10 ברך משה', maariv: '#off 19:00 ברך משה' } }) })).scheduleFor(D.fri).tefillos.maariv.name], ['קבלת שבת', 'מעריב', 'קבלת שבת']);
+  /* Yom Tov on a Friday: the morning is Yom Tov's, the afternoon and evening are Erev Shabbos's */
+  const fri = plain.scheduleFor(D.fri), yf = plain.scheduleFor(D.pesach2Fri), sf = plain.scheduleFor(D.shavuosFri), y1 = plain.scheduleFor(D.pesach1);
+  const zF = plain.zmanimFor(D.pesach2Fri), rel = (s, id) => Math.round(s.byTefilla[id][0].start - Math.round(plain.zmanimFor(s.rd).candles)); /* minutes after candle lighting, as the zmanim list shows it */
+  ok('the second day of Pesach on a Friday is Yom Tov', [yf.type, yf.info.dow], ['yomtov', 5]);
+  ok('its שחרית is the Shabbos and Yom Tov one', yf.byTefilla.shacharis.map(e => plain.fmtTime(e.start)), ['8:30', '9:30']);
+  ok('its מנחה goes by candle lighting, as on any Friday', [rel(yf, 'mincha'), rel(fri, 'mincha')], [10, 10]);
+  ok('and so does its מעריב, which is קבלת שבת', [yf.byTefilla.maariv[0].start < zF.sunset + 45, e1.scheduleFor(D.pesach2Fri).byTefilla.maariv[0].tefilla.name], [true, 'קבלת שבת']);
+  ok('Shavuos on a Friday the same', [sf.type, rel(sf, 'mincha')], ['yomtov', 10]);
+  ok('a Yom Tov that is not a Friday keeps the Shabbos afternoon and evening', [y1.type, Math.round(y1.byTefilla.maariv[0].start - plain.zmanimFor(D.pesach1).sunset) >= 45], ['yomtov', true]);
+  /* a Yom Tov list of its own for מנחה does not displace Friday's on a Friday */
+  const e3 = (E.MinyanEngine || E)(Object.assign({}, base, { schedules: Object.assign({}, base.schedules, { yomtov: { mincha: '17:00 לב אהרן' } }) }));
+  ok('with a מנחה list of its own, Yom Tov uses it on a Thursday and Friday\'s on a Friday', [e3.scheduleFor(D.pesach1).byTefilla.mincha.map(e => e3.fmtTime(e.start)), rel(e3.scheduleFor(D.pesach2Fri), 'mincha')], [['5:00'], 10]);
+}
 ok('צאת (60) is 60 minutes after sunset', Math.round(Cal.zmanim(sunRd, cfg.location).tzeis60 - Cal.zmanim(sunRd, cfg.location).sunset), 60);

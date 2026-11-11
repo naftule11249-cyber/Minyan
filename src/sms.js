@@ -71,8 +71,9 @@ var MinyanSms = (function () {
       [rd - 1, rd].forEach(function (d) {
         var s = engine.scheduleFor(d);
         engine.tefillos().forEach(function (t) {
-          if (!t.milestone || t.kind === 'event' || (tefillaId && t.id !== tefillaId)) return;
+          if (t.kind === 'event' || (tefillaId && t.id !== tefillaId)) return;
           (s.byTefilla[t.id] || []).forEach(function (e) {
+            if (!e.tefilla.milestone) return; /* the tefilla as that day has it: Shabbos may have another second time, or none */
             if (e.ms <= nowMs && Cal.epochFromWall(d, e.milestone, tz) - nowMs >= 3 * 60000 && (!best || e.ms > best.ms)) best = e;
           });
         });
@@ -85,7 +86,7 @@ var MinyanSms = (function () {
     else if (k === 'zmanim') {
       var z = engine.zmanimFor(rd), info = Cal.dayInfo(rd, !!cfg.israel), keys = ['sunrise', 'shema', 'chatzos', 'plag', 'candles', 'sunset', 'tzeis'], parts = [];
       keys.forEach(function (key) {
-        if (key === 'candles' && !(info.dow === 5 || info.erevYT)) return;
+        if (key === 'candles' && info.candles !== 'day') return;
         parts.push((lang === 'he' ? Cal.ZMAN_NAMES[key] : EN_ZMANIM[key]) + ' ' + engine.fmtTime(z[key]));
       });
       out = L.zmanim + ' (' + dayHeader(rd) + '): ' + parts.join(', ');
@@ -94,7 +95,7 @@ var MinyanSms = (function () {
       var d = k === 'today' ? rd : rd + 1, sched = engine.scheduleFor(d), lines = [];
       engine.tefillos().forEach(function (t) {
         var items = (sched.byTefilla[t.id] || []).filter(function (e) { return e.ms > nowMs; });
-        if (items.length) lines.push(tName(t) + ': ' + shortList(items));
+        if (items.length) lines.push(tName(items[0].tefilla) + ': ' + shortList(items)); /* by the name it has on that day (קבלת שבת on a Friday night, if the gabbai calls it so) */
       });
       if (lines.length) out = (k === 'today' ? L.today : L.tomorrow) + ' – ' + dayHeader(d) + '\n' + lines.join('\n');
       else if (k === 'today') { list = engine.after(nowMs, rd, 10); out = L.noneToday + '.' + (list.length ? ' ' + L.next + ': ' + dayPrefix(list[0]) + ', ' + entry(list[0].entry, true) + '.' : ''); }

@@ -73,4 +73,33 @@ eq('sunset ~18:07', Math.abs(z.sunset - (18 * 60 + 7)) <= 3, true);
 const e = Cal.epochFromWall(rd(2026, 10, 20), 11 * 60, 'America/New_York');
 eq('epochFromWall 11:00 EDT', new Date(e).toISOString(), '2026-10-20T15:00:00.000Z');
 eq('nowInTz', Cal.nowInTz(e, 'America/New_York').min, 660);
+// Candle lighting and the end of Shabbos or Yom Tov, by what the next day is
+{
+  const ev = (y, m, d, isr) => { const i = Cal.dayInfo(rd(y, m, d), !!isr); return [i.candles, i.motzaei]; };
+  eq('an ordinary Friday: candles before sunset', ev(2026, 11, 13), ['day', '']);
+  eq('an ordinary Shabbos: it ends at nightfall', ev(2026, 11, 14), ['', 'shabbos']);
+  eq('an ordinary weekday: neither', ev(2026, 11, 16), ['', '']);
+  eq('Erev Pesach on a Wednesday: candles before sunset', ev(2027, 4, 21), ['day', '']);
+  eq('the first day of Pesach: candles after nightfall for the second day, and Yom Tov does not end tonight', ev(2027, 4, 22), ['night', '']);
+  eq('the second day on a Friday: candles before sunset for Shabbos, still no מוצאי', ev(2027, 4, 23), ['day', '']);
+  eq('Shabbos Chol Hamoed: מוצאי שבת', ev(2027, 4, 24), ['', 'shabbos']);
+  eq('the seventh day of Pesach: candles after nightfall', ev(2027, 4, 28), ['night', '']);
+  eq('the last day of Pesach: מוצאי יום טוב', ev(2027, 4, 29), ['', 'yomtov']);
+  eq('Shavuos on Friday and Shabbos: Friday lights before sunset', ev(2027, 6, 11), ['day', '']);
+  eq('and that Shabbos, the second day, ends as a Shabbos', ev(2027, 6, 12), ['', 'shabbos']);
+  eq('Rosh Hashana on Shabbos: the candles for the second night wait for nightfall', ev(2027, 10, 2), ['night', '']);
+  eq('the second day of Rosh Hashana, a Sunday: מוצאי יום טוב', ev(2027, 10, 3), ['', 'yomtov']);
+  eq('Erev Yom Kippur: candles before sunset', ev(2027, 10, 10), ['day', '']);
+  eq('Shemini Atzeres on Shabbos, Simchas Torah after it', [ev(2027, 10, 23), ev(2027, 10, 24)], [['night', ''], ['', 'yomtov']]);
+  eq('in Eretz Yisroel the first day of Pesach is the only one: it ends that night', ev(2027, 4, 22, true), ['', 'yomtov']);
+  eq('in Eretz Yisroel Sukkos on Shabbos ends as a Shabbos', ev(2027, 10, 16, true), ['', 'shabbos']);
+  let bad = 0; /* a whole year: candles the evening before every Shabbos or Yom Tov day and never otherwise; מוצאי only when the next day is neither */
+  for (let r = rd(2026, 9, 1); r < rd(2027, 11, 1); r++) {
+    const a = Cal.dayInfo(r, false), b = Cal.dayInfo(r + 1, false), holyA = a.shabbos || a.yomtov, holyB = b.shabbos || b.yomtov;
+    if (!!a.candles !== holyB || !!a.motzaei !== (holyA && !holyB)) bad++;
+    if (a.candles === 'night' && !holyA) bad++; /* after nightfall only from a day that is itself Shabbos or Yom Tov */
+    if (a.candles === 'day' && a.shabbos) bad++; /* never before sunset on Shabbos */
+  }
+  eq('a whole year of evenings keeps the rule', bad, 0);
+}
 console.log(fails ? fails + ' FAILURES' : 'ALL PASS');
