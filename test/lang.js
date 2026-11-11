@@ -28,7 +28,7 @@ const { chromium } = require('playwright');
   ok('english settings: the remind-me box is English too', [await page.locator('#rem-overlay h2').textContent(), await page.locator('#rem-set').textContent()], ['Remind me', 'Set reminder']);
   await ctx.close();
   ({ ctx, page } = await open(1280, 13, 0, '?view=display', 'yi'));
-  ok('lobby screen keeps the gabbai\'s Hebrew default', [(await page.locator('.dayline').textContent()).split(' ').slice(0, 2).join(' '), (await page.locator('section.tefilla h3').first().textContent()).replace(/[●○ ]+$/, '')], ['יום ראשון', 'מניני שחרית – מחר, יום שני']);
+  ok('lobby screen keeps the gabbai\'s Hebrew default', [await page.locator('.wall section.next > h2').textContent(), (await page.locator('section.tefilla h3').first().textContent()).replace(/[●○ ]+$/, ''), await page.locator('.wall .zcard h3').textContent()], ['מנין הבא', 'מניני שחרית – מחר, יום שני', 'זמני היום']);
   await ctx.close();
   ({ ctx, page } = await open(1280, 13, 0, '', 'yi'));
   ok('yiddish tile badge via CSS variable', await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--badge-now').trim()), '"יעצט"');

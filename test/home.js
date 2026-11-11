@@ -29,7 +29,8 @@ const NOTICES = [
   }
   const tv = page => page.frameLocator('#home-tv');
   const shown = async page => { await page.waitForTimeout(400); await tv(page).locator('.aclock svg').waitFor({ timeout: 15000 }); await page.waitForTimeout(700);
-    return { day: (await tv(page).locator('.top .dayline').textContent()).trim(), dates: (await tv(page).locator('.top .dates').textContent()).replace(/\s+/g, ' ').trim(), clock: (await tv(page).locator('.top .clock .hm').textContent()).trim(),
+    /* the screen has no line across the top: the day it shows is on the page itself (data-day), the time on the clock face */
+    return { day: await tv(page).locator('#app').getAttribute('data-day'), clock: (await tv(page).locator('.aclock .dig').textContent()).trim().replace(/:\d\d$/, ''),
       sponsors: await tv(page).locator('.sponsor .t').allTextContents(), badge: await tv(page).locator('.preview-badge').count() }; };
   const facts = page => page.evaluate(() => { const o = {}; const dt = document.querySelectorAll('.home-facts dt'), dd = document.querySelectorAll('.home-facts dd'); dt.forEach((t, i) => { o[t.textContent] = dd[i].textContent; }); return o; });
   const status = page => page.locator('.abar .status').textContent();
@@ -38,7 +39,7 @@ const NOTICES = [
   ok('the back end opens on Home, with nothing marked as changed', [await page.locator('.ptitle h2').textContent(), await page.locator('#tab-home').getAttribute('aria-selected'), /Unsaved/.test(await status(page))], ['Home', 'true', false]);
   let s = await shown(page);
   ok('the picture is the hallway screen itself, live: today, this minute, with today\'s donation', [await page.locator('.home-cap').textContent(), await page.locator('#home-tv').getAttribute('data-url'), s.day, s.clock, s.sponsors, s.badge],
-    ['The screen as it is right now.', 'index.html?view=display&full=1', 'יום רביעי פרשת ויצא', '9:10', ['פרנס חודש כסלו'], 0]);
+    ['The screen as it is right now.', 'index.html?view=display&full=1', '2026-11-18', '9:10', ['פרנס חודש כסלו'], 0]);
   ok('under it, what today holds in words', await facts(page), { 'Day': 'יום רביעי פרשת ויצא · ח׳ כסלו תשפ״ז', 'Schedule in use': 'Weekdays', 'Donations on the board': 'מו״ה יעקב יואל פריעדמאן הי״ו (פרנס חודש כסלו)' });
   ok('the frame is the TV\'s shape and fits the page', await page.evaluate(() => { const st = document.querySelector('.home-stage').getBoundingClientRect(), f = document.getElementById('home-tv'); const k = +(/scale\(([\d.]+)\)/.exec(f.style.transform) || [0, 0])[1];
     return [Math.abs(st.width / st.height - 16 / 9) < 0.06, st.right <= window.innerWidth, k > 0.3 && k < 0.6, document.documentElement.scrollWidth <= window.innerWidth]; }), [true, true, true, true]);
@@ -46,14 +47,14 @@ const NOTICES = [
   /* another day */
   await page.click('#home-at'); s = await shown(page);
   ok('"Another day" starts at tomorrow morning: the screen\'s own clock is moved there', [await page.inputValue('#home-date'), await page.inputValue('#home-time'), await page.locator('#home-tv').getAttribute('data-url'), s.day, s.clock, await page.locator('.home-cap').textContent()],
-    ['2026-11-19', '08:00', 'index.html?view=display&full=1&at=2026-11-19T08:00', 'יום חמישי פרשת ויצא', '8:00', 'The screen as it will be on Thursday, Nov 19, 2026 at 8:00 AM.']);
+    ['2026-11-19', '08:00', 'index.html?view=display&full=1&at=2026-11-19T08:00', '2026-11-19', '8:00', 'The screen as it will be on Thursday, Nov 19, 2026 at 8:00 AM.']);
   ok('the day is shown in Hebrew boxes and in the civil calendar, and "Tomorrow" is marked', [await page.evaluate(() => Array.from(document.querySelectorAll('.home-pick .hebpick select')).map(x => x.options[x.selectedIndex].text)), await page.locator('.home-pick .dn-civil').textContent(), await page.locator('.home-pick [data-day].on').textContent()], [['ט׳', 'כסלו', 'תשפ״ז'], 'Thursday, Nov 19, 2026', 'Tomorrow']);
   const t1 = await tv(page).locator('.aclock .dig').textContent(); await page.waitForTimeout(1300); const t2 = await tv(page).locator('.aclock .dig').textContent();
   ok('its clock runs on from that moment', [/^8:00:\d\d$/.test(t1), t1 !== t2], [true, true]);
   await page.locator('.home-pick [data-day]', { hasText: 'Shabbos' }).click(); s = await shown(page);
-  ok('"Shabbos" shows this coming Shabbos, with Shabbos\'s own schedule', [await page.inputValue('#home-date'), s.day, (await facts(page))['Schedule in use'], (await facts(page))['Day']], ['2026-11-21', 'שבת קודש פרשת ויצא', 'Shabbos', 'שבת קודש פרשת ויצא · י״א כסלו תשפ״ז']);
+  ok('"Shabbos" shows this coming Shabbos, with Shabbos\'s own schedule', [await page.inputValue('#home-date'), s.day, (await facts(page))['Schedule in use'], (await facts(page))['Day']], ['2026-11-21', '2026-11-21', 'Shabbos', 'שבת קודש פרשת ויצא · י״א כסלו תשפ״ז']);
   await page.locator('.home-pick [data-day]', { hasText: 'Rosh Chodesh' }).click(); s = await shown(page);
-  ok('"Rosh Chodesh" finds the next one and shows its schedule', [await page.inputValue('#home-date'), (await facts(page))['Schedule in use'], /ראש חודש/.test(s.dates + s.day + (await facts(page))['Day'])], ['2026-12-10', 'Rosh Chodesh', true]);
+  ok('"Rosh Chodesh" finds the next one and shows its schedule', [await page.inputValue('#home-date'), s.day, (await facts(page))['Schedule in use'], /ראש חודש/.test((await facts(page))['Day'])], ['2026-12-10', '2026-12-10', 'Rosh Chodesh', true]);
   await page.locator('.home-pick [data-time="18:00"]').click(); s = await shown(page);
   ok('"Evening" moves the time of day', [await page.inputValue('#home-time'), s.clock, await page.locator('#home-tv').getAttribute('data-url')], ['18:00', '6:00', 'index.html?view=display&full=1&at=2026-12-10T18:00']);
 
@@ -94,14 +95,14 @@ const NOTICES = [
   /* the board itself with ?at= */
   ({ ctx, page } = await context({ width: 1920, height: 1080 }));
   await page.goto(BASE + 'index.html?view=display&full=1&at=2026-12-01T07:30', { waitUntil: 'networkidle' }); await page.waitForTimeout(900);
-  ok('opened by itself, a dated screen says plainly that it is a preview, and of when', [await page.locator('.preview-badge').textContent(), (await page.locator('.top .clock .hm').textContent()).trim(), await page.locator('.sponsor .t').allTextContents()], ['תצוגה מקדימה · כ״א כסלו תשפ״ז · 7:30', '7:30', ['פרנס חודש כסלו', 'פרנס היום']]);
-  for (const [at, clock, day] of [['2027-03-20T08:00', '8:00', 'שבת קודש'], ['2027-07-04T20:30', '8:30', 'יום ראשון'], ['2026-11-19', '9:10', 'יום חמישי']]) {
+  ok('opened by itself, a dated screen says plainly that it is a preview, and of when', [await page.locator('.preview-badge').textContent(), (await page.locator('.aclock .dig').textContent()).trim().replace(/:\d\d$/, ''), await page.locator('.sponsor .t').allTextContents()], ['תצוגה מקדימה · כ״א כסלו תשפ״ז · 7:30', '7:30', ['פרנס חודש כסלו', 'פרנס היום']]);
+  for (const [at, clock] of [['2027-03-20T08:00', '8:00'], ['2027-07-04T20:30', '8:30'], ['2026-11-19', '9:10']]) {
     await page.goto(BASE + 'index.html?view=display&full=1&at=' + at, { waitUntil: 'networkidle' }); await page.waitForTimeout(700);
-    ok('?at=' + at + ' lands on that day at that hour by the shul\'s clock, summer time or winter', [(await page.locator('.top .clock .hm').textContent()).trim(), (await page.locator('.top .dayline').textContent()).indexOf(day) === 0], [clock, true]);
+    ok('?at=' + at + ' lands on that day at that hour by the shul\'s clock, summer time or winter', [(await page.locator('.aclock .dig').textContent()).trim().replace(/:\d\d$/, ''), await page.locator('#app').getAttribute('data-day')], [clock, at.slice(0, 10)]);
   }
   for (const bad of ['2026-13-45T99:99', 'tomorrow', '2026-11-19T25:00']) {
     await page.goto(BASE + 'index.html?view=display&full=1&at=' + bad, { waitUntil: 'networkidle' }); await page.waitForTimeout(600);
-    ok('?at=' + bad + ' is not a moment: the screen stays on today, with no preview mark', [(await page.locator('.top .clock .hm').textContent()).trim(), await page.locator('.preview-badge').count()], ['9:10', 0]);
+    ok('?at=' + bad + ' is not a moment: the screen stays on today, with no preview mark', [(await page.locator('.aclock .dig').textContent()).trim().replace(/:\d\d$/, ''), await page.locator('#app').getAttribute('data-day'), await page.locator('.preview-badge').count()], ['9:10', '2026-11-18', 0]);
   }
   await page.goto(BASE + 'index.html?view=display&full=1', { waitUntil: 'networkidle' }); await page.waitForTimeout(600);
   ok('the screen without ?at= has no preview mark', await page.locator('.preview-badge').count(), 0);
