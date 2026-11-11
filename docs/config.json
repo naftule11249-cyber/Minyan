@@ -49,8 +49,8 @@
  "schedules": {
   "weekday": {
    "shacharis": "06:20 ברך משה\n06:50 דברי יואל\n07:10 ברך משה\n07:30 שלמה יודא\n07:45 לב אהרן\n08:00 דברי יואל\n08:15 ברך משה\n08:30 שלמה יודא\n08:45 לב אהרן\n09:00 דברי יואל\n09:15 ברך משה\n09:30 שלמה יודא\n09:45 לב אהרן\n10:00 דברי יואל\n10:20 ברך משה\n10:40 שלמה יודא\n11:00 דברי יואל\nchatzos-30 ברך משה\n11:20 ברך משה until chatzos-30\n11:40 שלמה יודא until chatzos-30\n12:00 דברי יואל until chatzos-26",
-   "mincha": "minchag ברך משה\n14:00 ברך משה // וידבר\n15:15 היכל ביהמ״ד\n17:00 דברי יואל\n17:15 ברך משה\nrt-15 ברך משה\nrt-12 דברי יואל\nrt-9 לב אהרן\n#off 18:00 ברך משה\n#off 18:15 דברי יואל\n17:30 לב אהרן",
-   "maariv": "sunset+60 היכל אדל\nrt דברי יואל\nrt לב אהרן\nrt+5 ברך משה\nevery 10 from rt+14~5 to 22:30 rooms ברך משה, דברי יואל, לב אהרן\n#off every 10 from 20:45 to 22:15 rooms ברך משה, דברי יואל, לב אהרן, שלמה יודא, היכל אדל, היכל ביהמ״ד\nevery 15 from 22:30 to 23:30 rooms ברך משה, דברי יואל\n00:00 היכל ביהמ״ד"
+   "mincha": "minchag ברך משה\n14:00 ברך משה\n15:15 היכל ביהמ״ד\n17:00 דברי יואל\n17:15 ברך משה\n17:30 לב אהרן\nrt-15 ברך משה\nrt-12 דברי יואל\nrt-9 לב אהרן\n#off 18:00 ברך משה\n#off 18:15 דברי יואל",
+   "maariv": "sunset+60 היכל אדל\nrt דברי יואל\nrt לב אהרן\nrt+5 ברך משה\nevery 10 from rt+14~5 to 20:00 rooms ברך משה, דברי יואל, לב אהרן\nevery 10 from 20:45 to 22:15 rooms ברך משה, דברי יואל, לב אהרן, שלמה יודא, היכל אדל, היכל ביהמ״ד\nevery 15 from 22:45 to 23:30 rooms ברך משה, דברי יואל\n00:00 היכל ביהמ״ד"
   },
   "sunday": {
    "shacharis": "07:30 לב אהרן\nevery 15 from 08:00 to 11:15 rooms דברי יואל, ברך משה, שלמה יודא, לב אהרן\n11:30 היכל אדל until chatzos-30\n11:45 לב אהרן until chatzos-28\n12:00 דברי יואל until chatzos-30\nchatzos-30 ברך משה"
@@ -61,7 +61,7 @@
    "maariv": "#off 07:00"
   },
   "shabbos": {
-   "shacharis": "#off 08:00 ברך משה // example\n#off 09:00 דברי יואל // example\n#off 09:30 היכל אדל // example\n#off 10:00 שלמה יודא // example",
+   "shacharis": "#off 08:00 ברך משה // example\n#off 09:00 דברי יואל // example\n09:30 היכל אדל // example\n#off 10:00 שלמה יודא // example",
    "mincha": "#off sunset-25~5 דברי יואל // example",
    "maariv": "#off 07:00"
   },
@@ -71,55 +71,60 @@
  },
  "notices": [
   {
-   "id": "d30wtc5",
-   "no": 3,
-   "kind": "month",
-   "title": "פרנס החודש",
-   "titleOwn": "פרנס החודש",
-   "lead": "",
-   "name": "",
-   "body": "הרה״ח ר׳ חיים אליעזר פאלקאוויטש הי״ו\nלרגל הולדות בנו למזל טוב",
-   "size": "",
-   "sizeOwn": "normal",
-   "logo": "",
-   "from": "",
-   "to": "2026-11-10"
-  },
-  {
-   "id": "d1bpym3",
-   "no": 1,
-   "kind": "month",
    "title": "פרנס חודש כסלו",
-   "titleOwn": "",
    "lead": "רון שיר ושבח למע״כ הרבני הנכבד והמרום כש״ת",
    "name": "מו״ה יעקב יואל פריעדמאן הי״ו",
    "body": "מחשובי מתפללי ולומדי בית מדרשינו\nלעילוי נשמת זקנתו מרת רבקה רחל בת ר׳ חיים ע״ה\nיארצייט ד׳ כסלו",
    "size": "big",
-   "sizeOwn": "",
    "logo": "horizon.png",
    "from": "2026-11-11",
    "to": "2026-12-10"
   },
   {
-   "id": "d2vwcsv",
-   "no": 2,
-   "kind": "ner",
    "title": "נר למאור לחודש כסלו",
-   "titleOwn": "",
    "lead": "נתנדב לעילוי נשמת",
    "name": "ר׳ דוד ב״ר משה אלי׳ עסטרייכער ע״ה",
    "body": "נפטר כ״ז כסלו תשפ״ד · ג׳ דחנוכה · ת.נ.צ.ב.ה.",
    "size": "small",
-   "sizeOwn": "",
    "logo": "",
    "from": "2026-11-11",
    "to": "2026-12-10"
+  },
+  {
+   "title": "פרנס היום",
+   "lead": "",
+   "name": "",
+   "body": "",
+   "size": "tiny",
+   "logo": "",
+   "from": "",
+   "to": ""
+  },
+  {
+   "title": "פרנס החודש",
+   "lead": "",
+   "name": "",
+   "body": "הרה״ח ר׳ חיים אליעזר פאלקאוויטש הי״ו\nלרגל הולדות בנו למזל טוב",
+   "size": "",
+   "logo": "",
+   "from": "",
+   "to": "2026-11-10"
+  },
+  {
+   "title": "פרנס השבוע",
+   "lead": "",
+   "name": "",
+   "body": "",
+   "size": "",
+   "logo": "",
+   "from": "",
+   "to": ""
   }
  ],
  "overrides": [],
  "smsNumber": "+1 929 828 7677",
  "remoteConfigUrl": "",
- "savedAt": 1794374844700,
+ "savedAt": 1794376874835,
  "siteUrl": "https://minyan.cascadeshul.org/",
  "logo": "",
  "wallLogo": "logo-name.png",
@@ -150,7 +155,7 @@
  "smsLang": "he",
  "displayScale": 100,
  "amidahMinutes": 15,
- "nextTemplate": "",
+ "nextTemplate": "{tefilla}\n{room}\n{time}\n{milestone}\n{countdown}{time}",
  "wallLook": {},
  "wallWindow": {
   "mode": "day",
@@ -158,39 +163,5 @@
   "after": 20,
   "neverEmpty": true
  },
- "rolls": [],
- "donationKinds": [
-  {
-   "id": "month",
-   "name": "פרנס החודש",
-   "title": "פרנס חודש {month}",
-   "size": "big",
-   "lead": "",
-   "period": "month"
-  },
-  {
-   "id": "ner",
-   "name": "נר למאור",
-   "title": "נר למאור לחודש {month}",
-   "size": "small",
-   "lead": "נתנדב לעילוי נשמת",
-   "period": "month"
-  },
-  {
-   "id": "week",
-   "name": "פרנס השבוע",
-   "title": "פרנס השבוע",
-   "size": "normal",
-   "lead": "",
-   "period": "week"
-  },
-  {
-   "id": "day",
-   "name": "פרנס היום",
-   "title": "פרנס היום",
-   "size": "tiny",
-   "lead": "",
-   "period": "day"
-  }
- ]
+ "rolls": []
 }
