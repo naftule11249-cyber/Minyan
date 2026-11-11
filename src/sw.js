@@ -2,9 +2,15 @@
 var VERSION = 'minyan-shell-dev';
 var FONTS = 'minyan-fonts';
 var SHELL = ['./index.html', './admin.html', './style.css', './cal.js', './engine.js', './template.js', './app.js', './manifest.webmanifest', './icon-192.png', './icon-512.png', './config.json'];
+/* A new version takes every file straight from the network. The host lets a browser keep a file for ten minutes, and a plain
+   cache.add() is answered from that copy: a version installed within ten minutes of the last visit would store the old files
+   under the new name and reload the page onto them. */
+function fresh(u) { return new Request(u, { cache: 'reload' }); }
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(VERSION).then(function (c) {
-    return Promise.all(SHELL.map(function (u) { return c.add(u).catch(function () {}); }));
+    return Promise.all(SHELL.map(function (u) {
+      return fetch(fresh(u)).then(function (r) { if (r.ok) return c.put(u, r); }).catch(function () {});
+    }));
   }).then(function () { return self.skipWaiting(); }));
 });
 self.addEventListener('activate', function (e) {
@@ -18,7 +24,7 @@ self.addEventListener('fetch', function (e) {
   if (url.origin === location.origin) {
     if (/\/config\.json$/.test(url.pathname)) {
       /* the schedule: network first, cached copy when offline */
-      e.respondWith(fetch(e.request).then(function (r) {
+      e.respondWith(fetch(e.request.url, { cache: 'no-cache' }).then(function (r) {
         if (r.ok) { var copy = r.clone(); caches.open(VERSION).then(function (c) { c.put('./config.json', copy); }); }
         return r;
       }).catch(function () { return caches.match('./config.json'); }));
@@ -31,7 +37,7 @@ self.addEventListener('fetch', function (e) {
       var shell = url.pathname === root || url.pathname === root + 'index.html' ? './index.html' : url.pathname === root + 'admin.html' ? './admin.html' : null;
       if (shell) {
         e.respondWith(caches.match(shell).then(function (cached) {
-          var net = fetch(e.request).then(function (r) { if (r.ok) caches.open(VERSION).then(function (c) { c.put(shell, r.clone()); }); return r; });
+          var net = fetch(e.request.url, { cache: 'no-cache' }).then(function (r) { if (r.ok) { var copy = r.clone(); caches.open(VERSION).then(function (c) { c.put(shell, copy); }); } return r; });
           return cached || net.catch(function () { return cached; });
         }));
       } else {
@@ -44,7 +50,7 @@ self.addEventListener('fetch', function (e) {
     }
     /* app shell: cached copy first, refreshed in the background */
     e.respondWith(caches.match(e.request, { ignoreSearch: true }).then(function (cached) {
-      var net = fetch(e.request).then(function (r) { if (r.ok) caches.open(VERSION).then(function (c) { c.put(e.request, r.clone()); }); return r; }).catch(function () { return cached; });
+      var net = fetch(e.request.url, { cache: 'no-cache' }).then(function (r) { if (r.ok) { var copy = r.clone(); caches.open(VERSION).then(function (c) { c.put(e.request, copy); }); } return r; }).catch(function () { return cached; });
       return cached || net;
     }));
     return;

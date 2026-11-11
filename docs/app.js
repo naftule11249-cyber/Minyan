@@ -2380,11 +2380,14 @@
   function registerSW() {
     if (inArtifact || !('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;
     var hadController = !!navigator.serviceWorker.controller, reloaded = false;
-    navigator.serviceWorker.register('./sw.js').then(function (reg) {
-      /* look for a new version every 10 minutes and whenever the page comes back into view; a new one installs, takes over and reloads the page */
+    navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then(function (reg) {
+      /* look for a new version as soon as the page opens, every 5 minutes after that, and whenever the page comes back into view or
+         the connection returns; a new one installs, takes over and reloads the page */
       var check = function () { reg.update().catch(function () {}); };
-      setInterval(check, 10 * 60 * 1000);
+      check();
+      setInterval(check, 5 * 60 * 1000);
       document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') check(); });
+      window.addEventListener('online', check);
     }).catch(function () {});
     navigator.serviceWorker.addEventListener('controllerchange', function () {
       if (hadController && !reloaded && !ui.adminOpen) { reloaded = true; location.reload(); }
