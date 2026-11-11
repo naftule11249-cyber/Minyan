@@ -66,9 +66,9 @@ const ny = (y, m, d, h, min) => Cal.epochFromWall(rd(y, m, d), h * 60 + (min || 
   await screen(page); s = await read(page);
   ok('minutes after Shabbos is out the band still says when it went out', s.band, [['מוצאי שבת', zt(SHAB, 'tzeis')]]);
   await ctx.close();
-  ({ ctx, page } = await context(ny(2026, 11, 14, 19, 0)));
+  ({ ctx, page } = await context(ny(2026, 11, 14, 23, 55)));
   await screen(page); s = await read(page);
-  ok('an hour later, with the card on tomorrow\'s zmanim, last night\'s "מוצאי שבת" is not left standing under "זמני מחר"', [s.zhead, s.band, s.three.length], ['זמני מחר', [], 3]);
+  ok('after חצות לילה, with the card on tomorrow\'s zmanim, last night\'s "מוצאי שבת" is not left standing under "זמני מחר"', [s.zhead, s.band, s.three.length], ['זמני מחר', [], 3]);
   await ctx.close();
 
   /* ---- Yom Tov ---- */

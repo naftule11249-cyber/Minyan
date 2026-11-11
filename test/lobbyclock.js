@@ -69,7 +69,7 @@ const { chromium } = require('playwright');
   ok('one tile before the next one is light green, the earlier ones are not', [await page.locator('.wall .tile.prev').count(), await page.locator('.wall .tile.prev .time').textContent(), await page.locator('.wall .tile.past').count() >= 1], [1, '2:00', true]);
   await ctx.close();
   ({ ctx, page } = await open('?view=display', Date.UTC(2026, 10, 11, 2, 10)));
-  ok('9:10 PM: the zmanim card turns to tomorrow and still counts down', [await page.locator('.zcard h3').textContent(), await page.locator('.wall .ztile.now').count()], ['זמני מחר', 1]);
+  ok('9:10 PM: the zmanim card is still today's, counting down to חצות לילה', [await page.locator('.zcard h3').textContent(), await page.locator('.wall .ztile.now').count()], ['זמני היום', 1]);
   ok('fits', (await fits(page)).columnsFit, true);
   const px = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize)), clock = (await page.locator('.aclock svg').boundingBox()).width;
   await ctx.close();
