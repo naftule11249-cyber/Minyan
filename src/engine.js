@@ -105,13 +105,21 @@ var MinyanEngine = (function () {
     }
     function tefillos() { return (cfg.tefillos && cfg.tefillos.length) ? cfg.tefillos : TEFILLA_DEFAULTS; }
     /* sponsor notices that are on today: non-empty body, and inside their from/to dates when set */
-    function activeNotices(rd) {
+    /* The donations on the board on a day. With `min` (minutes since midnight by the shul's clock) a donation for part of a day is
+       held to its hours: from fromTime on its first day until toTime on its last. Without it, the whole day counts. */
+    function clockMin(v) { var m = /^(\d{1,2}):(\d{2})$/.exec(v || ''); return m && +m[1] < 24 && +m[2] < 60 ? +m[1] * 60 + +m[2] : null; }
+    function activeNotices(rd, min) {
       var iso = isoDate(rd);
       return (cfg.notices || []).filter(function (n) {
         if (n.off) return false; /* switched off in the back end: kept, not shown */
         if (!((n.body || '') + (n.name || '') + (n.lead || '')).trim()) return false; /* a name on its own is a sponsor too */
         if (n.from && iso < n.from) return false;
         if (n.to && iso > n.to) return false;
+        if (min != null) {
+          var a = clockMin(n.fromTime), b = clockMin(n.toTime);
+          if (a != null && n.from && iso === n.from && min < a) return false;
+          if (b != null && n.to && iso === n.to && min >= b) return false;
+        }
         return true;
       });
     }

@@ -599,6 +599,12 @@ footer { max-width: 1120px; margin: 0 auto; padding-block: 0 30px; padding-left:
 .dn-date .dn-hebd { grid-area: heb; font-family: var(--font-display); font-weight: 700; font-size: 1.2rem; line-height: 1.25; text-align: left; } /* the page reads from the left, so the three lines share that edge */
 .dn-date .dn-civil { grid-area: civ; font-size: .88rem; color: var(--a-muted); }
 .dn-date .ico { grid-area: ico; display: flex; color: var(--a-navy-2); } .dn-date .ico svg { width: 22px; height: 22px; }
+.dn-allday { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-top: 12px; }
+.dn-allday .switch { min-height: 40px; font-size: .95rem; color: var(--a-ink); }
+.dn-allday .switch .swl { color: var(--a-ink); font-size: .95rem; }
+.dn-hours { margin-top: 4px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.dn-hours[hidden] { display: none; }
+.dn-hour { font-size: .85rem; font-weight: 700; color: var(--a-navy-2); }
 .dn-cal { margin-top: 10px; }
 .dn-cal[hidden] { display: none; }
 .hcal { background: #fff; border: 1px solid var(--a-line); border-radius: 16px; padding: 12px; box-shadow: 0 8px 28px rgba(40, 30, 10, .1); display: grid; gap: 10px; max-width: 560px; }
@@ -1011,6 +1017,24 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 @media (max-width: 640px) { .board-days .daychip { min-width: 78px; padding: 7px 10px; } }
 
 /* the colour rows on the Hallway screen tab: a kind of tile, its colour and its writing */
+/* "On the screen now": what the hallway screen lists at this minute under the settings beside it */
+.onscreen { margin-top: 12px; border: 1px dashed var(--a-line); border-radius: 14px; background: var(--a-field); padding: 12px 14px; display: grid; gap: 10px; }
+.os-head { display: flex; align-items: center; gap: 8px; }
+.os-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--a-ok); box-shadow: 0 0 0 3px rgba(29, 111, 55, .18); flex: none; }
+.os-title { font-size: .78rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--a-ink); }
+.os-time { margin-inline-start: auto; font-size: .88rem; color: var(--a-muted); }
+.os-rows { display: grid; gap: 8px; }
+.os-row { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); align-items: start; gap: 4px 10px; }
+.os-name { font-family: var(--font-display); font-weight: 700; font-size: 1rem; padding-top: 4px; text-align: left; } /* the page reads from the left: the name leads its row there */
+.os-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-start; }
+.os-chip { display: inline-flex; align-items: baseline; gap: 6px; padding: 3px 10px; border-radius: 999px; background: #fff; border: 1px solid var(--a-line); font-size: .88rem; white-space: nowrap; }
+.os-chip b { font-weight: 800; }
+.os-chip.next { background: #e4f3e8; border-color: #9fcdb0; color: #14502a; }
+.os-chip.gone { background: #f1eee7; color: #7a7468; }
+.os-none, .os-more { font-size: .85rem; color: var(--a-muted); padding: 4px 0; }
+.os-hid { grid-column: 2; font-size: .82rem; color: var(--a-muted); }
+.os-foot { font-size: .85rem; color: var(--a-muted); }
+@media (max-width: 520px) { .os-row { grid-template-columns: minmax(0, 1fr); } .os-hid { grid-column: 1; } }
 .shades { display: grid; gap: 8px; }
 .shade { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; background: var(--a-field); border: 1px solid var(--a-line); border-radius: 12px; padding: 10px 12px; }
 .shade-name { display: flex; align-items: center; gap: 12px; min-width: 0; }

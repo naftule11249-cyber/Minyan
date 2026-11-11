@@ -116,6 +116,19 @@
     for (i = -1; i < 10; i++) { s = scheduleFor(nowRd + i); /* from yesterday: a Maariv after midnight is still ahead */ for (j = 0; j < s.all.length; j++) if (keyMs(s.all[j]) > nowMs && s.all[j].tefilla.kind !== 'event') return { entry: s.all[j], sched: s, daysAhead: i }; }
     return null;
   }
+  /* What the hallway screen's countdown runs to (Hallway screen → The next-minyan panel): the time that stands large, the start, or
+     the tefilla's second time (הודו) where it has one. The panel is on the minyan its countdown runs to, so with הודו chosen it
+     stays on a minyan until הודו, though the tiles already mark the one after it as next. */
+  function countMs(e) {
+    if (cfg.countTo === 'start') return e.ms;
+    if (cfg.countTo === 'milestone' && e.tefilla.milestone) return e.ms + (+e.tefilla.offset || 0) * 60000;
+    return keyMs(e);
+  }
+  function upcomingBy(fn, nowMs, nowRd) {
+    var i, j, s;
+    for (i = -1; i < 10; i++) { s = scheduleFor(nowRd + i); for (j = 0; j < s.all.length; j++) if (s.all[j].tefilla.kind !== 'event' && fn(s.all[j]) > nowMs) return { entry: s.all[j], sched: s, daysAhead: i }; }
+    return null;
+  }
   function fmtTime(min) { return engine.fmtTime(min); }
   function fmtCountdown(ms) { return engine.fmtCountdown(ms); }
   /* the board's labels in Hebrew or Yiddish: General -> Board labels sets the default (the lobby screen and door displays always use it); each phone may pick its own */
@@ -214,7 +227,7 @@
 
     var banner = engine.activeBanner(now);
     if (banner) root.appendChild(el('div', { class: 'banner', role: 'status' }, [el('div', { class: 'banner-inner', text: banner.text.trim() })]));
-    var strip = sponsorsStrip(rd); /* a sponsor frame only when there is a sponsor that day */
+    var strip = sponsorsStrip(rd, n.min); /* a sponsor frame only when there is a sponsor at this hour of that day */
     if (strip && !lobby) root.appendChild(strip); /* on the lobby screen the sponsor box sits in the side column, under the zmanim */
     var up = upcoming(now, rd);
     var main = el('main'), colA = el('div', { class: 'col' }), colB = el('div', { class: 'col' });
@@ -224,12 +237,13 @@
       var e = up.entry, bigMs = bigIsMilestone(e.tefilla);
       ui.countdownMs = keyMs(e);
       /* on the hallway screen the room stands on its own line, large: from across the room that is what people look for */
+      var upP = lobby && (cfg.countTo === 'start' || cfg.countTo === 'milestone') ? (upcomingBy(countMs, now, rd) || up) : up, eP = upP.entry; /* the minyan the panel's countdown runs to */
       var held = lobby ? heldMinyan(now, rd) : null;
       if (held) { /* a minyan that has just started keeps the panel for its few minutes; the screen is drawn again when they are up, or when the next one starts */
         next.classList.add('held'); next.firstChild.textContent = S().nowMinyan;
-        ui.countdownMs = Math.min(held.until, keyMs(e)); ui.countdown = null;
-        nextPanelFromTemplate(next, held.entry, { daysAhead: 0, sched: held.sched }, now, e);
-      } else if (lobby) { nextPanelFromTemplate(next, e, up, now); }
+        ui.countdownMs = Math.min(held.until, countMs(eP)); ui.countdown = null;
+        nextPanelFromTemplate(next, held.entry, { daysAhead: 0, sched: held.sched }, now, eP);
+      } else if (lobby) { ui.countdownMs = countMs(eP); nextPanelFromTemplate(next, eP, upP, now); }
       else next.appendChild(el('div', { class: 'what', text: e.tefilla.name + (e.room ? ' – ' + e.room : '') }));
       if (!lobby) {
         if (bigMs) next.appendChild(el('div', { class: 'ms num pre', text: startLabel(e.tefilla) + ' ' + fmtTime(e.start) })); /* the start stays first: ברכות above, הודו big below */
@@ -417,7 +431,7 @@
     if (!hold) return null;
     for (i = -1; i <= 0; i++) {
       s = scheduleFor(rd + i);
-      for (j = 0; j < s.all.length; j++) { e = s.all[j]; if (e.tefilla.kind === 'event') continue; k = keyMs(e); if (k <= now && now - k < hold && (!best || k >= best.at)) best = { entry: e, sched: s, at: k, until: k + hold }; }
+      for (j = 0; j < s.all.length; j++) { e = s.all[j]; if (e.tefilla.kind === 'event') continue; k = countMs(e); if (k <= now && now - k < hold && (!best || k >= best.at)) best = { entry: e, sched: s, at: k, until: k + hold }; }
     }
     return best;
   }
@@ -461,6 +475,7 @@
       function st(e) {
         var s0 = entryState(e, now, up);
         if (e === lastStarted) return 'prev' + (s0 === 'now' ? ' now' : ''); /* the one before the next: light green, with עכשיו while it is fresh */
+        if (s0 === 'next' && !nextMarkedNow(e, now)) return 'next-quiet'; /* still the next one (it keeps a tile of its own), not yet marked as such */
         return s0 === 'now' ? 'past' : s0;
       }
       list.forEach(function (e) {
@@ -481,7 +496,7 @@
       }
       var nodes = [], grid = el('div', { class: 'grid' }), opened = {}, runs = [];
       list.forEach(function (e) {
-        var s0 = st(e), sid = e.series && e.series.id, keep = s0 === 'next' || s0.indexOf('prev') === 0; /* the next one and the one before it always get a tile of their own */
+        var s0 = st(e), sid = e.series && e.series.id, keep = s0.indexOf('next') === 0 || s0.indexOf('prev') === 0; /* the next one and the one before it always get a tile of their own */
         if (sid && counts[sid] >= 3 && !keep) {
           if (!opened[sid]) { opened[sid] = { s: e.series, items: [] }; runs.push(opened[sid]); }
           if (feature[sid] !== e) { opened[sid].items.push(e); return; }
@@ -501,14 +516,27 @@
     return out;
   }
   /* General → Hallway screen: the whole day, or only the minyanim near this moment */
-  function wallWindowList(list, now, up) {
-    var w = cfg.wallWindow || {};
-    if (w.mode !== 'window' || !list.length) return list;
+  /* w: the settings to go by — the saved ones, or, for the back end's "on the screen now", the ones standing in its form */
+  function wallWindowList(list, now, up, w) {
+    w = w || cfg.wallWindow || {};
+    if (!list.length || (w.mode !== 'window' && w.mode !== 'count')) return list;
+    var ahead = list.filter(function (e) { return e.ms > now; }), near;
+    if (w.mode === 'count') { /* by number: so many still to come, so many that have started */
+      var nNext = Math.max(1, Math.min(60, Math.round(w.next == null ? 6 : +w.next) || 1)), nRecent = Math.max(0, Math.min(20, Math.round(w.recent == null ? 2 : +w.recent) || 0));
+      var gone = list.filter(function (e) { return e.ms <= now; });
+      near = (nRecent ? gone.slice(-nRecent) : []).concat(ahead.slice(0, nNext));
+      if (ahead.length || w.neverEmpty === false) return ahead.length ? near : []; /* with none still to come the tefilla is over: its frame goes, unless the screen is never to be left empty */
+      return near.length ? near : list.slice(-3);
+    }
     var before = (w.before == null ? 180 : +w.before) * 60000, after = (w.after == null ? 20 : +w.after) * 60000;
-    var near = list.filter(function (e) { return e.ms > now ? e.ms - now <= before : now - e.ms <= after; });
+    near = list.filter(function (e) { return e.ms > now ? e.ms - now <= before : now - e.ms <= after; });
     if (near.length || w.neverEmpty === false) return near;
-    var ahead = list.filter(function (e) { return e.ms > now; }); /* nothing near: rather than an empty frame, the next ones */
-    return ahead.length ? ahead.slice(0, 4) : list.slice(-3); /* a tefilla with nothing near still shows its next few */
+    return ahead.length ? ahead.slice(0, 4) : list.slice(-3); /* nothing near: rather than an empty frame, a tefilla still shows its next few */
+  }
+  /* the next minyan's tile is marked (green, הבא) all the time, or only from so many minutes before it starts (Hallway screen → How the tiles behave) */
+  function nextMarkedNow(e, now) {
+    var m = cfg.nextMark; if (m == null || m === '' || !(+m > 0)) return true;
+    return keyMs(e) - now <= +m * 60000;
   }
   function wallTile(e, t, st, mark) {
     return el('div', { class: 'tile' + (st ? ' ' + st : '') + (mark ? ' marked' : '') + (t.kind === 'event' ? ' event' : '') }, [
@@ -585,7 +613,8 @@
     sec.appendChild(grid);
     return sec;
   }
-  var PAGE_MS = 8000;
+  /* a frame with more minyanim than fit turns its pages: so many seconds on each (Hallway screen → How the tiles behave) */
+  function pageMs() { var v = +cfg.pageSeconds; return (v >= 3 && v <= 60 ? v : 8) * 1000; }
   /* The hallway screen fits the TV: it scales with the screen (General → "Hallway screen size"), and when a column still does not fit, the
      whole screen shrinks a little (never below 60%); only if that is not enough does the fullest card page through its tiles. */
   function fitLobby() {
@@ -739,9 +768,9 @@
     { id: 'week', name: 'פרנס השבוע', title: 'פרנס השבוע', size: 'normal', lead: '', period: 'week' },
     { id: 'day', name: 'פרנס היום', title: 'פרנס היום', size: 'tiny', lead: '', period: 'day' }];
   /* Sponsor boxes (פרנס החודש and friends) in a framed strip under the header */
-  function sponsorsStrip(rd) {
+  function sponsorsStrip(rd, min) {
     var items = [];
-    engine.activeNotices(rd).forEach(function (n) { items.push(sponsorPanel(n)); });
+    engine.activeNotices(rd, min).forEach(function (n) { items.push(sponsorPanel(n)); });
     if (ui.sponsorTimer) { clearInterval(ui.sponsorTimer); ui.sponsorTimer = null; }
     if (!items.length) return null;
     var rotate = $('#app').classList.contains('room') && items.length > 1; /* a door tablet shows one at a time; the hallway screen has a column for them all */
@@ -1073,7 +1102,7 @@
     if (ui.zcountMs && now >= ui.zcountMs) { render(); return; }
     if (ui.countdown) ui.countdown.textContent = fmtCountdown(ui.countdownMs - now);
     if (ui.zcount) ui.zcount.textContent = fmtCountdown(ui.zcountMs - now);
-    if (ui.pages && ui.pages.length && now - (ui.pageAt || 0) >= PAGE_MS) { ui.pageAt = now; ui.pages.forEach(turnPage); }
+    if (ui.pages && ui.pages.length && now - (ui.pageAt || 0) >= pageMs()) { ui.pageAt = now; ui.pages.forEach(turnPage); }
     if (Math.floor(now / 60000) !== ui.lastMinute) render();
   }
 
@@ -1230,6 +1259,7 @@
       try { $('#overlay').scrollTop = 0; } catch (e) {}
       if (id === 'data') dataArea.value = JSON.stringify(collect(), null, 2);
       if (id === 'home') paintHome();
+      if (id === 'screen' && ui.paintOnScreen) ui.paintOnScreen(); /* what the screen lists is asked again each time the page is opened */
     }
 
     var oRows = [];
@@ -1874,7 +1904,7 @@
       if (force || homeFrame.getAttribute('data-url') !== url) { homeFrame.setAttribute('data-url', url); homeFrame.src = url + (force ? '&r=' + Date.now() : ''); }
       /* what that day holds, in words */
       var sc = scheduleFor(rd), kindOfDay = sc.override ? 'A special date' + (sc.override.label ? ': ' + sc.override.label : '') : sc.roll && sc.roll.name ? 'Extra schedule: ' + sc.roll.name : ((Cal.DAY_TYPES.filter(function (t) { return t[0] === sc.type; })[0] || [])[3] || sc.type || 'Regular');
-      var on = engine.activeNotices(rd), ms = Cal.epochFromWall(rd, min, loc().tz), ban = engine.activeBanner(ms);
+      var on = engine.activeNotices(rd, min), ms = Cal.epochFromWall(rd, min, loc().tz), ban = engine.activeBanner(ms);
       homeFacts.textContent = '';
       fact('Day', dayLine(info, rd) + ' · ' + Cal.formatHeb(info.heb) + (info.labels && info.labels.length ? ' · ' + info.labels.join(' · ') : ''), true);
       fact('Schedule in use', kindOfDay);
@@ -1937,7 +1967,7 @@
     function effSize(x) { var v = x.sizeOwn || kindSize(x.kind); return v === 'normal' ? '' : v; }
     var dons = (d.notices || []).filter(function (n) { return ((n.name || '') + (n.body || '') + (n.lead || '')).trim(); }).map(function (n) {
       var kd = guessKind(n);
-      return { id: n.id || '', no: +n.no || 0, kind: kd, lead: n.lead || '', name: n.name || '', body: n.body || '', logo: n.logo || '', from: n.from || '', to: n.to || '', off: !!n.off,
+      return { id: n.id || '', no: +n.no || 0, kind: kd, lead: n.lead || '', name: n.name || '', body: n.body || '', logo: n.logo || '', from: n.from || '', to: n.to || '', fromTime: n.fromTime || '', toTime: n.toTime || '', off: !!n.off,
         titleOwn: n.titleOwn != null ? n.titleOwn : ((n.title || '') === titleFor(kd, n.from, n.to) ? '' : (n.title || '')),
         sizeOwn: n.sizeOwn != null ? n.sizeOwn : ((n.size || 'normal') === kindSize(kd) ? '' : (n.size || 'normal')) };
     });
@@ -1950,19 +1980,29 @@
         var n = { id: x.id, no: x.no, kind: x.kind, title: effTitle(x), titleOwn: (x.titleOwn || '').trim(), lead: (x.lead || '').trim(), name: (x.name || '').trim(), body: (x.body || '').trim(),
           size: effSize(x), sizeOwn: x.sizeOwn || '', logo: (x.logo || '').trim(), from: x.from || '', to: x.to || '' };
         if (x.off) n.off = true; /* switched off: kept in the list, not shown on the board */
+        if (x.from && x.fromTime) n.fromTime = x.fromTime; /* a donation for part of a day: from a time on its first day … */
+        if (x.to && x.toTime) n.toTime = x.toTime; /* … until a time on its last */
         return n;
       });
     }
     /* where a donation stands today; a switched-off one is off whatever its dates say */
-    function dateState(x) { return x.from && todayIso < x.from ? 'soon' : x.to && todayIso > x.to ? 'done' : 'on'; }
+    function minuteNow() { return Cal.nowInTz(Date.now(), loc().tz).min; }
+    function dateState(x) {
+      var a = parseHHMM(x.fromTime), b = parseHHMM(x.toTime), m = minuteNow();
+      if (x.from && (todayIso < x.from || (todayIso === x.from && a != null && m < a))) return 'soon';
+      if (x.to && (todayIso > x.to || (todayIso === x.to && b != null && m >= b))) return 'done';
+      return 'on';
+    }
+    function hourText(v) { var m = parseHHMM(v); return m == null ? '' : clock12(m); }
     function donState(x) { return x.off ? 'off' : dateState(x); }
     var STATE_TEXT = { on: 'On the board', soon: 'Coming up', done: 'Finished', off: 'Switched off' };
     function dayWord(n) { return n === 1 ? '1 day' : n + ' days'; }
     function whenText(x, side) {
       var r = rdOf(side === 'from' ? x.from : x.to), n;
       if (r == null) return side === 'from' ? 'no start date' : 'no end date';
-      if (side === 'from') { n = todayRd - r; return n === 0 ? 'started today' : n === 1 ? 'started yesterday' : n > 1 ? 'started ' + dayWord(n) + ' ago' : n === -1 ? 'starts tomorrow' : 'starts in ' + dayWord(-n); }
-      n = r - todayRd; return n === 0 ? 'ends today' : n === 1 ? 'ends tomorrow' : n > 1 ? 'ends in ' + dayWord(n) : n === -1 ? 'ended yesterday' : 'ended ' + dayWord(-n) + ' ago';
+      var at = parseHHMM(side === 'from' ? x.fromTime : x.toTime), hour = at == null ? '' : ' at ' + clock12(at), late = at != null && minuteNow() >= at;
+      if (side === 'from') { n = todayRd - r; return n === 0 ? (at != null && !late ? 'starts today' : 'started today') + hour : n === 1 ? 'started yesterday' : n > 1 ? 'started ' + dayWord(n) + ' ago' : n === -1 ? 'starts tomorrow' + hour : 'starts in ' + dayWord(-n); }
+      n = r - todayRd; return n === 0 ? (late ? 'ended today' : 'ends today') + hour : n === 1 ? 'ends tomorrow' + hour : n > 1 ? 'ends in ' + dayWord(n) : n === -1 ? 'ended yesterday' : 'ended ' + dayWord(-n) + ' ago';
     }
     function hebDate(iso) { var r = rdOf(iso); return r == null ? '—' : Cal.formatHeb(Cal.hebFromRD(r)); }
     function civilDate(iso) { var r = rdOf(iso); if (r == null) return ''; var g = Cal.gregFromRD(r); return new Date(Date.UTC(g.y, g.m - 1, g.d)).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }); }
@@ -2051,6 +2091,22 @@
         if (which) { cal.open(); try { calBox.scrollIntoView({ block: 'nearest' }); } catch (e) {} }
       }
       function afterDates() { errDates.textContent = ''; paintQuick(); refresh(); }
+      /* All day, or part of it: from a time on the first day until a time on the last. Midnight to 11:59 PM is the whole day, said the long way. */
+      var hasHours = !!(src && orig && (orig.fromTime || orig.toTime));
+      var fAllDay = el('input', { type: 'checkbox', role: 'switch', id: 'dn-allday-' + fid }); fAllDay.checked = !hasHours;
+      var fFromT = inp('dn-fromt-' + fid, orig && orig.fromTime ? orig.fromTime : '00:00', { type: 'time' }), fToT = inp('dn-tot-' + fid, orig && orig.toTime ? orig.toTime : '23:59', { type: 'time' });
+      var allDayNote = el('span', { class: 'dn-hint' }), hoursRow = el('div', { class: 'fields dn-hours' }, [field('From, on the first day', fFromT), field('Until, on the last day', fToT)]);
+      function hours() { /* what is kept: nothing for a whole day, or for an end left at the day's own edge */
+        var a = fAllDay.checked || !fFrom.value ? '' : fFromT.value, b = fAllDay.checked || !fTo.value ? '' : fToT.value;
+        return { from: a && a !== '00:00' ? a : '', to: b && b !== '23:59' ? b : '' };
+      }
+      function hoursSync() {
+        hoursRow.hidden = fAllDay.checked;
+        fFromT.disabled = !fFrom.value; fToT.disabled = !fTo.value; /* a time belongs to a day: with no first or last day there is nothing for it to stand on */
+        allDayNote.textContent = fAllDay.checked ? 'From the start of its first day to the end of its last.' : 'Only between these times: from the first on its first day until the second on its last.';
+      }
+      fAllDay.addEventListener('change', function () { hoursSync(); errDates.textContent = ''; refresh(); changed(); });
+      [fFromT, fToT].forEach(function (f) { f.addEventListener('change', function () { errDates.textContent = ''; refresh(); changed(); }); });
       var fLead = inp('dn-lead-' + fid, src ? src.lead : (k0 ? k0.lead || '' : ''));
       var fTitle = inp('dn-title-' + fid, src ? src.titleOwn : '');
       var fSize = el('select', { id: 'dn-size-' + fid }, [opt('', 'As this kind usually is'), opt('big', 'Big'), opt('normal', 'Normal'), opt('small', 'Small'), opt('tiny', 'Smallest')]);
@@ -2066,8 +2122,9 @@
       function refresh() {
         var c = current(), empty = !(c.name + c.body).trim();
         stage.textContent = ''; stage.appendChild(sponsorPanel(c));
-        var ds = dateState({ from: fFrom.value, to: fTo.value });
-        stageNote.textContent = empty ? 'The name and the lines appear here as you type.' : orig && orig.off ? 'This donation is switched off, so it is not on the board. Switch it on in the list to show it.' : ds === 'on' ? 'This is on the board from the moment you publish.' : ds === 'soon' ? 'It goes on the board by itself on its first day.' : 'These dates have passed, so it will not be on the board.';
+        var hr = hours(), ds = dateState({ from: fFrom.value, to: fTo.value, fromTime: hr.from, toTime: hr.to });
+        hoursSync();
+        stageNote.textContent = empty ? 'The name and the lines appear here as you type.' : orig && orig.off ? 'This donation is switched off, so it is not on the board. Switch it on in the list to show it.' : ds === 'on' ? 'This is on the board from the moment you publish' + (hr.to ? ', until ' + hourText(hr.to) + ' on its last day.' : '.') : ds === 'soon' ? 'It goes on the board by itself on its first day' + (hr.from ? ' at ' + hourText(hr.from) + '.' : '.') : 'These dates have passed, so it will not be on the board.';
         fTitle.placeholder = titleFor(w.kind, fFrom.value, fTo.value) || 'The words at the top of the panel';
         paintDates();
       }
@@ -2109,8 +2166,11 @@
         errName.textContent = ''; errDates.textContent = '';
         if (!nameV && !bodyV) { errName.textContent = 'Enter the name of the donor.'; fName.focus(); return; }
         if (fFrom.value && fTo.value && fTo.value < fFrom.value) { errDates.textContent = 'The last day is before the first day. Pick a later last day.'; setPicking('to'); return; }
+        var hrs = hours();
+        if (!fAllDay.checked && (!fFromT.value || !fToT.value)) { errDates.textContent = 'Enter both times, or switch "All day" back on.'; (fFromT.value ? fToT : fFromT).focus(); return; }
+        if (hrs.from && hrs.to && fFrom.value === fTo.value && parseHHMM(hrs.to) <= parseHHMM(hrs.from)) { errDates.textContent = 'The end time is not after the start time. Pick a later end time.'; fToT.focus(); return; }
         var rec = orig || { id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), no: ++donSeq };
-        rec.kind = w.kind; rec.lead = fLead.value.trim(); rec.name = nameV; rec.body = bodyV; rec.logo = fLogo.value.trim(); rec.from = fFrom.value; rec.to = fTo.value; rec.sizeOwn = fSize.value;
+        rec.kind = w.kind; rec.lead = fLead.value.trim(); rec.name = nameV; rec.body = bodyV; rec.logo = fLogo.value.trim(); rec.from = fFrom.value; rec.to = fTo.value; rec.fromTime = hrs.from; rec.toTime = hrs.to; rec.sizeOwn = fSize.value;
         rec.titleOwn = fTitle.value.trim() === titleFor(w.kind, fFrom.value, fTo.value) ? '' : fTitle.value.trim();
         if (isNew) dons.push(rec);
         ui.dn.flash = rec.id; clearTimeout(ui.dn.flashT); ui.dn.flashT = setTimeout(function () { ui.dn.flash = ''; }, 3000); /* the list shows where it landed, through the rebuild that follows a save */
@@ -2134,7 +2194,9 @@
         el('div', { class: 'fields' }, [field('In honor of', fBody, el('div', { class: 'dn-hint', text: 'Each line you write is a line on the panel.' }))]),
         el('div', { class: 'field' }, [el('span', { class: 'dn-label', text: 'When it is on the board' }), quick]),
         el('div', { class: 'dn-datepair' }, [bFrom, bTo, fFrom, fTo]),
-        calBox, errDates, moreBox]);
+        calBox,
+        el('div', { class: 'dn-allday' }, [el('label', { class: 'switch', for: fAllDay.id }, [fAllDay, el('span', { class: 'swl', text: 'All day' })]), allDayNote]),
+        hoursRow, errDates, moreBox]);
       var body = el('div', { class: 'dn-body' }, [form, el('aside', { class: 'dn-preview' }, [el('div', { class: 'dn-label', text: 'How it looks on the board' }), stage, stageNote])]);
       var saveMain = el('button', { type: 'button', class: 'btn primary', id: 'dn-save', text: isConnected() ? 'Save and publish' : 'Save donation', onclick: function () { save(isConnected()); } });
       var saveOnly = isConnected() ? el('button', { type: 'button', class: 'btn', id: 'dn-save-only', text: 'Save only', onclick: function () { save(false); } }) : null;
@@ -2271,8 +2333,8 @@
           el('div', { class: 'dn-meta' }, [el('span', { class: 'dn-no num', text: numText(x.no) }), el('span', { class: 'dn-st ' + st, text: STATE_TEXT[st] })])]),
         el('div', { class: 'dn-chips' }, [el('span', { class: 'dn-kind', dir: 'auto', text: k ? k.name : (effTitle(x) || 'Other') })]),
         el('div', { class: 'dn-dates' }, [
-          el('div', null, [el('span', { class: 'dn-lbl', text: 'Start' }), el('span', { class: 'dn-heb', dir: 'rtl', title: civilDate(x.from), text: hebDate(x.from) }), el('span', { class: 'dn-rel', text: whenText(x, 'from') })]),
-          el('div', null, [el('span', { class: 'dn-lbl', text: 'End' }), el('span', { class: 'dn-heb', dir: 'rtl', title: civilDate(x.to), text: hebDate(x.to) }), el('span', { class: 'dn-rel', text: whenText(x, 'to') })])]),
+          el('div', null, [el('span', { class: 'dn-lbl', text: 'Start' }), el('span', { class: 'dn-heb', dir: 'rtl', title: civilDate(x.from), text: hebDate(x.from) }), x.from && x.fromTime ? el('span', { class: 'dn-hour num', text: 'from ' + hourText(x.fromTime) }) : null, el('span', { class: 'dn-rel', text: whenText(x, 'from') })]),
+          el('div', null, [el('span', { class: 'dn-lbl', text: 'End' }), el('span', { class: 'dn-heb', dir: 'rtl', title: civilDate(x.to), text: hebDate(x.to) }), x.to && x.toTime ? el('span', { class: 'dn-hour num', text: 'until ' + hourText(x.toTime) }) : null, el('span', { class: 'dn-rel', text: whenText(x, 'to') })])]),
         acts]);
     }
     function paintList() {
@@ -2377,7 +2439,7 @@
     /* the hallway screen: its colours, and which minyanim it shows */
     var sp = el('div', { class: 'col', id: 'page-screen' }), wall = clone(d.wallLook || {}), win = clone(d.wallWindow || {});
     var cWallLook = card('Colours', 'Each kind of tile on the hallway screen. Leave one empty and it keeps the colour of the look chosen in General.'),
-      cWallShow = card('Which minyanim it shows', 'The whole day, or only what is near.');
+      cWallShow = card('Which minyanim it shows', 'The whole day, only what is near, or the next few and the last few.');
     var KINDS = [['tile', 'Minyanim still to come', 'Ink'], ['next', 'The next minyan', 'Ink'], ['now', 'The one before it', 'Ink'],
       ['past', 'The earlier ones', 'Ink'], ['bar', 'The top line, when it is shown', 'Ink']];
     var SWATCHES = [];
@@ -2447,17 +2509,66 @@
     });
     cWallLook.body.appendChild(swatchRows);
     cWallLook.body.appendChild(el('div', { class: 'bar actions' }, [el('button', { type: 'button', class: 'btn small', text: 'Back to the look\'s own colours', 'data-nodirty': '1', onclick: function () { SWATCHES.forEach(function (sw) { if (/^(pageBg|frameBg|frameLine)$/.test(sw[0])) return; wall[sw[0]] = ''; $('#w-on-' + sw[0]).checked = false; $('#w-' + sw[0]).disabled = true; }); markDirty(); } })]));
-    var fWinMode = el('select', { id: 'w-mode' }, [el('option', { value: 'day', text: 'The whole day, from the first minyan to the last' }), el('option', { value: 'window', text: 'Only what is near: the next few hours and what just went' })]);
-    fWinMode.value = win.mode === 'window' ? 'window' : 'day';
+    var fWinMode = el('select', { id: 'w-mode' }, [el('option', { value: 'day', text: 'The whole day, from the first minyan to the last' }), el('option', { value: 'window', text: 'Only what is near: the next few hours and what just went' }),
+      el('option', { value: 'count', text: 'The next few and the last few, by number' })]);
+    fWinMode.value = win.mode === 'window' ? 'window' : win.mode === 'count' ? 'count' : 'day';
+    var fWinNext = inp('w-next', win.next == null ? 6 : win.next, { type: 'number', min: '1', max: '60', inputmode: 'numeric' });
+    var fWinRecent = inp('w-recent', win.recent == null ? 2 : win.recent, { type: 'number', min: '0', max: '20', inputmode: 'numeric' });
     var fWinBefore = inp('w-before', win.before == null ? 180 : win.before, { type: 'number', min: '10', max: '1440', inputmode: 'numeric' });
     var fWinAfter = inp('w-after', win.after == null ? 20 : win.after, { type: 'number', min: '0', max: '240', inputmode: 'numeric' });
     var fWinKeep = el('input', { type: 'checkbox', id: 'w-keep' }); fWinKeep.checked = win.neverEmpty !== false;
     var winRow = el('div', { class: 'fields' }, [field('Minutes ahead to show', stepper(fWinBefore, 30)), field('Minutes to keep one after it starts', stepper(fWinAfter, 5))]);
-    function winSync() { winRow.hidden = fWinMode.value !== 'window'; }
-    fWinMode.addEventListener('change', winSync); winSync();
+    var cntRow = el('div', { class: 'fields' }, [field('Minyanim still to come, of each tefilla', stepper(fWinNext, 1)), field('Minyanim that have started, to keep', stepper(fWinRecent, 1))]);
+    var keepRow = el('div', { class: 'checks' }, [el('label', { for: 'w-keep' }, [fWinKeep, ' Never leave the screen empty: when nothing is near, show the next ones anyway'])]);
+    /* the settings as they stand in the form, saved or not: the screen is asked what it would list under these */
+    function winNow() {
+      return { mode: fWinMode.value, before: Math.max(10, Math.min(1440, +fWinBefore.value || 180)), after: Math.max(0, Math.min(240, +fWinAfter.value || 0)), neverEmpty: fWinKeep.checked,
+        next: Math.max(1, Math.min(60, Math.round(+fWinNext.value) || 6)), recent: Math.max(0, Math.min(20, Math.round(+fWinRecent.value) || 0)) };
+    }
+    /* "On the screen now": what the hallway screen lists at this minute under the settings above, tefilla by tefilla, and how many it leaves out */
+    var onScreen = el('div', { class: 'onscreen', id: 'w-onscreen', 'data-nodirty': '1', 'aria-live': 'polite' });
+    function paintOnScreen() {
+      var nowMs = Date.now(), w = winNow(), keepFlag = ui.todayAllSwitched, lists = tefillaLists(scheduleFor(todayRd), nowMs, true), up = upcoming(nowMs, todayRd), total = 0, left = 0;
+      ui.todayAllSwitched = keepFlag; /* asking is not the board's own drawing: its note of the day is left as it was */
+      var rows = el('div', { class: 'os-rows' });
+      lists.forEach(function (x) {
+        if (x.t.kind === 'event' || !x.list.length) return;
+        var shown = wallWindowList(x.list, nowMs, up, w), hid = x.list.length - shown.length, chips = el('div', { class: 'os-chips' }), MOST = 10;
+        total += shown.length; left += hid;
+        shown.slice(0, MOST).forEach(function (e) {
+          var st = up && sameEntry(e, up.entry) ? ' next' : e.ms <= nowMs ? ' gone' : '';
+          chips.appendChild(el('span', { class: 'os-chip' + st }, [el('b', { class: 'num', text: fmtTime(bigIsMilestone(x.t) ? e.milestone : e.start) }), el('bdi', { text: e.room || x.t.name })]));
+        });
+        if (shown.length > MOST) chips.appendChild(el('span', { class: 'os-more', text: 'and ' + (shown.length - MOST) + ' more' })); /* a long day is told, not spelled out */
+        if (!shown.length) chips.appendChild(el('span', { class: 'os-none', text: 'No frame for it right now' }));
+        rows.appendChild(el('div', { class: 'os-row' }, [el('div', { class: 'os-name', dir: 'rtl', text: x.t.name + (x.fromTomorrow ? ' – ' + S().tomorrow : '') }), chips, hid ? el('div', { class: 'os-hid', text: hid + ' not shown' }) : null]));
+      });
+      onScreen.textContent = '';
+      onScreen.appendChild(el('div', { class: 'os-head' }, [el('span', { class: 'os-dot', 'aria-hidden': 'true' }), el('span', { class: 'os-title', text: 'On the screen now' }),
+        el('span', { class: 'os-time num', text: new Date(nowMs).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: loc().tz }) })]));
+      onScreen.appendChild(rows);
+      onScreen.appendChild(el('div', { class: 'os-foot', text: !total ? 'Nothing would be on the screen at this minute.' : total + (total === 1 ? ' minyan' : ' minyanim') + ' on the screen' + (left ? ', ' + left + ' left out for now.' : ', none left out.') + ' The green one is the next; the pale ones have started.' }));
+    }
+    function winSync() { winRow.hidden = fWinMode.value !== 'window'; cntRow.hidden = fWinMode.value !== 'count'; keepRow.hidden = fWinMode.value === 'day'; paintOnScreen(); }
+    fWinMode.addEventListener('change', winSync);
     cWallShow.body.appendChild(el('div', { class: 'fields' }, [field('What the hallway screen lists', fWinMode)]));
-    cWallShow.body.appendChild(winRow);
-    cWallShow.body.appendChild(el('div', { class: 'checks' }, [el('label', { for: 'w-keep' }, [fWinKeep, ' Never leave the screen empty: when nothing is near, show the next ones anyway'])]));
+    cWallShow.body.appendChild(winRow); cWallShow.body.appendChild(cntRow);
+    cWallShow.body.appendChild(keepRow);
+    cWallShow.body.appendChild(onScreen);
+    cWallShow.body.addEventListener('input', function () { paintOnScreen(); }); cWallShow.body.addEventListener('change', function () { paintOnScreen(); });
+    ui.paintOnScreen = paintOnScreen;
+    winSync();
+    /* how the tiles behave: when the next minyan is marked, and how fast a frame that has too many turns its pages */
+    var cWallTiles = card('How the tiles behave', 'When the next minyan is marked, and how fast a frame with more than fits turns its pages.');
+    var fMarkOn = el('input', { type: 'checkbox', id: 'w-mark-on' }); fMarkOn.checked = +d.nextMark > 0;
+    var fMark = inp('w-mark', +d.nextMark > 0 ? d.nextMark : 15, { type: 'number', min: '1', max: '240', inputmode: 'numeric' });
+    var markRow = el('div', { class: 'fields' }, [field('Minutes before it starts', stepper(fMark, 5), el('div', { class: 'hint', text: 'Until then the next minyan looks like any other still to come; from then on its tile is green and carries הבא.' }))]);
+    function markSync() { markRow.hidden = !fMarkOn.checked; }
+    fMarkOn.addEventListener('change', markSync); markSync();
+    var fPage = inp('w-page', d.pageSeconds == null ? 8 : d.pageSeconds, { type: 'number', min: '3', max: '60', inputmode: 'numeric' });
+    cWallTiles.body.appendChild(el('div', { class: 'checks' }, [el('label', { for: 'w-mark-on' }, [fMarkOn, ' Mark the next minyan only shortly before it starts'])]));
+    cWallTiles.body.appendChild(markRow);
+    cWallTiles.body.appendChild(el('div', { class: 'fields' }, [field('Seconds on each page', stepper(fPage, 1), el('div', { class: 'hint', text: 'A frame turns pages only when a day has more minyanim than fit on the screen even at its smallest size. Then each page stays this long.' }))]));
     var cWallNext = card('The next-minyan panel', 'One line per line. Put a piece in braces and it is filled in; anything else is shown as you write it.');
     var fNextT = el('textarea', { id: 'w-next-template', dir: 'ltr', spellcheck: 'false' });
     fNextT.value = d.nextTemplate == null || d.nextTemplate === '' ? NEXT_TEMPLATE : d.nextTemplate;
@@ -2477,6 +2588,9 @@
     cWallNext.body.appendChild(el('div', { class: 'checks' }, [el('label', { for: 'w-nextpanel' }, [fNextPanel, ' Show the next-minyan panel on the hallway screen'])]));
     cWallNext.body.appendChild(nextRest);
     nextRest.appendChild(el('div', { class: 'fields' }, [field('Minutes to stay on a minyan after it starts', stepper(fNextHold, 1), el('div', { class: 'hint', text: '0 moves on to the next minyan the moment one starts. With 5, the panel stays on the minyan that has just started for five minutes, headed עכשיו, with the next one named under it.' }))]));
+    var fCountTo = el('select', { id: 'w-countto' }, [el('option', { value: '', text: 'The time that stands large (as it is now)' }), el('option', { value: 'start', text: 'The start of the minyan' }), el('option', { value: 'milestone', text: 'The second time (הודו), where a tefilla has one' })]);
+    fCountTo.value = d.countTo === 'start' || d.countTo === 'milestone' ? d.countTo : '';
+    nextRest.appendChild(el('div', { class: 'fields' }, [field('The countdown runs to', fCountTo, el('div', { class: 'hint', text: 'The panel stays on a minyan until its countdown ends. Run to הודו, it stays on a shacharis until הודו while the tiles already mark the one after it.' }))]));
     nextRest.appendChild(el('div', { class: 'fields' }, [field('The panel, line by line', fNextT)]));
     nextRest.appendChild(el('div', { class: 'hint', text: '{tefilla} שחרית · {room} the shtibl · {time} the big time · {milestone} הודו and its time · {countdown} the red countdown · {day} tomorrow and its date · {note} the row\'s note' }));
     nextRest.appendChild(varRow);
@@ -2485,7 +2599,7 @@
     var cWallClock = card('The clock', 'A logo on the clock face, above the hands. Put the picture beside the website (logo.png) or paste its web address; leave it empty for a plain face.');
     var fWallLogo = inp('w-logo', d.wallLogo || '', { dir: 'ltr', placeholder: 'logo.png' });
     cWallClock.body.appendChild(el('div', { class: 'fields' }, [field('Logo on the clock face', fWallLogo)]));
-    sp.appendChild(cWallBase); sp.appendChild(cWallLook); sp.appendChild(cWallTop); sp.appendChild(cWallClock); sp.appendChild(cWallNext); sp.appendChild(cWallShow);
+    sp.appendChild(cWallBase); sp.appendChild(cWallLook); sp.appendChild(cWallTop); sp.appendChild(cWallClock); sp.appendChild(cWallNext); sp.appendChild(cWallShow); sp.appendChild(cWallTiles);
     pages.screen = sp;
 
     /* this week: add, move or cancel a minyan for today or one of the next six days, without the editor; each day is saved as its own one-date schedule */
@@ -2739,7 +2853,10 @@
       out.wallTopBar = fTopBar.checked;
       out.nextPanel = fNextPanel.checked; out.nextHold = Math.max(0, Math.min(30, Math.round(+fNextHold.value) || 0));
       out.wallLook = {}; SWATCHES.forEach(function (sw) { if (wall[sw[0]]) out.wallLook[sw[0]] = wall[sw[0]]; });
-      out.wallWindow = { mode: fWinMode.value, before: Math.max(10, Math.min(1440, +fWinBefore.value || 180)), after: Math.max(0, Math.min(240, +fWinAfter.value || 0)), neverEmpty: fWinKeep.checked };
+      out.wallWindow = winNow();
+      out.nextMark = fMarkOn.checked ? Math.max(1, Math.min(240, Math.round(+fMark.value) || 15)) : 0;
+      out.pageSeconds = Math.max(3, Math.min(60, Math.round(+fPage.value) || 8));
+      out.countTo = fCountTo.value;
       out.rolls = rollRows.map(function (r) {
         var dows = r.dows.filter(function (c) { return c.checked; }).map(function (c) { return +c.value; }), ln = {};
         d.tefillos.forEach(function (tf) { if ((r.lines[tf.id].value || '').trim()) ln[tf.id] = r.lines[tf.id].value; });
@@ -2910,7 +3027,7 @@
     function lines(t) { return (t || '').split('\n').map(function (l) { return l.trim(); }).filter(Boolean); }
     function few(list) { return list.slice(0, 5).join('; ') + (list.length > 5 ? ' … (' + list.length + ')' : ''); }
     (a.tefillos || []).concat(b.tefillos || []).forEach(function (t) { names[t.id] = t.name; });
-    [['name', 'Shul name'], ['rooms', 'Rooms'], ['palette', 'Colors'], ['lang', 'Board labels'], ['bigTime', 'Big number'], ['displayScale', 'Hallway screen size'], ['wallLook', 'Hallway screen colours'], ['nextTemplate', 'Next-minyan panel'], ['wallWindow', 'What the hallway screen lists'], ['dateFormat', 'Date format'], ['nowMinutes', '"Now" minutes'], ['countdownZmanim', 'Countdown zmanim'],
+    [['name', 'Shul name'], ['rooms', 'Rooms'], ['palette', 'Colors'], ['lang', 'Board labels'], ['bigTime', 'Big number'], ['displayScale', 'Hallway screen size'], ['wallLook', 'Hallway screen colours'], ['nextTemplate', 'Next-minyan panel'], ['wallWindow', 'What the hallway screen lists'], ['nextMark', 'When the next minyan is marked'], ['pageSeconds', 'Seconds on each page'], ['countTo', 'What the countdown runs to'], ['dateFormat', 'Date format'], ['nowMinutes', '"Now" minutes'], ['countdownZmanim', 'Countdown zmanim'],
       ['candles', 'Candle lighting minutes'], ['tzeisMinutes', 'Nightfall minutes'], ['tzeisDeg', 'Nightfall degrees'], ['minchaGedola', 'Mincha gedola'], ['amidahMinutes', 'Minutes from הודו to שמונה עשרה'], ['israel', 'Eretz Yisroel calendar'], ['weeklyEarliest', 'Weekly earliest sunset'], ['clock24', '24-hour clock'],
       ['showTzeis', 'Show צאת הכוכבים'], ['showRT', 'Show Rabbeinu Tam'], ['show60', 'Show 60 minutes'], ['siteUrl', 'Website address'], ['logo', 'Logo'], ['wallLogo', 'Logo on the clock face'], ['wallTopBar', 'Top line of the hallway screen'], ['nextPanel', 'Next-minyan panel on the hallway screen'], ['nextHold', 'Minutes the next-minyan panel stays on a minyan'], ['notifyUrl', 'Notification service'], ['smsNumber', 'SMS number'], ['smsLang', 'Text reply language'],
       ['sponsorSeconds', 'Sponsor seconds'], ['remoteConfigUrl', 'Central schedule URL'], ['location', 'Location'], ['pinHash', 'PIN'], ['pin', 'PIN']].forEach(function (f) {
@@ -2957,7 +3074,7 @@
     function donKey(x) { return x.id || (x.title || '') + '|' + (x.name || '') + '|' + (x.from || ''); }
     function donLabel(x) { return ((x.name || '').trim() || (x.body || '').trim().split('\n')[0] || 'a donation') + (x.title ? ' (' + x.title + ')' : ''); }
     function shown(x) { return ((x.name || '') + (x.body || '') + (x.lead || '')).trim() !== ''; } /* an entry with nothing in it was never on the board */
-    function board(x) { return { title: x.title, lead: x.lead, name: x.name, body: x.body, size: x.size, logo: x.logo, from: x.from, to: x.to }; } /* what the board reads; the back end's own notes on it are not a change */
+    function board(x) { return { title: x.title, lead: x.lead, name: x.name, body: x.body, size: x.size, logo: x.logo, from: x.from, to: x.to, fromTime: x.fromTime || '', toTime: x.toTime || '' }; } /* what the board reads; the back end's own notes on it are not a change */
     (a.notices || []).filter(shown).forEach(function (x) { na[donKey(x)] = x; }); (b.notices || []).filter(shown).forEach(function (x) { nb[donKey(x)] = x; });
     /* a donation saved before donations had their own marks is the same one once it has them */
     Object.keys(nb).forEach(function (k) { if (na[k]) return; var y = nb[k], old = Object.keys(na).filter(function (j) { return !nb[j] && same(board(na[j]), board(y)); })[0]; if (old) { na[k] = na[old]; delete na[old]; } });
@@ -2974,8 +3091,10 @@
   /* the settings the admin form fills in by itself, so a published file that never had them does not look changed */
   function withDefaults(c) {
     var o = clone(c), tz = (o.location || {}).tz || '';
-    var d = { palette: 'shul', lang: 'he', bigTime: 'start', dateFormat: /^America\//.test(tz) ? 'mdy' : 'dmy', nowMinutes: 20, sponsorSeconds: 8, tzeisDeg: 8.5, candles: 18, minchaGedola: 'later', displayScale: 100, smsLang: 'auto', amidahMinutes: 15, wallLogo: '', wallTopBar: false, nextPanel: true, nextHold: 0, donationKinds: DONATION_KINDS, wallLook: {}, wallWindow: { mode: 'day', before: 180, after: 20, neverEmpty: true } };
+    var d = { palette: 'shul', lang: 'he', bigTime: 'start', dateFormat: /^America\//.test(tz) ? 'mdy' : 'dmy', nowMinutes: 20, sponsorSeconds: 8, tzeisDeg: 8.5, candles: 18, minchaGedola: 'later', displayScale: 100, smsLang: 'auto', amidahMinutes: 15, wallLogo: '', wallTopBar: false, nextPanel: true, nextHold: 0, nextMark: 0, pageSeconds: 8, countTo: '', donationKinds: DONATION_KINDS, wallLook: {}, wallWindow: { mode: 'day', before: 180, after: 20, neverEmpty: true } };
     Object.keys(d).forEach(function (k) { if (o[k] == null || o[k] === '') o[k] = d[k]; });
+    /* settings saved before "by number" existed have no numbers for it: they stand at the usual ones, and are not a change */
+    if (o.wallWindow && typeof o.wallWindow === 'object') { if (o.wallWindow.next == null) o.wallWindow.next = 6; if (o.wallWindow.recent == null) o.wallWindow.recent = 2; }
     return o;
   }
   /* send what is saved on this device to the website (GitHub); the board and the app pick it up within minutes */

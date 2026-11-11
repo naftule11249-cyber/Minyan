@@ -321,6 +321,57 @@ const THREE = [
   ok('and the back end says it was published', /Published/.test(await page.locator('#toast').textContent().catch(() => '')), true);
   await ctx.close();
 
+  /* ---- a donation for part of a day: "All day" off, a time on the first day and a time on the last ---- */
+  ({ ctx, page } = await open(null, THREE));
+  const hoursOf = page => page.evaluate(() => ({ allDay: document.querySelector('[id^="dn-allday-"]').checked, shown: !document.querySelector('.dn-hours').hidden, from: document.querySelector('[id^="dn-fromt-"]').value, to: document.querySelector('[id^="dn-tot-"]').value, note: document.querySelector('.dn-allday .dn-hint').textContent }));
+  const cardOf = (page, name) => page.evaluate(nm => { const c = Array.from(document.querySelectorAll('.dn-card')).filter(x => x.querySelector('.dn-name').textContent === nm)[0]; return c ? { st: c.querySelector('.dn-st').textContent, hours: Array.from(c.querySelectorAll('.dn-hour')).map(x => x.textContent), rel: Array.from(c.querySelectorAll('.dn-rel')).map(x => x.textContent) } : null; }, name);
+  const panelsAt = async (page, when) => { const b = await page.context().newPage(); await b.goto(BASE + 'index.html' + (when ? '?at=' + when : ''), { waitUntil: 'networkidle' }); await b.waitForTimeout(500); const t = await b.locator('.sponsor .t').allTextContents(); await b.close(); return t; };
+  await page.click('#dn-add'); await page.waitForTimeout(200); await page.click('.dn-kindbtn[data-kind="day"]'); await page.fill('[id^="dn-name-"]', 'ר׳ שמואל ווייס');
+  ok('a donation is for the whole day unless told otherwise: the switch is on and no times are asked for', await hoursOf(page), { allDay: true, shown: false, from: '00:00', to: '23:59', note: 'From the start of its first day to the end of its last.' });
+  await page.locator('.dn-allday .switch').click(); await page.waitForTimeout(100);
+  ok('switching "All day" off asks for two times, starting at the day\'s own edges', await hoursOf(page), { allDay: false, shown: true, from: '00:00', to: '23:59', note: 'Only between these times: from the first on its first day until the second on its last.' });
+  await page.fill('[id^="dn-fromt-"]', '10:00'); await page.fill('[id^="dn-tot-"]', '09:00'); await page.click('#dn-save'); await page.waitForTimeout(150);
+  ok('an end time before the start time on the same day is refused, in a plain sentence, with the cursor on it', [await page.locator('.dn-form > .dn-err').textContent(), await formOpen(page), await page.evaluate(() => document.activeElement.id.replace(/-\d+$/, ''))], ['The end time is not after the start time. Pick a later end time.', 1, 'dn-tot']);
+  await page.fill('[id^="dn-tot-"]', ''); await page.click('#dn-save'); await page.waitForTimeout(150);
+  ok('so is a time left empty', [await page.locator('.dn-form > .dn-err').textContent(), await formOpen(page)], ['Enter both times, or switch "All day" back on.', 1]);
+  await page.fill('[id^="dn-tot-"]', '12:30'); await page.locator('[id^="dn-tot-"]').blur(); await page.waitForTimeout(100);
+  ok('with good times the message goes and the preview says when it goes up', [await page.locator('.dn-form > .dn-err').textContent(), await page.locator('.dn-note').textContent()], ['', 'It goes on the board by itself on its first day at 10:00 AM.']);
+  await page.click('#dn-save'); await saved(page);
+  ok('saved, its card carries the hours and says it has not started yet (it is 9:10)', await cardOf(page, 'ר׳ שמואל ווייס'), { st: 'Coming up', hours: ['from 10:00 AM', 'until 12:30 PM'], rel: ['starts today at 10:00 AM', 'ends today at 12:30 PM'] });
+  ok('the board does not show it before its time, shows it from 10:00 and through 12:29, and has taken it off at 12:30', [(await panelsAt(page)).indexOf('פרנס היום'), (await panelsAt(page, '2026-11-18T09:59')).indexOf('פרנס היום'), (await panelsAt(page, '2026-11-18T10:00')).indexOf('פרנס היום') >= 0, (await panelsAt(page, '2026-11-18T12:29')).indexOf('פרנס היום') >= 0, (await panelsAt(page, '2026-11-18T12:30')).indexOf('פרנס היום')],
+    [-1, -1, true, true, -1]);
+  await page.reload({ waitUntil: 'networkidle' }); await enter(page);
+  await page.locator('.dn-card', { hasText: 'ר׳ שמואל ווייס' }).locator('[data-act="edit"]').click(); await page.waitForTimeout(200);
+  ok('opened again after a reload, the form holds its hours', await hoursOf(page), { allDay: false, shown: true, from: '10:00', to: '12:30', note: 'Only between these times: from the first on its first day until the second on its last.' });
+  /* over several days: the first time on the first day, the second on the last */
+  await page.click('.dn-date[data-end="to"]'); await page.waitForTimeout(150); await page.locator('.hcal-day[data-iso="2026-11-20"]').click(); await page.waitForTimeout(150);
+  await page.fill('[id^="dn-tot-"]', '08:00'); await page.click('#dn-save'); await saved(page);
+  ok('an end time earlier than the start time is fine when the last day is a later day', [await formOpen(page), (await cardOf(page, 'ר׳ שמואל ווייס')).hours, (await cardOf(page, 'ר׳ שמואל ווייס')).rel], [0, ['from 10:00 AM', 'until 8:00 AM'], ['starts today at 10:00 AM', 'ends in 2 days']]);
+  ok('it is on through the day between, and off from 8:00 on its last day', [(await panelsAt(page, '2026-11-19T03:00')).indexOf('פרנס היום') >= 0, (await panelsAt(page, '2026-11-20T07:59')).indexOf('פרנס היום') >= 0, (await panelsAt(page, '2026-11-20T08:00')).indexOf('פרנס היום')], [true, true, -1]);
+  /* back to the whole day */
+  await page.locator('.dn-card', { hasText: 'ר׳ שמואל ווייס' }).locator('[data-act="edit"]').click(); await page.waitForTimeout(200);
+  await page.locator('.dn-allday .switch').click(); await page.waitForTimeout(100);
+  ok('switching "All day" back on puts the times away', [(await hoursOf(page)).allDay, (await hoursOf(page)).shown], [true, false]);
+  await page.click('#dn-save'); await saved(page);
+  ok('and saved so, the card has no hours and the donation is on the board now', [await cardOf(page, 'ר׳ שמואל ווייס'), (await panelsAt(page)).indexOf('פרנס היום') >= 0, await page.evaluate(() => JSON.parse(localStorage.getItem('minyan-config')).notices.filter(n => n.name === 'ר׳ שמואל ווייס').map(n => [n.fromTime || '', n.toTime || '']))],
+    [{ st: 'On the board', hours: [], rel: ['started today', 'ends in 2 days'] }, true, [['', '']]]);
+  /* times left at the day's own edges are the whole day, said the long way */
+  await page.locator('.dn-card', { hasText: 'ר׳ שמואל ווייס' }).locator('[data-act="edit"]').click(); await page.waitForTimeout(200);
+  await page.locator('.dn-allday .switch').click(); await page.click('#dn-save'); await saved(page);
+  ok('"All day" off with the times left at midnight and 11:59 PM is still the whole day: nothing odd is kept', [(await cardOf(page, 'ר׳ שמואל ווייס')).hours, await page.evaluate(() => JSON.parse(localStorage.getItem('minyan-config')).notices.filter(n => n.name === 'ר׳ שמואל ווייס').map(n => [n.fromTime || '', n.toTime || '']))], [[], [['', '']]]);
+  /* a donation with no last day has no end time to set */
+  await page.locator('.dn-card', { hasText: 'ר׳ שמואל ווייס' }).locator('[data-act="edit"]').click(); await page.waitForTimeout(200);
+  await page.locator('.dn-allday .switch').click(); await page.click('.dn-date[data-end="to"]'); await page.waitForTimeout(150); await page.click('.hcal [data-cal="none"]'); await page.waitForTimeout(150);
+  ok('with no last day there is no end time to give: its box is shut', [await page.locator('[id^="dn-tot-"]').isDisabled(), await page.locator('[id^="dn-fromt-"]').isDisabled()], [true, false]);
+  await page.click('#dn-cancel');
+  /* on a phone */
+  await page.setViewportSize({ width: 390, height: 780 }); await page.waitForTimeout(150);
+  await page.locator('.dn-card', { hasText: 'ר׳ שמואל ווייס' }).locator('[data-act="edit"]').click(); await page.waitForTimeout(200);
+  await page.locator('.dn-allday .switch').click(); await page.locator('.dn-hours').scrollIntoViewIfNeeded(); await page.waitForTimeout(150);
+  ok('on a phone the switch and the two times fit, big enough for a thumb', await page.evaluate(() => { const r = e => e.getBoundingClientRect(), a = r(document.querySelector('[id^="dn-fromt-"]')), b = r(document.querySelector('[id^="dn-tot-"]')), sw = r(document.querySelector('.dn-allday .switch'));
+    return [a.height >= 40 && b.height >= 40 && sw.height >= 38, a.left >= 0 && b.right <= window.innerWidth, document.querySelector('.dn-body').scrollWidth <= document.querySelector('.dn-body').clientWidth + 1]; }), [true, true, true]);
+  await ctx.close();
+
   await browser.close();
   console.log(errors.length ? 'ERRORS:\n' + errors.join('\n') : 'no console errors');
   console.log(fails ? fails + ' FAILING' : 'donations: all good');

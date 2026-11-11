@@ -129,5 +129,13 @@ if (fails) { console.log(fails + ' FAILING'); process.exit(1); } else console.lo
   ok('a donation switched off is not on the board whatever its dates; one outside its dates or with nothing in it is not either', mkN(N).activeNotices(day).map(n => n.name), ['א']);
   ok('switched on again it is back', mkN(N.map(n => Object.assign({}, n, { off: false }))).activeNotices(day).map(n => n.name), ['א', 'ב']);
   ok('on its own day the one-day donation joins them', mkN(N).activeNotices(Cal.rdFromGreg(2026, 12, 1)).map(n => n.name), ['א', 'ג']);
+  /* part of a day: from a time on the first day until a time on the last */
+  const H = [{ title: 'פרנס היום', name: 'בוקר', from: '2026-11-18', to: '2026-11-18', fromTime: '10:00', toTime: '12:30' }, { title: 'פרנס השבוע', name: 'שבוע', from: '2026-11-17', to: '2026-11-19', fromTime: '18:00', toTime: '09:00' },
+    { title: 'x', name: 'סוף', to: '2026-11-18', toTime: '08:00' }, { title: 'y', name: 'bad', from: '2026-11-18', to: '2026-11-18', fromTime: '25:99', toTime: 'noon' }];
+  const on = (rd, min) => mkN(H).activeNotices(rd, min).map(n => n.name), d17 = Cal.rdFromGreg(2026, 11, 17), d19 = Cal.rdFromGreg(2026, 11, 19);
+  ok('a donation for part of a day is on from its start time and off at its end time, to the minute', [on(day, 9 * 60 + 59).indexOf('בוקר') >= 0, on(day, 10 * 60).indexOf('בוקר') >= 0, on(day, 12 * 60 + 29).indexOf('בוקר') >= 0, on(day, 12 * 60 + 30).indexOf('בוקר') >= 0], [false, true, true, false]);
+  ok('over several days the first time is on the first day and the second on the last: the days between are whole', [on(d17, 17 * 60 + 59).indexOf('שבוע') >= 0, on(d17, 18 * 60).indexOf('שבוע') >= 0, on(day, 3 * 60).indexOf('שבוע') >= 0, on(d19, 8 * 60 + 59).indexOf('שבוע') >= 0, on(d19, 9 * 60).indexOf('שבוע') >= 0], [false, true, true, true, false]);
+  ok('an end time with no first day still ends it; times that are not times are ignored, not obeyed', [on(day, 7 * 60 + 59).indexOf('סוף') >= 0, on(day, 8 * 60).indexOf('סוף') >= 0, on(day, 5).indexOf('bad') >= 0], [true, false, true]);
+  ok('asked about a day with no time of day, the whole day counts', mkN(H).activeNotices(day).map(n => n.name), ['בוקר', 'שבוע', 'סוף', 'bad']);
 }
 ok('צאת (60) is 60 minutes after sunset', Math.round(Cal.zmanim(sunRd, cfg.location).tzeis60 - Cal.zmanim(sunRd, cfg.location).sunset), 60);
