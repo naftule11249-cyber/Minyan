@@ -36,7 +36,7 @@ const THREE = [
   const cards = page => page.evaluate(() => Array.from(document.querySelectorAll('.dn-card')).map(c => ({
     no: c.querySelector('.dn-no').textContent, name: c.querySelector('.dn-name').textContent, st: c.querySelector('.dn-st').textContent, kind: c.querySelector('.dn-kind').textContent,
     start: c.querySelectorAll('.dn-heb')[0].textContent, end: c.querySelectorAll('.dn-heb')[1].textContent, rel: Array.from(c.querySelectorAll('.dn-rel')).map(r => r.textContent) })));
-  const counts = page => page.evaluate(() => Array.from(document.querySelectorAll('.dn-filters .dn-chip')).map(b => b.textContent));
+  const counts = page => page.evaluate(() => Array.from(document.querySelectorAll('#page-donations .dn-filters .dn-chip')).map(b => b.textContent));
   const formOpen = page => page.locator('.dn-sheet').count();
   const saved = async page => { await page.waitForTimeout(600); };
   const boardPanels = page => page.evaluate(() => Array.from(document.querySelectorAll('.sponsors .sponsor')).map(s => [s.querySelector('.t').textContent, (s.querySelector('.n') || {}).textContent || '', s.className.replace('sponsor', '').trim()]));
@@ -72,16 +72,16 @@ const THREE = [
   await page.click('#dn-add'); await page.waitForTimeout(250);
   ok('"Add donation" opens the form with the cursor in the name, the first kind chosen and this month filled in',
     [await page.locator('.dn-head h2').textContent(), await page.evaluate(() => document.activeElement.id.replace(/-\d+$/, '')), await page.locator('.dn-kindbtn.on').textContent(),
-      await page.inputValue('[id^="dn-from-"]'), await page.inputValue('[id^="dn-to-"]'), await page.locator('.dn-quick .dn-chip.on').textContent(), await page.locator('.dn-stage .t').textContent()],
+      await page.inputValue('[id^="dn-from-"]'), await page.inputValue('[id^="dn-to-"]'), await page.locator('.dn-sheet .dn-quick .dn-chip.on').textContent(), await page.locator('.dn-stage .t').textContent()],
     ['Add a donation', 'dn-name', 'פרנס החודש', '2026-11-11', '2026-12-10', 'כסלוthis month', 'פרנס חודש כסלו']);
   await page.click('#dn-save'); await page.waitForTimeout(150);
   ok('saving with nothing typed is refused, beside the name, in a plain sentence', [await page.locator('.dn-err').first().textContent(), await formOpen(page), await page.evaluate(() => document.activeElement.id.replace(/-\d+$/, ''))], ['Enter the name of the donor.', 1, 'dn-name']);
   await page.click('.dn-kindbtn[data-kind="day"]'); await page.waitForTimeout(150);
-  ok('choosing פרנס היום turns the dates to today and offers today and tomorrow', [await page.inputValue('[id^="dn-from-"]'), await page.inputValue('[id^="dn-to-"]'), await page.locator('.dn-quick .dn-chip').allTextContents(), await page.locator('.dn-stage .t').textContent(), await page.locator('.dn-stage .sponsor').getAttribute('class')],
+  ok('choosing פרנס היום turns the dates to today and offers today and tomorrow', [await page.inputValue('[id^="dn-from-"]'), await page.inputValue('[id^="dn-to-"]'), await page.locator('.dn-sheet .dn-quick .dn-chip').allTextContents(), await page.locator('.dn-stage .t').textContent(), await page.locator('.dn-stage .sponsor').getAttribute('class')],
     ['2026-11-18', '2026-11-18', ['Today', 'Tomorrow'], 'פרנס היום', 'sponsor sp-xs']);
-  await page.locator('.dn-quick .dn-chip', { hasText: 'Tomorrow' }).click(); await page.waitForTimeout(100);
+  await page.locator('.dn-sheet .dn-quick .dn-chip', { hasText: 'Tomorrow' }).click(); await page.waitForTimeout(100);
   ok('"Tomorrow" sets both days and shows them in Hebrew and in the civil calendar; the preview waits for a name',
-    [await page.inputValue('[id^="dn-from-"]'), await page.inputValue('[id^="dn-to-"]'), await page.locator('.dn-civil').first().textContent(), await page.evaluate(() => Array.from(document.querySelectorAll('.dn-form .hebpick')[0].querySelectorAll('select')).map(s => s.options[s.selectedIndex].text)), await page.locator('.dn-note').textContent()],
+    [await page.inputValue('[id^="dn-from-"]'), await page.inputValue('[id^="dn-to-"]'), await page.locator('.dn-sheet .dn-civil').first().textContent(), await page.evaluate(() => Array.from(document.querySelectorAll('.dn-form .hebpick')[0].querySelectorAll('select')).map(s => s.options[s.selectedIndex].text)), await page.locator('.dn-note').textContent()],
     ['2026-11-19', '2026-11-19', 'Thu, Nov 19, 2026', ['ט׳', 'כסלו', 'תשפ״ז'], 'The name and the lines appear here as you type.']);
   await page.fill('[id^="dn-name-"]', '  מו״ה אלעזר ליבערמאן הי״ו  '); await page.fill('[id^="dn-body-"]', 'לע״נ אביו\nהרב משה יודא לייב ב״ר יחיאל מיכל זצ״ל');
   ok('the preview reads as the board will: the name large, its titles small; it says the panel goes up by itself on its day', [await page.locator('.dn-stage .n .nm').textContent(), await page.locator('.dn-stage .n .hon').allTextContents(), await page.locator('.dn-err').first().textContent(), await page.locator('.dn-note').textContent()], ['אלעזר ליבערמאן', ['מו״ה', 'הי״ו'], '', 'It goes on the board by itself on its first day.']);
@@ -95,7 +95,7 @@ const THREE = [
   /* one for today goes on the board at once */
   await page.click('#dn-add'); await page.waitForTimeout(200);
   await page.click('.dn-kindbtn[data-kind="week"]');
-  ok('פרנס השבוע takes this week, Sunday to Shabbos', [await page.inputValue('[id^="dn-from-"]'), await page.inputValue('[id^="dn-to-"]'), await page.locator('.dn-quick .dn-chip.on').textContent()], ['2026-11-15', '2026-11-21', 'This week']);
+  ok('פרנס השבוע takes this week, Sunday to Shabbos', [await page.inputValue('[id^="dn-from-"]'), await page.inputValue('[id^="dn-to-"]'), await page.locator('.dn-sheet .dn-quick .dn-chip.on').textContent()], ['2026-11-15', '2026-11-21', 'This week']);
   await page.fill('[id^="dn-name-"]', 'יואל "פרנס" <b>&amp; 🎉 O\'Brien');
   await page.press('[id^="dn-name-"]', 'Enter'); await saved(page);
   list = await cards(page);
@@ -131,7 +131,7 @@ const THREE = [
   /* the Hebrew boxes write the civil date */
   await page.evaluate(() => { const sel = document.querySelectorAll('.dn-form .hebpick')[1].querySelectorAll('select'); sel[0].value = '20'; sel[0].dispatchEvent(new Event('change', { bubbles: true })); });
   await page.waitForTimeout(100);
-  ok('choosing כ׳ in the Hebrew day box sets the civil date beside it', [await page.inputValue('[id^="dn-to-"]'), await page.locator('.dn-civil').nth(1).textContent()], ['2026-11-30', 'Mon, Nov 30, 2026']);
+  ok('choosing כ׳ in the Hebrew day box sets the civil date beside it', [await page.inputValue('[id^="dn-to-"]'), await page.locator('.dn-sheet .dn-civil').nth(1).textContent()], ['2026-11-30', 'Mon, Nov 30, 2026']);
   await page.click('#dn-save'); await saved(page);
   ok('the change is saved on the card', (await cards(page)).filter(c => c.no === '#004').map(c => [c.start, c.end, c.rel]), [['ט״ו כסלו תשפ״ז', 'כ׳ כסלו תשפ״ז', ['starts in 7 days', 'ends in 12 days']]]);
 
@@ -139,7 +139,7 @@ const THREE = [
   await page.locator('.dn-card[data-no="2"] [data-act="copy"]').click(); await page.waitForTimeout(200);
   ok('Copy starts a new donation from another\'s details, for the present month', [await page.locator('.dn-head h2').textContent(), await page.inputValue('[id^="dn-name-"]'), await page.locator('.dn-kindbtn.on').textContent(), await page.inputValue('[id^="dn-from-"]'), await page.locator('#dn-remove').count()],
     ['Add a donation', 'ר׳ דוד ב״ר משה אלי׳ עסטרייכער ע״ה', 'נר למאור', '2026-11-11', 0]);
-  await page.locator('.dn-quick .dn-chip', { hasText: 'next month' }).click(); await page.click('#dn-save'); await saved(page);
+  await page.locator('.dn-sheet .dn-quick .dn-chip', { hasText: 'next month' }).click(); await page.click('#dn-save'); await saved(page);
   list = await cards(page);
   ok('the copy is its own donation for טבת, titled for that month; the one it came from is untouched', [list.length, list.filter(c => c.no === '#006').map(c => [c.name, c.st, c.start, c.end]), list.filter(c => c.no === '#002').map(c => c.start)],
     [6, [['ר׳ דוד ב״ר משה אלי׳ עסטרייכער ע״ה', 'Coming up', 'א׳ טבת תשפ״ז', 'כ״ט טבת תשפ״ז']], ['א׳ כסלו תשפ״ז']]);
@@ -180,7 +180,7 @@ const THREE = [
   await page.fill('[id^="dn-name-"]', 'משפחת גאלדבערגער'); await page.click('#dn-save'); await saved(page);
   await page.click('#dn-add'); await page.waitForTimeout(200);
   await page.locator('.dn-kindbtn', { hasText: 'Other' }).click(); await page.waitForTimeout(100);
-  ok('"Other" asks for the words at the top itself, in the form', [await page.locator('.dn-form > .fields:not([hidden]) [id^="dn-title-"]').count(), await page.locator('.dn-quick .dn-chip').allTextContents()], [1, ['Today', 'This week', 'כסלוthis month']]);
+  ok('"Other" asks for the words at the top itself, in the form', [await page.locator('.dn-form > .fields:not([hidden]) [id^="dn-title-"]').count(), await page.locator('.dn-sheet .dn-quick .dn-chip').allTextContents()], [1, ['Today', 'This week', 'כסלוthis month']]);
   await page.fill('[id^="dn-title-"]', 'סעודה שלישית'); await page.fill('[id^="dn-name-"]', 'ר׳ יודא בערגער'); await page.click('#dn-save'); await saved(page);
   ok('and is shown under those words', (await cards(page)).filter(c => c.name === 'ר׳ יודא בערגער').map(c => c.kind), ['סעודה שלישית']);
   /* a kind is removed while a donation still uses it */
@@ -200,18 +200,18 @@ const THREE = [
   const hundred = []; for (let i = 0; i < 100; i++) hundred.push({ title: 'פרנס היום', name: 'תורם מספר ' + (i + 1), body: 'לזכות', size: 'tiny', from: '2026-10-' + String(1 + (i % 28)).padStart(2, '0'), to: '2026-10-' + String(1 + (i % 28)).padStart(2, '0') });
   ({ ctx, page } = await open(null, hundred));
   const t0 = Date.now(); await page.fill('#dn-search', 'מספר 77'); const took = Date.now() - t0;
-  ok('a hundred donations: all listed, numbered, and found at once', [await page.evaluate(() => document.querySelectorAll('.dn-filters .dn-chip')[0].textContent), (await cards(page)).map(c => c.name), took < 1500], ['All100', ['תורם מספר 77'], true]);
+  ok('a hundred donations: all listed, numbered, and found at once', [await page.evaluate(() => document.querySelectorAll('#page-donations .dn-filters .dn-chip')[0].textContent), (await cards(page)).map(c => c.name), took < 1500], ['All100', ['תורם מספר 77'], true]);
   await ctx.close();
 
   /* ---- the turn of a month, a leap year and a new year ---- */
   ({ ctx, page } = await open(null, [], Date.UTC(2027, 0, 13, 15, 0))); /* ה׳ שבט תשפ״ז, a leap year */
   await page.click('#dn-add'); await page.waitForTimeout(200);
-  ok('in שבט of a leap year next month is אדר א׳', await page.locator('.dn-quick .dn-chip bdi').allTextContents(), ['שבט', 'אדר א׳']);
+  ok('in שבט of a leap year next month is אדר א׳', await page.locator('.dn-sheet .dn-quick .dn-chip bdi').allTextContents(), ['שבט', 'אדר א׳']);
   await ctx.close();
   ({ ctx, page } = await open(null, [], Date.UTC(2027, 8, 20, 15, 0))); /* י״ח אלול תשפ״ז: next month is in the new year */
   await page.click('#dn-add'); await page.waitForTimeout(200);
-  await page.locator('.dn-quick .dn-chip').nth(1).click(); await page.waitForTimeout(100);
-  ok('in אלול next month is תשרי of the new year, whole', [await page.locator('.dn-quick .dn-chip bdi').allTextContents(), await page.locator('.dn-stage .t').textContent(),
+  await page.locator('.dn-sheet .dn-quick .dn-chip').nth(1).click(); await page.waitForTimeout(100);
+  ok('in אלול next month is תשרי of the new year, whole', [await page.locator('.dn-sheet .dn-quick .dn-chip bdi').allTextContents(), await page.locator('.dn-stage .t').textContent(),
     await page.evaluate(() => Array.from(document.querySelectorAll('.dn-form .hebpick')).map(p => Array.from(p.querySelectorAll('select')).map(s => s.options[s.selectedIndex].text).join(' ')))],
     [['אלול', 'תשרי'], 'פרנס חודש תשרי', ['א׳ תשרי תשפ״ח', 'ל׳ תשרי תשפ״ח']]);
   await ctx.close();
@@ -225,7 +225,7 @@ const THREE = [
   ok('on a narrow phone the list fits: no sideways scrolling, one card to a row', await page.evaluate(() => { const c = Array.from(document.querySelectorAll('.dn-card')).map(e => e.getBoundingClientRect()); return [document.documentElement.scrollWidth <= window.innerWidth, c.every(r => r.left >= 0 && r.right <= window.innerWidth), c[1].top > c[0].bottom - 1]; }), [true, true, true]);
   await page.click('#dn-add'); await page.waitForTimeout(250);
   ok('the form fills the screen, its buttons a thumb can hit, nothing off the side', await page.evaluate(() => {
-    const s = document.querySelector('.dn-sheet').getBoundingClientRect(), b = Array.from(document.querySelectorAll('.dn-foot .btn, .dn-kindbtn, .dn-quick .dn-chip')).map(e => e.getBoundingClientRect());
+    const s = document.querySelector('.dn-sheet').getBoundingClientRect(), b = Array.from(document.querySelectorAll('.dn-foot .btn, .dn-kindbtn, .dn-sheet .dn-quick .dn-chip')).map(e => e.getBoundingClientRect());
     return [Math.round(s.width) === window.innerWidth, Math.round(s.height) === window.innerHeight, b.every(r => r.height >= 40 && r.right <= window.innerWidth + 1), document.querySelector('.dn-body').scrollWidth <= document.querySelector('.dn-body').clientWidth + 1];
   }), [true, true, true, true]);
   await page.screenshot({ path: 'test/shot-donations-phone.png' });

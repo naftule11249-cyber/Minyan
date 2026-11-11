@@ -14,7 +14,9 @@ const { chromium } = require('playwright');
   await page.evaluate(() => { try { localStorage.clear(); } catch (e) {} }); await page.reload({ waitUntil: 'networkidle' });
   await page.waitForSelector('#pin-input'); await page.fill('#pin-input', '1234'); await page.press('#pin-input', 'Enter');
   await page.waitForSelector('#tab-today');
-  ok('Today tab opens first', await page.locator('#tab-today').getAttribute('aria-selected'), 'true');
+  ok('the back end opens on Home, and "This week" is one press away', await page.locator('#tab-home').getAttribute('aria-selected'), 'true');
+  await page.click('#tab-today'); await page.waitForTimeout(150);
+  ok('the This week page opens', await page.locator('#tab-today').getAttribute('aria-selected'), 'true');
   const sh = () => page.locator('#page-today .field:has(label:text-is("שחרית"))'), mi = () => page.locator('#page-today .field:has(label:text-is("מנחה"))');
   const n = await sh().locator('.today-row').count(); console.log('shacharis rows today:', n);
   ok('today lists minyanim', n > 0, true);
@@ -45,7 +47,7 @@ const { chromium } = require('playwright');
   // undo
   await page.goto('http://localhost:8790/admin.html', { waitUntil: 'networkidle' }); await page.waitForTimeout(300);
   if (await page.locator('#pin-input').count()) { await page.fill('#pin-input', '1234'); await page.press('#pin-input', 'Enter'); }
-  await page.waitForSelector('#tab-today');
+  await page.waitForSelector('#tab-today'); await page.click('#tab-today'); await page.waitForTimeout(150); /* the back end opens on Home now */
   ok('undo offered when today has changes', await page.locator('#page-today button:has-text("Back to the regular schedule")').count(), 1);
   await page.click('#page-today button:has-text("Back to the regular schedule")'); await page.waitForTimeout(600);
   const cfg2 = await page.evaluate(() => JSON.parse(localStorage.getItem('minyan-config')));

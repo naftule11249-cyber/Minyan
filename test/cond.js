@@ -6,6 +6,9 @@ const { chromium } = require('playwright');
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: 'he', timezoneId: 'America/New_York', serviceWorkers: 'block' });
   const fixed = Date.UTC(2026, 9, 28, 13, 0);
   await ctx.addInitScript(({ fixed }) => { const real = Date.now; const start = real(); Date.now = () => fixed + (real() - start); }, { fixed });
+  /* the published copy the device compares against is made older than this test's frozen clock, whatever date the shul last published — at the
+     source, since every page that loads (the screen in the back end's Home page among them) fetches the file and keeps it afresh */
+  await ctx.route('**/config.json*', async route => { const res = await route.fetch(); const c = JSON.parse(await res.text()); c.savedAt = 1; await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(c) }); });
   const page = await ctx.newPage();
   page.on('console', m => { if (m.type() === 'error' && !/favicon|ERR_TUNNEL|ERR_NAME_NOT_RESOLVED|ERR_INTERNET|ERR_CONNECTION/.test(m.text())) errors.push(m.text()); });
   page.on('pageerror', e => errors.push('pageerror: ' + e.message));

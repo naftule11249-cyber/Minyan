@@ -120,7 +120,7 @@
   function fmtCountdown(ms) { return engine.fmtCountdown(ms); }
   /* the board's labels in Hebrew or Yiddish: General -> Board labels sets the default (the lobby screen and door displays always use it); each phone may pick its own */
   var STR = {
-    he: { lastTefilla: 'סוף זמן תפילה', lastChatzos: 'אחרון לחצות', runLine: function (every, a, b) { return 'כל ' + every + ' דק׳ · ' + a + '–' + b; }, uiLangLabel: 'שפת ההגדרות', sameAsBoard: 'כמו הלוח', zmanimOf: 'זמני ', remindMe: 'תזכורת', minutesBefore: 'דקות לפני', before: 'לפני', todayOnly: 'היום בלבד', thatDayOnly: 'באותו יום בלבד', everyDay: 'כל יום', everyDayAt: 'כל יום בשעה זו', remNote: 'התראה במכשיר זה, גם כשהאפליקציה סגורה.', cancel: 'ביטול', setRem: 'קביעת תזכורת', setting: 'קובע…', remSet: 'התזכורת נקבעה: ', remFail: 'לא ניתן לקבוע את התזכורת: ', minBefore: ' דק׳ לפני ', todayOnlyP: ' (היום בלבד)',
+    he: { preview: 'תצוגה מקדימה', lastTefilla: 'סוף זמן תפילה', lastChatzos: 'אחרון לחצות', runLine: function (every, a, b) { return 'כל ' + every + ' דק׳ · ' + a + '–' + b; }, uiLangLabel: 'שפת ההגדרות', sameAsBoard: 'כמו הלוח', zmanimOf: 'זמני ', remindMe: 'תזכורת', minutesBefore: 'דקות לפני', before: 'לפני', todayOnly: 'היום בלבד', thatDayOnly: 'באותו יום בלבד', everyDay: 'כל יום', everyDayAt: 'כל יום בשעה זו', remNote: 'התראה במכשיר זה, גם כשהאפליקציה סגורה.', cancel: 'ביטול', setRem: 'קביעת תזכורת', setting: 'קובע…', remSet: 'התזכורת נקבעה: ', remFail: 'לא ניתן לקבוע את התזכורת: ', minBefore: ' דק׳ לפני ', todayOnlyP: ' (היום בלבד)',
       picks: { first: 'המנין הראשון של היום', last: 'המנין האחרון של היום', 'before:shema': 'המנין האחרון לפני סוף זמן ק״ש', 'before:tefilla': 'המנין האחרון לפני סוף זמן תפילה', 'before:chatzos': 'המנין האחרון לפני חצות', 'before:sunset': 'המנין האחרון לפני השקיעה', 'before:tzeis': 'המנין האחרון לפני צאת הכוכבים' }, pickWith: function (label, name) { return label.replace('המנין', 'מנין ' + name); },
       remTitle: 'תזכורות בטלפון', remHint: 'התראה לפני המנינים או הזמנים שתבחרו, גם כשהאפליקציה סגורה. אפשר גם ללחוץ על כל מנין בלוח, או על כל זמן ברשימה, כדי לקבוע לו תזכורת.', zmanimGroup: 'זמנים', remove: 'הסרת התזכורת', noRems: 'עדיין אין תזכורות.', addRem: '+ תזכורת', maxRems: 'עד 10 תזכורות', dailyAt: ' הלוח היומי כל בוקר בשעה ', remUpdate: 'עדכון התזכורות', remOn: 'הפעלת תזכורות', remOff: 'כיבוי התזכורות', remAtLeast: 'הוסיפו לפחות תזכורת אחת.', turningOn: 'מפעיל…', remsOn: 'התזכורות פועלות במכשיר זה.', remOnFail: 'לא ניתן להפעיל תזכורות: ',
       settings: 'הגדרות', close: 'סגירה', display: 'תצוגה', displayHint: 'הבחירות נשמרות במכשיר זה; המסכים בבית המדרש נשארים כפי שקבע הגבאי.', bigNumber: 'המספר הגדול במשבצות', startWord: 'התחלה', look: 'מראה', labels: 'שפת הכיתובים', cdBox: 'תיבת הזמן הבא', cdHint: 'לאילו זמנים היא סופרת לאחור.', chooseZmanim: 'בחירת הזמנים…', installSec: 'התקנה כאפליקציה', appSec: 'האפליקציה', checkUpdates: 'בדיקת עדכונים', upToDate: 'מעודכן. גרסה חדשה נטענת מעצמה כשהיא מגיעה.', checkFail: 'לא ניתן לבדוק כעת.', done: 'סיום',
@@ -129,7 +129,7 @@
       installFirst: 'כדי לקבל תזכורות באייפון או באייפד, הוסיפו תחילה את הלוח למסך הבית: בספארי לחצו על שיתוף, ואז „הוסף למסך הבית”, ופתחו אותו מהסמל.', noPush: 'דפדפן זה אינו יכול לקבל התראות. השתמשו בכרום, או באפליקציה המותקנת.',
       today: 'היום', tomorrow: 'מחר', tonight: 'בערב', nextMinyan: 'מנין הבא', nextZman: 'הזמן הבא', zmanim: 'זמני היום', none: 'אין מנינים רשומים', showEarlier: 'הצג את הקודמים', badgeNext: 'הבא', badgeNow: 'עכשיו', badgeLast: 'עבר', board: 'לוח ', special: 'לוח מיוחד', noMinyanim: 'לא רשומים מנינים לימים הקרובים.', fastStart: 'תחילת הצום', fastEnd: 'צאת הצום', motzaeiShabbos: 'מוצאי שבת', motzaeiYT: 'מוצאי יום טוב', omerTonight: 'הלילה סופרים', omer: 'ספירת העומר', laomer: ' לעומר', clock: 'השעה', timesBy: 'הזמנים לפי ', chul: 'לוח חוץ לארץ', eretz: 'לוח ארץ ישראל', parsha: ' פרשת ',
       days: Cal.DAY_NAMES, types: {}, minyanim: function (name) { return 'מניני ' + name; } },
-    en: { lastTefilla: 'sof zman tefilla', lastChatzos: 'last before chatzos', runLine: function (every, a, b) { return 'every ' + every + ' min · ' + a + '–' + b; }, uiLangLabel: 'Settings language', sameAsBoard: 'Same as the board', zmanimOf: 'Zmanim for ', remindMe: 'Remind me', minutesBefore: 'Minutes before', before: 'Before', todayOnly: 'Today only', thatDayOnly: 'That day only', everyDay: 'Every day', everyDayAt: 'Every day at this time', remNote: 'A notification on this device, even when the app is closed.', cancel: 'Cancel', setRem: 'Set reminder', setting: 'Setting…', remSet: 'Reminder set: ', remFail: 'Could not set the reminder: ', minBefore: ' min before ', todayOnlyP: ' (today only)',
+    en: { preview: 'Preview', lastTefilla: 'sof zman tefilla', lastChatzos: 'last before chatzos', runLine: function (every, a, b) { return 'every ' + every + ' min · ' + a + '–' + b; }, uiLangLabel: 'Settings language', sameAsBoard: 'Same as the board', zmanimOf: 'Zmanim for ', remindMe: 'Remind me', minutesBefore: 'Minutes before', before: 'Before', todayOnly: 'Today only', thatDayOnly: 'That day only', everyDay: 'Every day', everyDayAt: 'Every day at this time', remNote: 'A notification on this device, even when the app is closed.', cancel: 'Cancel', setRem: 'Set reminder', setting: 'Setting…', remSet: 'Reminder set: ', remFail: 'Could not set the reminder: ', minBefore: ' min before ', todayOnlyP: ' (today only)',
       picks: { first: 'First minyan of the day', last: 'Last minyan of the day', 'before:shema': 'Last minyan before sof zman Shema', 'before:tefilla': 'Last minyan before sof zman tefilla', 'before:chatzos': 'Last minyan before chatzos', 'before:sunset': 'Last minyan before sunset', 'before:tzeis': 'Last minyan before nightfall' }, pickWith: function (label, name) { return label.replace('minyan', name); },
       remTitle: 'Reminders on your phone', remHint: 'A notification before the minyanim or zmanim you pick, even when the app is closed. Tap any minyan on the board, or any zman in the list, to set a reminder for it.', zmanimGroup: 'Zmanim', remove: 'Remove this reminder', noRems: 'No reminders yet.', addRem: '+ Reminder', maxRems: 'Up to 10 reminders', dailyAt: ' The day\'s board every morning at ', remUpdate: 'Update reminders', remOn: 'Turn on reminders', remOff: 'Turn off reminders', remAtLeast: 'Add at least one reminder.', turningOn: 'Turning on…', remsOn: 'Reminders are on for this device.', remOnFail: 'Could not turn on reminders: ',
       settings: 'Settings', close: 'Close', display: 'Display', displayHint: 'Your choices stay on this device; the screens in the shul keep the gabbai\'s.', bigNumber: 'Big number on the tiles', startWord: 'start', look: 'Look', labels: 'Language', cdBox: 'The next-zman box', cdHint: 'Which zmanim it counts down to.', chooseZmanim: 'Choose the zmanim…', installSec: 'Install as an app', appSec: 'The app', checkUpdates: 'Check for updates', upToDate: 'Up to date. A newer version reloads by itself when it arrives.', checkFail: 'Could not check right now.', done: 'Done',
@@ -140,7 +140,7 @@
       days: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Shabbos'], types: { weekday: 'Weekday schedule', sunday: 'Sunday schedule', friday: 'Erev Shabbos schedule', shabbos: 'Shabbos schedule', yomtov: 'Yom Tov schedule', erev_yomtov: 'Erev Yom Tov schedule', chol_hamoed: 'Chol Hamoed schedule', rosh_chodesh: 'Rosh Chodesh schedule', fast: 'Fast day schedule', chanukah: 'Chanukah schedule', purim: 'Purim schedule', yomkippur: 'Yom Kippur schedule' },
       minyanim: function (name) { return ({ 'שחרית': 'Shacharis', 'מנחה': 'Mincha', 'מעריב': 'Maariv' }[name] || name) + ' minyanim'; },
       zmanNames: { alos: 'Alos hashachar', sunrise: 'Sunrise (netz)', shema: 'Sof zman Shema', tefilla: 'Sof zman tefilla', chatzos: 'Chatzos', minchag: 'Mincha gedola', plag: 'Plag hamincha', candles: 'Candle lighting', sunset: 'Sunset (shkiah)', tzeis: 'Nightfall (tzeis)', tzeis60: '60 minutes after sunset', tzeis72: 'Rabbeinu Tam (72)' } },
-    yi: { lastTefilla: 'סוף זמן תפילה', lastChatzos: 'לעצטער פאר חצות', runLine: function (every, a, b) { return 'יעדע ' + every + ' מינוט · ' + a + '–' + b; }, uiLangLabel: 'שפראך פון די איינשטעלונגען', sameAsBoard: 'ווי דער לוח', zmanimOf: 'זמנים פון ', remindMe: 'דערמאנונג', minutesBefore: 'מינוט פריער', before: 'פאר', todayOnly: 'נאר היינט', thatDayOnly: 'נאר יענעם טאג', everyDay: 'יעדן טאג', everyDayAt: 'יעדן טאג אין דער צייט', remNote: 'א מעלדונג אויף דעם מכשיר, אויך ווען די אַפּ איז פארמאכט.', cancel: 'אפשטעלן', setRem: 'שטעלן א דערמאנונג', setting: 'שטעלט…', remSet: 'די דערמאנונג איז געשטעלט: ', remFail: 'די דערמאנונג האט זיך נישט געלאזט שטעלן: ', minBefore: ' מינוט פאר ', todayOnlyP: ' (נאר היינט)',
+    yi: { preview: 'פארויסבליק', lastTefilla: 'סוף זמן תפילה', lastChatzos: 'לעצטער פאר חצות', runLine: function (every, a, b) { return 'יעדע ' + every + ' מינוט · ' + a + '–' + b; }, uiLangLabel: 'שפראך פון די איינשטעלונגען', sameAsBoard: 'ווי דער לוח', zmanimOf: 'זמנים פון ', remindMe: 'דערמאנונג', minutesBefore: 'מינוט פריער', before: 'פאר', todayOnly: 'נאר היינט', thatDayOnly: 'נאר יענעם טאג', everyDay: 'יעדן טאג', everyDayAt: 'יעדן טאג אין דער צייט', remNote: 'א מעלדונג אויף דעם מכשיר, אויך ווען די אַפּ איז פארמאכט.', cancel: 'אפשטעלן', setRem: 'שטעלן א דערמאנונג', setting: 'שטעלט…', remSet: 'די דערמאנונג איז געשטעלט: ', remFail: 'די דערמאנונג האט זיך נישט געלאזט שטעלן: ', minBefore: ' מינוט פאר ', todayOnlyP: ' (נאר היינט)',
       picks: { first: 'דער ערשטער מנין פון טאג', last: 'דער לעצטער מנין פון טאג', 'before:shema': 'דער לעצטער מנין פאר סוף זמן ק״ש', 'before:tefilla': 'דער לעצטער מנין פאר סוף זמן תפילה', 'before:chatzos': 'דער לעצטער מנין פאר חצות', 'before:sunset': 'דער לעצטער מנין פאר שקיעה', 'before:tzeis': 'דער לעצטער מנין פאר צאת הכוכבים' }, pickWith: function (label, name) { return label.replace('מנין', name); },
       remTitle: 'דערמאנונגען אויפן טעלעפאן', remHint: 'א מעלדונג פאר די מנינים אדער זמנים וואס איר קלויבט אויס, אויך ווען די אַפּ איז פארמאכט. מען קען אויך דריקן אויף יעדן מנין אויפן לוח, אדער אויף יעדן זמן אין דער ליסטע, צו שטעלן א דערמאנונג.', zmanimGroup: 'זמנים', remove: 'אראפנעמען די דערמאנונג', noRems: 'נאך נישטא קיין דערמאנונגען.', addRem: '+ דערמאנונג', maxRems: 'ביז 10 דערמאנונגען', dailyAt: ' דער טעגליכער לוח יעדן אינדערפרי ', remUpdate: 'דערמאנונגען אפדעיטן', remOn: 'דערמאנונגען אנצינדן', remOff: 'דערמאנונגען פארלעשן', remAtLeast: 'לייגט צו כאטש איין דערמאנונג.', turningOn: 'צינדט אן…', remsOn: 'די דערמאנונגען זענען אן אויף דעם מכשיר.', remOnFail: 'די דערמאנונגען האבן זיך נישט געלאזט אנצינדן: ',
       settings: 'איינשטעלונגען', close: 'פארמאכן', display: 'אויסזען', displayHint: 'די ברירות בלייבן אויף דעם מכשיר; די שירעמס אין שול בלייבן ווי דער גבאי האט געשטעלט.', bigNumber: 'די גרויסע נומער אויף די קעסטלעך', startWord: 'אנהייב', look: 'קאלירן', labels: 'שפראך', cdBox: 'די קעסטל הזמן הבא', cdHint: 'צו וועלכע זמנים זי ציילט.', chooseZmanim: 'אויסקלויבן די זמנים…', installSec: 'אינסטאלירן ווי אן אַפּ', appSec: 'די אַפּ', checkUpdates: 'זוכן אפדעיטס', upToDate: 'אפדעיטעד. א נייע ווערסיע לאדט זיך אליין ווען זי קומט אן.', checkFail: 'מען קען יעצט נישט נאכקוקן.', done: 'פארטיג',
@@ -1178,7 +1178,7 @@
     d.location = d.location || {}; d.schedules = d.schedules || {}; d.overrides = d.overrides || []; d.notices = d.notices || [];
     d.tefillos = (d.tefillos && d.tefillos.length) ? d.tefillos : clone(TEFILLA_DEFAULTS);
     var todayRd = Cal.nowInTz(Date.now(), loc().tz).rd, todayInfo = Cal.dayInfo(todayRd, !!cfg.israel);
-    var tabs = [['today', 'This week', 'Move, cancel or add a minyan for today or for one of the next days; that day only.', 'Week'], ['general', 'General', 'Name, rooms, location, looks and the tefillos.'], ['schedule', 'Schedule', 'The regular minyanim for each kind of day.'], ['donations', 'Donations', 'Who sponsors what on the board, and from when to when.', 'Donors'], ['notices', 'Banner', 'One line across the top of the board, for as long as you say.'], ['rolls', 'Extra schedules', 'A named list that takes over for the days it covers: a season, a week, or one kind of day.', 'Extra'], ['screen', 'Hallway screen', 'The TV in the hallway: its colours, and which minyanim it shows.', 'Screen'], ['overrides', 'Special dates', 'A different schedule for one date or for a day every year.', 'Special']];
+    var tabs = [['home', 'Home', 'The hallway screen as it is now, and as it will be on any day you choose.'], ['today', 'This week', 'Move, cancel or add a minyan for today or for one of the next days; that day only.', 'Week'], ['general', 'General', 'Name, rooms, location, looks and the tefillos.'], ['schedule', 'Schedule', 'The regular minyanim for each kind of day.'], ['donations', 'Donations', 'Who sponsors what on the board, and from when to when.', 'Donors'], ['notices', 'Banner', 'One line across the top of the board, for as long as you say.'], ['rolls', 'Extra schedules', 'A named list that takes over for the days it covers: a season, a week, or one kind of day.', 'Extra'], ['screen', 'Hallway screen', 'The TV in the hallway: its colours, and which minyanim it shows.', 'Screen'], ['overrides', 'Special dates', 'A different schedule for one date or for a day every year.', 'Special']];
     if (mode !== 'artifact') tabs.push(['publish', 'Publish', 'What is waiting to go out, and the connection to the website.']);
     if (mode !== 'artifact') tabs.push(['send', 'Send', 'A notification, right now, to everyone who turned reminders on.']);
     tabs.push(['data', 'Backup', 'Previous versions and the settings as text.']);
@@ -1189,6 +1189,7 @@
       tabs.forEach(function (t) { pages[t[0]].hidden = t[0] !== id; $('#tab-' + t[0], tabBar).setAttribute('aria-selected', String(t[0] === id)); if (t[0] === id) { pageTitle.textContent = t[1]; pageDesc.textContent = t[2]; } });
       try { $('#overlay').scrollTop = 0; } catch (e) {}
       if (id === 'data') dataArea.value = JSON.stringify(collect(), null, 2);
+      if (id === 'home') paintHome();
     }
 
     var oRows = [];
@@ -1658,6 +1659,78 @@
     cBanner.body.appendChild(el('div', { class: 'fields' }, [field('Banner text', bText)]));
     cBanner.body.appendChild(el('div', { class: 'fields' }, [field('Show from (shul time; blank = right away)', bFrom), field('Show until (shul time; blank = until you clear it)', bUntil, el('button', { type: 'button', class: 'btn small', text: 'Clear banner', onclick: function () { bText.value = ''; bFrom.value = ''; bUntil.value = ''; } }))]));
     np.appendChild(cBanner);
+    /* ---------- home: the hallway screen as it is now, and as it will be on any day ----------
+       The screen itself, in a frame the size of the TV scaled to fit the page. "Now" is live; "Another day" opens the same screen with
+       its clock set to that day and time, so the schedule, the zmanim and the donations shown are that day's. It shows what is saved
+       on this device, published or not. */
+    var hp = el('div', { class: 'col', id: 'page-home', 'data-nodirty': '1' });
+    ui.home = ui.home || { mode: 'now', date: MinyanEngine.isoDate(todayRd + 1), time: '08:00' };
+    var H = ui.home, homeFrame = el('iframe', { id: 'home-tv', title: 'The hallway screen', scrolling: 'no', tabindex: '-1' }), homeStage = el('div', { class: 'home-stage' }, [homeFrame]);
+    var homeCap = el('div', { class: 'home-cap', role: 'status' }), homeFacts = el('dl', { class: 'home-facts' }), homeWhen = el('div', { class: 'home-when' });
+    var homeUnsaved = el('div', { class: 'home-note warn', text: 'You have changes that are not saved yet. Press Save and they appear here.' }); homeUnsaved.hidden = true;
+    var fHDate = inp('home-date', H.date, { type: 'date' }), hHDate = hebPicker(fHDate), homeCivil = el('span', { class: 'dn-civil' });
+    var fHTime = inp('home-time', H.time, { type: 'time', step: '300' });
+    var homeOpen = el('a', { class: 'btn', id: 'home-open', target: '_blank', rel: 'noopener' }, [el('span', { text: 'Open full size' }), svgIcon('open')]);
+    var homeModes = el('div', { class: 'dn-filters', role: 'group', 'aria-label': 'Which moment to show' }), homeDays = el('div', { class: 'dn-quick' }), homeTimes = el('div', { class: 'dn-quick' });
+    function homeRd() { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(fHDate.value || ''); return m ? Cal.rdFromGreg(+m[1], +m[2], +m[3]) : null; }
+    function homeMin() { var m = /^(\d{2}):(\d{2})/.exec(fHTime.value || ''); return m ? +m[1] * 60 + +m[2] : null; }
+    function homeUrl() { return 'index.html?view=display&full=1' + (H.mode === 'at' && homeRd() != null && homeMin() != null ? '&at=' + fHDate.value + 'T' + fHTime.value.slice(0, 5) : ''); }
+    function nextDay(test) { for (var i = 1; i <= 60; i++) if (test(Cal.dayInfo(todayRd + i, !!d.israel))) return todayRd + i; return todayRd + 1; }
+    var HOME_DAYS = [['Tomorrow', todayRd + 1], ['Friday', nextDay(function (x) { return x.dow === 5; })], ['Shabbos', nextDay(function (x) { return x.dow === 6; })], ['Rosh Chodesh', nextDay(function (x) { return x.roshChodesh; })]];
+    var HOME_TIMES = [['Morning', '07:30'], ['Midday', '13:00'], ['Evening', '18:00'], ['Night', '21:30']];
+    function clock12(min) { var h = Math.floor(min / 60), m = min % 60; return ((h + 11) % 12 + 1) + ':' + pad2(m) + (h < 12 ? ' AM' : ' PM'); }
+    function fitHome() { var w = homeStage.clientWidth; if (!w) return; var k = w / 1920; homeStage.style.height = Math.round(1080 * k) + 'px'; homeFrame.style.transform = 'scale(' + k + ')'; }
+    function fact(label, value, rtl) { homeFacts.appendChild(el('dt', { text: label })); homeFacts.appendChild(el('dd', rtl ? { dir: 'rtl', text: value } : { dir: 'auto', text: value })); }
+    function paintHome(force) {
+      var at = H.mode === 'at', rd = at ? homeRd() : todayRd, min = at ? homeMin() : Math.floor(Cal.nowInTz(Date.now(), loc().tz).min), ok = rd != null && min != null;
+      homeModes.textContent = '';
+      [['now', 'Now'], ['at', 'Another day']].forEach(function (mo) {
+        var on = H.mode === mo[0];
+        homeModes.appendChild(el('button', { type: 'button', class: 'dn-chip' + (on ? ' on' : ''), id: 'home-' + mo[0], 'data-nodirty': '1', 'aria-pressed': String(on), text: mo[1], onclick: function () { H.mode = mo[0]; paintHome(); } }));
+      });
+      homeWhen.hidden = !at;
+      homeDays.textContent = '';
+      HOME_DAYS.forEach(function (q) {
+        var iso = MinyanEngine.isoDate(q[1]), on = fHDate.value === iso;
+        homeDays.appendChild(el('button', { type: 'button', class: 'dn-chip' + (on ? ' on' : ''), 'data-nodirty': '1', 'aria-pressed': String(on), 'data-day': iso, text: q[0], onclick: function () { fHDate.value = iso; hHDate.sync(); H.date = iso; paintHome(); } }));
+      });
+      homeTimes.textContent = '';
+      HOME_TIMES.forEach(function (q) {
+        var on = fHTime.value.slice(0, 5) === q[1];
+        homeTimes.appendChild(el('button', { type: 'button', class: 'dn-chip' + (on ? ' on' : ''), 'data-nodirty': '1', 'aria-pressed': String(on), 'data-time': q[1] }, [el('span', { text: q[0] }), el('span', { class: 'dn-chipsub', text: clock12(+q[1].slice(0, 2) * 60 + +q[1].slice(3)) })]));
+        homeTimes.lastChild.addEventListener('click', function () { fHTime.value = q[1]; H.time = q[1]; paintHome(); });
+      });
+      if (!ok) { homeCap.textContent = 'Choose a day and a time to see the screen then.'; homeFacts.textContent = ''; return; }
+      var g = Cal.gregFromRD(rd), info = Cal.dayInfo(rd, !!d.israel), civil = new Date(Date.UTC(g.y, g.m - 1, g.d)).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+      homeCivil.textContent = civil;
+      homeCap.textContent = at ? 'The screen as it will be on ' + civil + ' at ' + clock12(min) + '.' : 'The screen as it is right now.';
+      var url = homeUrl();
+      homeOpen.setAttribute('href', url);
+      if (force || homeFrame.getAttribute('data-url') !== url) { homeFrame.setAttribute('data-url', url); homeFrame.src = url + (force ? '&r=' + Date.now() : ''); }
+      /* what that day holds, in words */
+      var sc = scheduleFor(rd), kindOfDay = sc.override ? 'A special date' + (sc.override.label ? ': ' + sc.override.label : '') : sc.roll && sc.roll.name ? 'Extra schedule: ' + sc.roll.name : ((Cal.DAY_TYPES.filter(function (t) { return t[0] === sc.type; })[0] || [])[3] || sc.type || 'Regular');
+      var on = engine.activeNotices(rd), ms = Cal.epochFromWall(rd, min, loc().tz), ban = engine.activeBanner(ms);
+      homeFacts.textContent = '';
+      fact('Day', dayLine(info, rd) + ' · ' + Cal.formatHeb(info.heb) + (info.labels && info.labels.length ? ' · ' + info.labels.join(' · ') : ''), true);
+      fact('Schedule in use', kindOfDay);
+      fact('Donations on the board', on.length ? on.map(function (n) { return ((n.name || '').trim() || (n.body || '').trim().split('\n')[0]) + (n.title ? ' (' + n.title + ')' : ''); }).join('  ·  ') : 'None that day');
+      if (ban && ban.text) fact('Banner', ban.text);
+      fitHome();
+    }
+    fHDate.addEventListener('change', function () { H.date = fHDate.value; paintHome(); });
+    fHTime.addEventListener('change', function () { H.time = fHTime.value.slice(0, 5); paintHome(); });
+    homeWhen.appendChild(el('div', { class: 'fields home-pick' }, [
+      el('div', { class: 'field' }, [el('label', { for: fHDate.id, text: 'Day' }), el('div', { class: 'hebrow' }, [hHDate.wrap]), el('div', { class: 'dn-civilrow' }, [fHDate, homeCivil]), homeDays]),
+      el('div', { class: 'field' }, [el('label', { for: fHTime.id, text: 'Time of day' }), fHTime, homeTimes])]));
+    hp.appendChild(el('div', { class: 'home-bar' }, [homeModes, el('span', { class: 'sp' }), el('button', { type: 'button', class: 'btn', id: 'home-refresh', 'data-nodirty': '1', text: 'Refresh', title: 'Load the screen again', onclick: function () { paintHome(true); } }), homeOpen]));
+    hp.appendChild(homeWhen); hp.appendChild(homeUnsaved);
+    hp.appendChild(el('div', { class: 'home-tv' }, [homeStage, el('div', { class: 'home-stand' })]));
+    hp.appendChild(homeCap); hp.appendChild(homeFacts);
+    hp.appendChild(el('div', { class: 'home-note', text: 'This is the hallway screen itself, with what is saved on this device. The TV shows the same once you publish. On a phone, turn it sideways for a bigger picture.' }));
+    if (ui.homeFit) window.removeEventListener('resize', ui.homeFit); /* a rebuild of the back end leaves one listener, not one more each time */
+    ui.homeFit = fitHome; window.addEventListener('resize', fitHome);
+    pages.home = hp;
+
     /* ---------- donations: who sponsors what on the board, and from when to when ----------
        Each donation is a card: who, which kind, its Hebrew start and end dates, and whether it is on the board now, still to come or
        finished. A kind (פרנס החודש, נר למאור …) carries how its panel reads — title, size, the line that leads into the name, its usual
@@ -2433,7 +2506,7 @@
     var saveBtn = el('button', { type: 'button', class: 'btn primary', text: 'Save', onclick: function () { saveConfig(collect()); } });
     var status = el('span', { class: 'status', text: '' });
     function setDirty(on) {
-      ui.adminDirty = on;
+      ui.adminDirty = on; homeUnsaved.hidden = !on;
       status.textContent = on ? 'Unsaved changes' : (cfg.savedAt ? 'Saved ' + new Date(cfg.savedAt).toLocaleString([], { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '');
       status.className = 'status' + (on ? ' dirty' : ''); saveBtn.classList.toggle('attn', on);
     }
@@ -2443,7 +2516,7 @@
       el('button', { type: 'button', class: 'btn ghost', 'data-nodirty': '1', onclick: function () { if (ui.adminDirty && !confirm('Lock without saving? The changes made here will be lost.')) return; pinOk = false; try { sessionStorage.removeItem('minyan-pin'); } catch (e) {} ui.adminDirty = false; closeOverlay(); showPin(); } }, [svgIcon('lock'), el('span', { text: 'Lock' })])]);
     var ghNow = mode === 'artifact' ? null : ghSettings();
     var footHint = mode === 'artifact' ? 'Save publishes a new version of this page for everyone who has the link.' : (ghConfigured(ghNow) ? 'Save keeps the changes on this device. Publish sends them to the website and the app.' : 'Save keeps the settings on this device only. Connect the website on the Publish tab to be able to publish.');
-    var main = el('div', { class: 'amain' }, [el('div', { class: 'ptitle' }, [pageTitle, pageDesc]), pages.today, pages.general, pages.schedule, pages.donations, pages.rolls, pages.notices, pages.screen, pages.overrides, mode !== 'artifact' ? pages.publish : null, mode !== 'artifact' ? pages.send : null, pages.data,
+    var main = el('div', { class: 'amain' }, [el('div', { class: 'ptitle' }, [pageTitle, pageDesc]), pages.home, pages.today, pages.general, pages.schedule, pages.donations, pages.rolls, pages.notices, pages.screen, pages.overrides, mode !== 'artifact' ? pages.publish : null, mode !== 'artifact' ? pages.send : null, pages.data,
       el('div', { class: 'bar afoot' }, [el('span', { class: 'hint', text: footHint }), saveBtn.cloneNode(true)])]);
     var pubBar = el('div', { class: 'pubbar' }); pubBar.hidden = true;
     function refreshPubBar() {
@@ -2462,7 +2535,7 @@
       el('div', { class: 'abody' }, [el('nav', { class: 'anav' }, [tabBar, navFoot]), main]), pubBar]);
     overlay(panel);
     refreshPubBar();
-    selectTab(draft && ui.adminTab && pages[ui.adminTab] ? ui.adminTab : 'today'); showType('weekday'); markTabs();
+    selectTab(draft && ui.adminTab && pages[ui.adminTab] ? ui.adminTab : 'home'); showType('weekday'); markTabs();
     setDirty(!!ui.adminDirty);
     var bottomSave = main.lastChild.lastChild;
     bottomSave.addEventListener('click', function () { saveBtn.click(); });
@@ -2689,6 +2762,20 @@
   }
 
   /* ---------- installable app ---------- */
+  /* ?at=2026-12-05T08:30 shows the board as it will be at that moment by the shul's own clock. Every reading of the time is moved by the
+     same amount, so the day, its schedule, its zmanim and its donations are that day's, and the clock goes on running from there.
+     It is how the back end's Home page shows the screen on another day. */
+  function startPreview() {
+    var m = /[?&]at=(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?(?:&|$)/.exec(location.search);
+    if (!m) return;
+    var y = +m[1], mo = +m[2], dd = +m[3], hh = m[4] == null ? null : +m[4], mm = m[5] == null ? 0 : +m[5];
+    if (mo < 1 || mo > 12 || dd < 1 || dd > 31 || (hh != null && (hh > 23 || mm > 59))) return;
+    var real = Date.now.bind(Date), base = real(), tz = loc().tz, rd = Cal.rdFromGreg(y, mo, dd);
+    var min = hh == null ? Math.floor(Cal.nowInTz(base, tz).min) : hh * 60 + mm;
+    var shift = Cal.epochFromWall(rd, min, tz) - base;
+    Date.now = function () { return real() + shift; };
+    ui.preview = { rd: rd, min: min };
+  }
   function isStandalone() { return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true; }
   /* the store app opens this same website in its own window, and marks itself in the browser's name */
   function inStoreApp() { return /MinyanBoardApp/.test(navigator.userAgent || '') || !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()); }
@@ -2727,11 +2814,14 @@
       try { applyIfNewer(JSON.parse(localStorage.getItem('minyan-remote') || 'null')); } catch (e) {}
       try { applyIfNewer(JSON.parse(localStorage.getItem('minyan-config') || 'null')); } catch (e) {}
       try { pinOk = sessionStorage.getItem('minyan-pin') === '1'; } catch (e) {}
+      startPreview();
       /* the lobby address on a phone: show the TV preview (the lobby as the TV renders it, scaled down) instead of a squeezed lobby */
       var v0 = currentView();
       if (v0.kind === 'display' && !v0.full && Math.max(window.innerWidth, window.innerHeight) < 1000) { location.replace('tv.html'); return; }
     }
     render();
+    /* opened by itself, a preview says that it is one, so it is never taken for the board as it is today */
+    if (ui.preview && window.top === window) document.body.appendChild(el('div', { class: 'preview-badge', dir: 'rtl', text: S().preview + ' · ' + Cal.formatHeb(Cal.hebFromRD(ui.preview.rd)) + ' · ' + fmtTime(ui.preview.min) }));
     setInterval(tick, 1000);
     if (window.matchMedia) { var mq = window.matchMedia('(max-width: 640px)'); (mq.addEventListener ? mq.addEventListener('change', function () { render(); }) : mq.addListener(function () { render(); })); } /* phone layout follows the width */
     window.addEventListener('hashchange', function () { refreshEditBtn(); if (isAdminPage() && canEditNow() && !ui.adminOpen) openAdmin(); });
