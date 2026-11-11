@@ -31,7 +31,14 @@ const ogHead = '<meta property="og:type" content="website"><meta property="og:ti
 if (!site) console.warn('siteUrl is empty: share previews need the full site address (set it under Edit → General once the site is online, or in config.default.json).');
 const full = '<!doctype html><html lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>' + reset + '</style>' + pwaHead + ogHead + '</head><body>' + body + '</body></html>';
 fs.writeFileSync(path.join(dist, 'index.html'), full);
-const adminFull = full.replace('<title>' + esc(name) + '</title>', '<title>' + esc(name) + ' – Admin</title>').replace('<head>', '<head><meta name="robots" content="noindex,nofollow"><meta name="minyan-page" content="admin">'); /* the page says what it is, whatever address the host serves it at */
+// The back end is an app of its own to the browser: its own manifest (name, icon, the address it starts at), so "Install",
+// "Create shortcut" or "Add to Home Screen" from the back end makes a shortcut that opens the back end, not the board.
+const swapHead = (html, from, to) => { if (html.indexOf(from) < 0) throw new Error('build: the page head no longer has ' + from); return html.replace(from, to); };
+let adminFull = full.replace('<title>' + esc(name) + '</title>', '<title>' + esc(name) + ' – Admin</title>').replace('<head>', '<head><meta name="robots" content="noindex,nofollow"><meta name="minyan-page" content="admin">'); /* the page says what it is, whatever address the host serves it at */
+adminFull = swapHead(adminFull, '<link rel="manifest" href="manifest.webmanifest">', '<link rel="manifest" href="admin.webmanifest">');
+adminFull = swapHead(adminFull, '<meta name="theme-color" content="#4a3a28">', '<meta name="theme-color" content="#1f3a68">');
+adminFull = swapHead(adminFull, '<meta name="apple-mobile-web-app-title" content="' + esc(name) + '">', '<meta name="apple-mobile-web-app-title" content="Back end">');
+adminFull = swapHead(adminFull, '<link rel="apple-touch-icon" href="apple-touch-icon.png">', '<link rel="apple-touch-icon" href="admin-touch-icon.png">');
 fs.writeFileSync(path.join(dist, 'admin.html'), adminFull);
 // short ways in: /admin for the back end, /screen for the TV itself, /tv for the preview on a phone.
 // They are plain pages next to the others, never folders: a folder address ends in "/", which the service
@@ -69,15 +76,18 @@ if (site) {
     SITE: JSON.stringify(site).replace(/</g, '\\u003c'), STRINGS: JSON.stringify({ waiting: o.waiting, checking: o.checking, found: o.found }).replace(/</g, '\\u003c') };
   fs.writeFileSync(path.join(dist, 'offline.html'), fs.readFileSync(path.join(__dirname, 'src/offline.html'), 'utf8').replace(/\{\{(\w+)\}\}/g, (m, k) => fill[k]));
 }
-for (const f of ['style.css', 'cal.js', 'engine.js', 'template.js', 'app.js', 'manifest.webmanifest']) fs.copyFileSync(path.join(__dirname, 'src', f), path.join(dist, f));
+for (const f of ['style.css', 'cal.js', 'engine.js', 'template.js', 'app.js', 'manifest.webmanifest', 'admin.webmanifest']) fs.copyFileSync(path.join(__dirname, 'src', f), path.join(dist, f));
 fs.writeFileSync(path.join(dist, 'config.json'), json);
 fs.writeFileSync(path.join(dist, '.nojekyll'), '');
 const hash = crypto.createHash('sha256');
-for (const f of ['index.html', 'style.css', 'cal.js', 'engine.js', 'template.js', 'app.js', 'manifest.webmanifest']) hash.update(fs.readFileSync(path.join(dist, f)));
+for (const f of ['index.html', 'admin.html', 'style.css', 'cal.js', 'engine.js', 'template.js', 'app.js', 'manifest.webmanifest', 'admin.webmanifest']) hash.update(fs.readFileSync(path.join(dist, f)));
 const sw = fs.readFileSync(path.join(__dirname, 'src/sw.js'), 'utf8').replace("var VERSION = 'minyan-shell-dev';", "var VERSION = 'minyan-shell-" + hash.digest('hex').slice(0, 12) + "';");
 fs.writeFileSync(path.join(dist, 'sw.js'), sw);
 for (const f of ['icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png', 'favicon.png', 'og-image.png']) {
   if (!fs.existsSync(path.join(dist, f))) console.warn('missing ' + f + ' (run node assets/make-icons.js and node assets/make-og.js)');
+}
+for (const f of ['admin-192.png', 'admin-512.png', 'admin-maskable-512.png', 'admin-touch-icon.png']) {
+  if (!fs.existsSync(path.join(dist, f))) console.warn('missing ' + f + ' (run node assets/make-admin-icons.js)');
 }
 // SMS responder bundles: one file to paste into Twilio Functions, one to deploy as a Cloudflare Worker
 const strip = t => t.replace(/^if \(typeof module !== 'undefined'\) module\.exports = .*;$/mg, '');

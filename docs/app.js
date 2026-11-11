@@ -46,7 +46,8 @@
     if (typeof document === 'undefined') return;
     var root = document.documentElement, look = lookMode();
     if (look === 'classic') root.removeAttribute('data-palette'); else root.setAttribute('data-palette', look);
-    var meta = document.querySelector('meta[name="theme-color"]'); if (meta) meta.setAttribute('content', LOOK_BAND[look]);
+    /* the browser's own bar wears the board's band; on the back end's own page it stays the back end's navy, the colour its shortcut opens in */
+    var meta = document.querySelector('meta[name="theme-color"]'); if (meta && !document.querySelector('meta[name="minyan-page"][content="admin"]')) meta.setAttribute('content', LOOK_BAND[look]);
   }
   function loc() { return engine.loc(); }
   function zmanimFor(rd) { return engine.zmanimFor(rd); }
@@ -1015,6 +1016,39 @@
       out.push(el('ol', { class: 'guide' }, [step(1, SU().desk1, 'install'), step(2, SU().desk2(cfg.name || 'לוח המנינים'), 'plus')]));
     }
     return out;
+  }
+  /* The back end on this device as a shortcut of its own (its page has its own manifest: name, icon, the address it opens at).
+     Where the browser can do it itself, one button does it; elsewhere, the steps for this device, and the address to paste. */
+  function adminShortcut() {
+    var ua = navigator.userAgent || '', ios = isIOS(), android = /Android/i.test(ua), safari = ios && !/CriOS|FxiOS|EdgiOS|OPiOS|OPT\//.test(ua), edge = /Edg\//.test(ua), nodes = [], buttons = [];
+    var url = location.origin + location.pathname.replace(/[^/]*$/, '') + 'admin';
+    function steps(list) { return el('ol', { class: 'guide' }, list.map(function (x, i) { return el('li', null, [el('span', { class: 'stepn', text: String(i + 1) }), x[1] ? svgIcon(x[1]) : null, el('span', { text: x[0] })]); })); }
+    function copyRow() {
+      return el('div', { class: 'copyrow' }, [el('code', { text: url }), el('button', { type: 'button', class: 'btn small', id: 'adm-copy', 'data-nodirty': '1', text: 'Copy', onclick: function () {
+        (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(url) : Promise.reject()).then(function () { toast('Address copied'); }, function () { toast(url, 8000); });
+      } })]);
+    }
+    if (isStandalone()) {
+      nodes.push(el('div', { class: 'installed' }, [el('span', { class: 'okmark', text: '✓' }), el('span', { text: 'This is the back end\'s own shortcut: you opened it from its icon.' })]));
+      buttons.push({ text: 'Close', kind: 'primary', cancel: true });
+    } else if (deferredInstall) {
+      nodes.push(el('p', { text: 'Puts the back end on this device with an icon of its own, named “Back end”. The icon opens the back end, not the board.' }));
+      buttons.push({ text: 'Not now', cancel: true });
+      buttons.push({ text: 'Add it', kind: 'primary', id: 'adm-install-go', act: function () { installApp(); } });
+    } else {
+      nodes.push(el('p', { text: 'A shortcut made from this page opens the back end, with an icon of its own, named “Back end”.' }));
+      if (ios && safari) nodes.push(steps([['Tap the Share button, the square with an arrow, at the bottom of Safari.', 'share'], ['Choose “Add to Home Screen”.', 'plus'], ['Tap “Add”.', 'home']]));
+      else if (ios) { nodes.push(el('p', { class: 'hint', text: 'On an iPhone or iPad a shortcut is added from Safari. Open this address in Safari:' })); nodes.push(copyRow()); nodes.push(steps([['In Safari, tap the Share button, the square with an arrow.', 'share'], ['Choose “Add to Home Screen”, then “Add”.', 'plus']])); }
+      else if (android) nodes.push(steps([['Tap the three dots at the top of the browser.', 'menu'], ['Choose “Add to Home screen” or “Install app”.', 'plus'], ['Tap “Add” or “Install”.', 'home']]));
+      else {
+        nodes.push(steps(edge ? [['Open the browser\'s menu, the three dots at the top right.', 'menu'], ['Choose “Apps”, then “Install this site as an app”.', 'install'], ['Press “Install”. Tick “Create Desktop shortcut” when it asks.', 'plus']]
+          : [['Open the browser\'s menu, the three dots at the top right.', 'menu'], ['Choose “Cast, save and share”, then “Install page as app”.', 'install'], ['Press “Install”.', 'plus']]));
+        nodes.push(el('p', { class: 'hint', text: 'Or, on any computer: right-click the desktop, choose New, then Shortcut, and paste this address.' }));
+        nodes.push(copyRow());
+      }
+      buttons.push({ text: 'Close', kind: 'primary', cancel: true });
+    }
+    askBox('The back end on this device', nodes, buttons);
   }
   function openSettings(goto) {
     var old = $('#set-overlay'); if (old) old.remove();
@@ -1999,6 +2033,8 @@
     hp.appendChild(el('div', { class: 'home-tv' }, [homeStage, el('div', { class: 'home-stand' })]));
     hp.appendChild(homeCap); hp.appendChild(homeFacts);
     hp.appendChild(el('div', { class: 'home-note', text: 'This is the hallway screen itself, with what is saved on this device. The TV shows the same once you publish. Tap the picture to see it large; on a phone, turn it sideways.' }));
+    if (mode !== 'artifact' && !isStandalone() && !inStoreApp()) hp.appendChild(el('div', { class: 'home-shortcut' }, [el('button', { type: 'button', class: 'btn small', id: 'home-shortcut', 'data-nodirty': '1', onclick: adminShortcut }, [svgIcon('install'), el('span', { text: 'Put the back end on this device' })]),
+      el('span', { class: 'hint', text: 'A shortcut of its own, so it opens here and not on the board.' })]));
     if (ui.homeFit) window.removeEventListener('resize', ui.homeFit); /* a rebuild of the back end leaves one listener, not one more each time */
     ui.homeFit = fitHome; window.addEventListener('resize', fitHome);
     /* The frame is measured whenever its own size changes, not only when the window's does: the page laid out a moment after it
@@ -3006,6 +3042,7 @@
     var closeBtn = el('button', { type: 'button', class: 'btn closebtn', 'aria-label': 'Close', onclick: function () { if (ui.adminDirty && !confirm('Close without saving? The changes made here will be lost.')) return; ui.adminDirty = false; closeOverlay(); } }, [el('span', { class: 'lbl', text: 'Close' }), svgIcon('x')]);
     var navFoot = el('div', { class: 'navfoot' }, mode === 'artifact' ? [] : [
       el('a', { class: 'btn ghost', href: 'index.html', target: '_blank', rel: 'noopener' }, [svgIcon('open'), el('span', { text: 'View the board' })]),
+      el('button', { type: 'button', class: 'btn ghost', id: 'adm-shortcut', 'data-nodirty': '1', onclick: adminShortcut }, [svgIcon('install'), el('span', { text: 'Shortcut on this device' })]),
       el('button', { type: 'button', class: 'btn ghost', 'data-nodirty': '1', onclick: function () { if (ui.adminDirty && !confirm('Lock without saving? The changes made here will be lost.')) return; pinOk = false; try { sessionStorage.removeItem('minyan-pin'); } catch (e) {} ui.adminDirty = false; closeOverlay(); showPin(); } }, [svgIcon('lock'), el('span', { text: 'Lock' })])]);
     var ghNow = mode === 'artifact' ? null : ghSettings();
     var footHint = mode === 'artifact' ? 'Save publishes a new version of this page for everyone who has the link.' : (ghConfigured(ghNow) ? 'Save keeps the changes on this device. Publish sends them to the website and the app.' : 'Save keeps the settings on this device only. Connect the website on the Publish tab to be able to publish.');
