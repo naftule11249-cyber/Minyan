@@ -61,7 +61,7 @@
    "maariv": "#off 07:00"
   },
   "shabbos": {
-   "shacharis": "#off 08:00 ברך משה // example\n#off 09:00 דברי יואל // example\n09:30 היכל אדל // example\n#off 10:00 שלמה יודא // example",
+   "shacharis": "#off 08:00 ברך משה // example\n#off 09:00 דברי יואל // example\n#off 09:30 היכל אדל // example\n#off 10:00 שלמה יודא // example",
    "mincha": "#off sunset-25~5 דברי יואל // example",
    "maariv": "#off 07:00"
   },
@@ -72,23 +72,23 @@
  "notices": [
   {
    "title": "פרנס חודש כסלו",
+   "lead": "רון שיר ושבח למע״כ הרבני הנכבד והמרום כש״ת",
    "name": "מו״ה יעקב יואל פריעדמאן הי״ו",
    "body": "מחשובי מתפללי ולומדי בית מדרשינו\nלעילוי נשמת זקנתו מרת רבקה רחל בת ר׳ חיים ע״ה\nיארצייט ד׳ כסלו",
    "size": "big",
    "logo": "horizon.png",
    "from": "2026-11-11",
-   "to": "2026-12-10",
-   "lead": "רון שיר ושבח למע״כ הרבני הנכבד והמרום כש״ת"
+   "to": "2026-12-10"
   },
   {
    "title": "נר למאור לחודש כסלו",
+   "lead": "נתנדב לעילוי נשמת",
    "name": "ר׳ דוד ב״ר משה אלי׳ עסטרייכער ע״ה",
    "body": "נפטר כ״ז כסלו תשפ״ד · ג׳ דחנוכה · ת.נ.צ.ב.ה.",
    "size": "small",
    "logo": "",
    "from": "2026-11-11",
-   "to": "2026-12-10",
-   "lead": "נתנדב לעילוי נשמת"
+   "to": "2026-12-10"
   },
   {
    "title": "פרנס היום",
@@ -102,29 +102,29 @@
   },
   {
    "title": "פרנס החודש",
+   "lead": "",
    "name": "",
    "body": "הרה״ח ר׳ חיים אליעזר פאלקאוויטש הי״ו\nלרגל הולדות בנו למזל טוב",
    "size": "",
    "logo": "",
    "from": "",
-   "to": "2026-11-10",
-   "lead": ""
+   "to": "2026-11-10"
   },
   {
    "title": "פרנס השבוע",
+   "lead": "",
    "name": "",
    "body": "",
    "size": "",
    "logo": "",
    "from": "",
-   "to": "",
-   "lead": ""
+   "to": ""
   }
  ],
  "overrides": [],
  "smsNumber": "+1 929 828 7677",
  "remoteConfigUrl": "",
- "savedAt": 1794356910133,
+ "savedAt": 1794372901118,
  "siteUrl": "https://minyan.cascadeshul.org/",
  "logo": "",
  "wallLogo": "logo-name.png",
@@ -154,5 +154,14 @@
  "minchaGedola": "mga",
  "smsLang": "he",
  "displayScale": 100,
- "amidahMinutes": 15
+ "amidahMinutes": 15,
+ "nextTemplate": "",
+ "wallLook": {},
+ "wallWindow": {
+  "mode": "day",
+  "before": 180,
+  "after": 20,
+  "neverEmpty": true
+ },
+ "rolls": []
 }
