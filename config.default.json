@@ -71,60 +71,70 @@
  },
  "notices": [
   {
-   "title": "פרנס חודש כסלו",
-   "lead": "רון שיר ושבח למע״כ הרבני הנכבד והמרום כש״ת",
-   "name": "מו״ה יעקב יואל פריעדמאן הי״ו",
-   "body": "מחשובי מתפללי ולומדי בית מדרשינו\nלעילוי נשמת זקנתו מרת רבקה רחל בת ר׳ חיים ע״ה\nיארצייט ד׳ כסלו",
-   "size": "big",
-   "logo": "horizon.png",
-   "from": "2026-11-11",
-   "to": "2026-12-10"
-  },
-  {
-   "title": "נר למאור לחודש כסלו",
-   "lead": "נתנדב לעילוי נשמת",
-   "name": "ר׳ דוד ב״ר משה אלי׳ עסטרייכער ע״ה",
-   "body": "נפטר כ״ז כסלו תשפ״ד · ג׳ דחנוכה · ת.נ.צ.ב.ה.",
-   "size": "big",
-   "logo": "",
-   "from": "2026-11-11",
-   "to": "2026-12-10"
-  },
-  {
-   "title": "פרנס היום",
-   "lead": "",
-   "name": "מו״ה אפרים אליעזר פריעדמאן הי״ו",
-   "body": "לרגל נישואי בתו\nהיום באולם פרדס פיגא",
-   "size": "big",
-   "logo": "",
-   "from": "2026-11-11",
-   "to": "2026-11-11"
-  },
-  {
+   "id": "d4rdhxz",
+   "no": 4,
+   "kind": "month",
    "title": "פרנס החודש",
+   "titleOwn": "פרנס החודש",
    "lead": "",
    "name": "",
    "body": "הרה״ח ר׳ חיים אליעזר פאלקאוויטש הי״ו\nלרגל הולדות בנו למזל טוב",
    "size": "",
+   "sizeOwn": "normal",
    "logo": "",
    "from": "",
    "to": "2026-11-10"
   },
   {
-   "title": "פרנס השבוע",
-   "lead": "",
-   "name": "",
-   "body": "",
+   "id": "d1p168c",
+   "no": 1,
+   "kind": "month",
+   "title": "פרנס חודש כסלו",
+   "titleOwn": "",
+   "lead": "רון שיר ושבח למע״כ הרבני הנכבד והמרום כש״ת",
+   "name": "מו״ה יעקב יואל פריעדמאן הי״ו",
+   "body": "מחשובי מתפללי ולומדי בית מדרשינו\nלעילוי נשמת זקנתו מרת רבקה רחל בת ר׳ חיים ע״ה\nיארצייט ד׳ כסלו",
+   "size": "big",
+   "sizeOwn": "",
+   "logo": "horizon.png",
+   "from": "2026-11-11",
+   "to": "2026-12-10"
+  },
+  {
+   "id": "d22lf6x",
+   "no": 2,
+   "kind": "ner",
+   "title": "נר למאור לחודש כסלו",
+   "titleOwn": "",
+   "lead": "נתנדב לעילוי נשמת",
+   "name": "ר׳ דוד ב״ר משה אלי׳ עסטרייכער ע״ה",
+   "body": "נפטר כ״ז כסלו תשפ״ד · ג׳ דחנוכה · ת.נ.צ.ב.ה.",
    "size": "",
+   "sizeOwn": "",
    "logo": "",
-   "from": "",
-   "to": ""
+   "from": "2026-11-11",
+   "to": "2026-12-10"
+  },
+  {
+   "id": "d3wpvgj",
+   "no": 3,
+   "kind": "day",
+   "title": "פרנס היום",
+   "titleOwn": "",
+   "lead": "",
+   "name": "מו״ה אפרים אליעזר פריעדמאן הי״ו",
+   "body": "לרגל נישואי בתו\nהיום באולם פרדס פיגא",
+   "size": "",
+   "sizeOwn": "",
+   "logo": "",
+   "from": "2026-11-11",
+   "to": "2026-11-11"
   }
  ],
  "overrides": [],
  "smsNumber": "+1 929 828 7677",
  "remoteConfigUrl": "",
- "savedAt": 1794413593420,
+ "savedAt": 1794418781992,
  "siteUrl": "https://minyan.cascadeshul.org/",
  "logo": "",
  "wallLogo": "logo-name.png",
@@ -161,7 +171,50 @@
   "mode": "day",
   "before": 180,
   "after": 20,
-  "neverEmpty": true
+  "neverEmpty": true,
+  "next": 6,
+  "recent": 2
  },
- "rolls": []
+ "rolls": [],
+ "wallTopBar": false,
+ "dayTefilla": {},
+ "nextPanel": true,
+ "nextHold": 0,
+ "nextMark": 0,
+ "pageSeconds": 8,
+ "countTo": "",
+ "donationKinds": [
+  {
+   "id": "month",
+   "name": "פרנס החודש",
+   "title": "פרנס חודש {month}",
+   "size": "big",
+   "lead": "",
+   "period": "month"
+  },
+  {
+   "id": "ner",
+   "name": "נר למאור",
+   "title": "נר למאור לחודש {month}",
+   "size": "normal",
+   "lead": "נתנדב לעילוי נשמת",
+   "period": "month"
+  },
+  {
+   "id": "week",
+   "name": "פרנס השבוע",
+   "title": "פרנס השבוע",
+   "size": "big",
+   "lead": "",
+   "period": "week"
+  },
+  {
+   "id": "day",
+   "name": "פרנס היום",
+   "title": "פרנס היום",
+   "size": "normal",
+   "lead": "",
+   "period": "day"
+  }
+ ]
 }
