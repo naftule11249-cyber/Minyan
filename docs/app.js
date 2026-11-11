@@ -131,6 +131,8 @@
     return null;
   }
   function fmtTime(min) { return engine.fmtTime(min); }
+  /* a zman as the lists show it: צאת הכוכבים to the second, as the gabbai asked; the rest to the minute */
+  function zTime(k, v) { if (k !== 'tzeis' || isNaN(v)) return fmtTime(v); var sec = Math.round(v * 60); return fmtTime(Math.floor(sec / 60)) + ':' + pad2(sec % 60); }
   function fmtCountdown(ms) { return engine.fmtCountdown(ms); }
   /* the board's labels in Hebrew or Yiddish: General -> Board labels sets the default (the lobby screen and door displays always use it); each phone may pick its own */
   var STR = {
@@ -627,7 +629,7 @@
     ui.zcount = null; ui.zcountMs = 0;
     list.forEach(function (x, i) {
       var here = i === hereIdx;
-      var t = tile(zmanName(x.key), fmtTime(x.min), (here ? 'now' : 'zsm') + (x.past ? ' past' : ''), x.tomorrow && !allTomorrow ? L.tomorrow : '');
+      var t = tile(zmanName(x.key), zTime(x.key, x.min), (here ? 'now' : 'zsm') + (x.past ? ' past' : ''), x.tomorrow && !allTomorrow ? L.tomorrow : '');
       if (here) { ui.zcountMs = x.ms; ui.zcount = el('div', { class: 'count num', text: fmtCountdown(x.ms - now) }); t.appendChild(ui.zcount); }
       grid.appendChild(t);
     });
@@ -736,7 +738,7 @@
       var hi = k === 'candles', v = z[k];
       /* a zman that has passed keeps today's time, dimmed; tapping it then sets a reminder for tomorrow's */
       var passed = !isNaN(v) && nowMs >= Cal.epochFromWall(rd, Math.round(v), tz) + 60000, nextDay = passed && !isNaN(zt[k]);
-      var li = el('li', { class: (hi ? 'hi' : '') + (passed ? ' past' : '') }, [el('span', { text: zmanName(k) }), el('span', { class: 'z num', text: fmtTime(v) })]);
+      var li = el('li', { class: (hi ? 'hi' : '') + (passed ? ' past' : '') }, [el('span', { text: zmanName(k) }), el('span', { class: 'z num', text: zTime(k, v) })]);
       if (canRemind && (nextDay || (!passed && !isNaN(v)))) makeTappable(li, nextDay ? { zman: k, rd: rd + 1, min: zt[k] } : { zman: k, rd: rd, min: v }); /* tap a zman to be reminded before it */
       ul.appendChild(li);
     });

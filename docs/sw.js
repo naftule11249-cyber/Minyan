@@ -1,5 +1,5 @@
 /* sw.js — offline cache for the minyan board. VERSION is stamped by build.js. */
-var VERSION = 'minyan-shell-7bb00afa7c54';
+var VERSION = 'minyan-shell-d2670943b9e6';
 var FONTS = 'minyan-fonts';
 var SHELL = ['./index.html', './admin.html', './style.css', './cal.js', './engine.js', './template.js', './app.js', './manifest.webmanifest', './admin.webmanifest', './icon-192.png', './icon-512.png', './admin-192.png', './admin-512.png', './config.json'];
 /* A new version takes every file straight from the network. The host lets a browser keep a file for ten minutes, and a plain
