@@ -2509,8 +2509,8 @@
     });
     cWallLook.body.appendChild(swatchRows);
     cWallLook.body.appendChild(el('div', { class: 'bar actions' }, [el('button', { type: 'button', class: 'btn small', text: 'Back to the look\'s own colours', 'data-nodirty': '1', onclick: function () { SWATCHES.forEach(function (sw) { if (/^(pageBg|frameBg|frameLine)$/.test(sw[0])) return; wall[sw[0]] = ''; $('#w-on-' + sw[0]).checked = false; $('#w-' + sw[0]).disabled = true; }); markDirty(); } })]));
-    var fWinMode = el('select', { id: 'w-mode' }, [el('option', { value: 'day', text: 'The whole day, from the first minyan to the last' }), el('option', { value: 'window', text: 'Only what is near: the next few hours and what just went' }),
-      el('option', { value: 'count', text: 'The next few and the last few, by number' })]);
+    var fWinMode = el('select', { id: 'w-mode' }, [el('option', { value: 'day', text: 'The whole day' }), el('option', { value: 'window', text: 'Only what is near (by minutes)' }),
+      el('option', { value: 'count', text: 'The next few and the last few' })]); /* short enough to read whole in the closed box on a phone */
     fWinMode.value = win.mode === 'window' ? 'window' : win.mode === 'count' ? 'count' : 'day';
     var fWinNext = inp('w-next', win.next == null ? 6 : win.next, { type: 'number', min: '1', max: '60', inputmode: 'numeric' });
     var fWinRecent = inp('w-recent', win.recent == null ? 2 : win.recent, { type: 'number', min: '0', max: '20', inputmode: 'numeric' });
