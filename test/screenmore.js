@@ -126,7 +126,7 @@ const SHACHARIS = '07:45 לב אהרן\n08:00 דברי יואל\n08:02 ברך מ
   /* ---- settings saved before these existed are not "changed" by the page learning about them ---- */
   ({ ctx, page } = await context(at(8, 5), { wallWindow: { mode: 'window', before: 180, after: 20, neverEmpty: true } }, { width: 1280, height: 950 }, 'en-US'));
   await page.goto(BASE + 'admin.html', { waitUntil: 'networkidle' });
-  await page.fill('#pin-input', '1234'); await page.press('#pin-input', 'Enter'); await page.waitForSelector('#tab-screen'); await page.waitForTimeout(300);
+  await page.fill('#pin-input', process.env.MINYAN_PIN || '1234'); await page.press('#pin-input', 'Enter'); await page.waitForSelector('#tab-screen'); await page.waitForTimeout(300);
   await page.click('.abar .btn.primary'); await page.waitForTimeout(900);
   ok('a Save with nothing touched, on settings from before today\'s additions, leaves nothing waiting to be published', [await page.locator('.pubbar').isVisible(), /Nothing new to publish|Saved/.test(await page.locator('#toast').textContent().catch(() => 'Saved'))], [false, true]);
   await ctx.close();
@@ -134,7 +134,7 @@ const SHACHARIS = '07:45 לב אהרן\n08:00 דברי יואל\n08:02 ברך מ
   /* ---- the back end: the settings, and "On the screen now" ---- */
   ({ ctx, page } = await context(at(8, 5), null, { width: 1280, height: 950 }, 'en-US'));
   await page.goto(BASE + 'admin.html', { waitUntil: 'networkidle' });
-  await page.fill('#pin-input', '1234'); await page.press('#pin-input', 'Enter'); await page.waitForSelector('#tab-screen'); await page.click('#tab-screen'); await page.waitForTimeout(250);
+  await page.fill('#pin-input', process.env.MINYAN_PIN || '1234'); await page.press('#pin-input', 'Enter'); await page.waitForSelector('#tab-screen'); await page.click('#tab-screen'); await page.waitForTimeout(250);
   const box = () => page.evaluate(() => ({ rows: Array.from(document.querySelectorAll('#w-onscreen .os-row')).map(r => [r.querySelector('.os-name').textContent, Array.from(r.querySelectorAll('.os-chip')).map(c => c.querySelector('b').textContent + (c.classList.contains('next') ? '*' : c.classList.contains('gone') ? '-' : '')), (r.querySelector('.os-hid') || {}).textContent || '']),
     foot: document.querySelector('#w-onscreen .os-foot').textContent, time: document.querySelector('#w-onscreen .os-time').textContent }));
   let bx = await box();

@@ -63,7 +63,7 @@ const at = (h, m, s) => Date.UTC(2026, 10, 18, h + 5, m, s || 0); /* New York is
   /* the back end */
   ({ ctx, page } = await context(at(7, 47), null, { width: 1280, height: 900 }));
   await page.goto(BASE + 'admin.html', { waitUntil: 'networkidle' });
-  await page.fill('#pin-input', '1234'); await page.press('#pin-input', 'Enter'); await page.waitForSelector('#tab-screen'); await page.click('#tab-screen'); await page.waitForTimeout(200);
+  await page.fill('#pin-input', process.env.MINYAN_PIN || '1234'); await page.press('#pin-input', 'Enter'); await page.waitForSelector('#tab-screen'); await page.click('#tab-screen'); await page.waitForTimeout(200);
   ok('the back end has both: the switch on, the minutes at 0', [await page.isChecked('#w-nextpanel'), await page.inputValue('#w-nexthold'), await page.locator('#w-next-template').isVisible()], [true, '0', true]);
   await page.fill('#w-nexthold', '5'); await page.click('.abar .btn.primary'); await page.waitForTimeout(900);
   const tv = await ctx.newPage(); await tv.setViewportSize({ width: 1920, height: 1080 }); await screen(tv);

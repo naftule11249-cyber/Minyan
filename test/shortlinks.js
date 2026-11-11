@@ -38,7 +38,7 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; ch
   let { ctx, page } = await open({ width: 1200, height: 850 });
   await page.goto(base + '/admin', { waitUntil: 'networkidle' }); await page.waitForTimeout(500);
   ok('/admin opens the back end: it asks for the PIN, at that address', [await pinShown(page), where(page)], [true, '/admin']);
-  if (await pinShown(page)) { await page.fill('#pin-input', '1234'); await page.press('#pin-input', 'Enter'); await page.waitForTimeout(600); }
+  if (await pinShown(page)) { await page.fill('#pin-input', process.env.MINYAN_PIN || '1234'); await page.press('#pin-input', 'Enter'); await page.waitForTimeout(600); }
   ok('the PIN lets you in: the tabs of the back end are there', [await page.locator('#tab-notices').isVisible().catch(() => false), await page.locator('#tab-schedule').isVisible().catch(() => false)], [true, true]);
   await page.reload({ waitUntil: 'networkidle' }); await page.waitForTimeout(500);
   ok('reloading /admin stays in the back end', [where(page), await page.locator('#tab-notices').isVisible().catch(() => false) || await pinShown(page)], ['/admin', true]);

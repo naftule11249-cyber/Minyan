@@ -129,7 +129,7 @@ const ny = (y, m, d, h, min) => Cal.epochFromWall(rd(y, m, d), h * 60 + (min || 
   const saved = () => page.evaluate(() => { const c = JSON.parse(localStorage.getItem('minyan-config') || 'null'); return c ? c.dayTefilla || null : 'nothing saved'; });
   async function admin() {
     await page.goto(BASE + 'admin.html', { waitUntil: 'networkidle' }); await page.waitForSelector('#pin-input, #tab-home');
-    if (await page.locator('#pin-input').count()) { await page.fill('#pin-input', '1234'); await page.press('#pin-input', 'Enter'); }
+    if (await page.locator('#pin-input').count()) { await page.fill('#pin-input', process.env.MINYAN_PIN || '1234'); await page.press('#pin-input', 'Enter'); }
     await page.waitForSelector('#tab-home'); await page.waitForTimeout(300); await page.click('#tab-schedule'); await page.waitForTimeout(200);
   }
   await admin();
@@ -200,7 +200,7 @@ const ny = (y, m, d, h, min) => Cal.epochFromWall(rd(y, m, d), h * 60 + (min || 
 
   /* on a phone */
   ({ ctx, page } = await context(WED, { dayTefilla: { shabbos: { shacharis: { second: 'own', milestone: 'נשמת', offset: 30 } } } }, { width: 390, height: 844 }, 'en-US'));
-  await page.goto(BASE + 'admin.html', { waitUntil: 'networkidle' }); await page.fill('#pin-input', '1234'); await page.press('#pin-input', 'Enter'); await page.waitForSelector('#tab-schedule'); await page.click('#tab-schedule'); await page.click('#dt-shabbos'); await page.waitForTimeout(200);
+  await page.goto(BASE + 'admin.html', { waitUntil: 'networkidle' }); await page.fill('#pin-input', process.env.MINYAN_PIN || '1234'); await page.press('#pin-input', 'Enter'); await page.waitForSelector('#tab-schedule'); await page.click('#tab-schedule'); await page.click('#dt-shabbos'); await page.waitForTimeout(200);
   await page.locator('#dt-box-shabbos-shacharis > summary').click(); await page.waitForTimeout(150);
   ok('on a phone the box and its fields fit: nothing off the side, fields big enough for a thumb', await page.evaluate(() => { const f = Array.from(document.querySelectorAll('#dt-box-shabbos-shacharis input, #dt-box-shabbos-shacharis select')).map(e => e.getBoundingClientRect()).filter(r => r.width);
     return [document.documentElement.scrollWidth <= window.innerWidth, f.length, f.every(r => r.left >= 0 && r.right <= window.innerWidth && r.height >= 40)]; }), [true, 4, true]);

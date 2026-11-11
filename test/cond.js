@@ -16,7 +16,7 @@ const { chromium } = require('playwright');
   await page.evaluate(() => { try { localStorage.clear(); } catch (e) {} }); await page.reload({ waitUntil: 'networkidle' }); await page.waitForTimeout(600);
   /* the published copy the device compares against: make it older than this test's frozen clock, whatever date the shul last published */
   await page.evaluate(() => { try { const r = JSON.parse(localStorage.getItem('minyan-remote') || 'null'); if (r) { r.savedAt = 1; localStorage.setItem('minyan-remote', JSON.stringify(r)); } } catch (e) {} });
-  await page.waitForSelector('#pin-input'); await page.fill('#pin-input', '1234'); await page.press('#pin-input', 'Enter');
+  await page.waitForSelector('#pin-input'); await page.fill('#pin-input', process.env.MINYAN_PIN || '1234'); await page.press('#pin-input', 'Enter');
   await page.waitForSelector('#tab-schedule'); await page.click('#tab-schedule');
   const sh = page.locator('#dtp-weekday .fields.three > .field').nth(0);
   await sh.locator('button:has-text("+ Add minyan")').click();

@@ -18,7 +18,7 @@ const UA = { iphone: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) App
     if (opts.init) await ctx.addInitScript(opts.init);
     const page = watch(await ctx.newPage());
     await page.goto(BASE + (opts.page || 'admin.html'), { waitUntil: 'networkidle' });
-    if (opts.pin !== false && !opts.page) { await page.fill('#pin-input', '1234'); await page.press('#pin-input', 'Enter'); await page.waitForSelector('#tab-home'); await page.waitForTimeout(300); }
+    if (opts.pin !== false && !opts.page) { await page.fill('#pin-input', process.env.MINYAN_PIN || '1234'); await page.press('#pin-input', 'Enter'); await page.waitForSelector('#tab-home'); await page.waitForTimeout(300); }
     return { ctx, page };
   }
   /* what a page tells the browser about installing it */

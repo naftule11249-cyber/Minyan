@@ -315,19 +315,21 @@ var Cal = (function () {
     }
     var sunrise = wall(sunUTC(rd, lat, lng, 90.833 + elevAdj, true));
     var sunset = wall(sunUTC(rd, lat, lng, 90.833 + elevAdj, false));
-    var alos = wall(sunUTC(rd, lat, lng, 106.1, true));
+    var alos = sunrise - 72; /* dawn by the Magen Avraham, 72 minutes before sunrise: the day the shul's own zmanim board reckons by */
     var tzeisDeg = wall(sunUTC(rd, lat, lng, 90 + (loc.tzeisDeg || 8.5), false));
     var shaah = (sunset - sunrise) / 12;
     var tzeis = loc.tzeisMinutes ? sunset + loc.tzeisMinutes : tzeisDeg;
     return {
       alos: alos, sunrise: sunrise, shema: sunrise + 3 * shaah, tefilla: sunrise + 4 * shaah,
+      /* by the Magen Avraham, the day from 72 minutes before sunrise to 72 after sunset; a latest time is told to the minute before, never the minute after */
+      shemaMGA: Math.floor((sunrise - 72) + 3 * ((sunset - sunrise + 144) / 12)), tefillaMGA: Math.floor((sunrise - 72) + 4 * ((sunset - sunrise + 144) / 12)),
       chatzos: sunrise + 6 * shaah, minchag: minchaGedola(sunrise + 6 * shaah, shaah, loc.minchaGedola), plag: sunrise + 10.75 * shaah,
       /* מנחה קטנה by the Magen Avraham: nine and a half proportional hours of the day from dawn to nightfall, 72 minutes before sunrise and after sunset */
       minchak: (sunrise - 72) + 9.5 * ((sunset - sunrise + 144) / 12),
       candles: sunset - (loc.candles == null ? 18 : loc.candles), sunset: sunset, tzeis: tzeis, tzeis60: sunset + 60, tzeis72: sunset + 72
     };
   }
-  var ZMAN_NAMES = { alos: 'עלות השחר', sunrise: 'נץ החמה', shema: 'סוף זמן ק״ש', tefilla: 'סוף זמן תפילה', chatzos: 'חצות',
+  var ZMAN_NAMES = { alos: 'עלות השחר', sunrise: 'הנץ החמה', shemaMGA: 'סוזק״ש (מג״א)', shema: 'סוזק״ש (גר״א)', tefillaMGA: 'סוז״ת (מג״א)', tefilla: 'סוז״ת (גר״א)', chatzos: 'חצות היום',
     minchag: 'מנחה גדולה', minchak: 'מנחה קטנה', plag: 'פלג המנחה', candles: 'הדלקת נרות', sunset: 'שקיעה', tzeis: 'צאת הכוכבים', tzeis60: '60 מינוט אחר השקיעה', tzeis72: 'ר״ת (72)' };
 
   /* ---------- Time zone helpers ---------- */

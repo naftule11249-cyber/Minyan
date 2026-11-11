@@ -108,7 +108,7 @@ const { chromium } = require('playwright');
     await c3.close();
   }
   ({ ctx, page } = await open('admin.html', { width: 1100, height: 800 }));
-  await page.fill('#pin-input', '1234'); await page.press('#pin-input', 'Enter'); await page.waitForSelector('#tab-notices');
+  await page.fill('#pin-input', process.env.MINYAN_PIN || '1234'); await page.press('#pin-input', 'Enter'); await page.waitForSelector('#tab-notices');
   ok('the admin header has a TV link to the preview', await page.locator('.abar a[href="tv.html"]').count(), 1);
   await page.click('#tab-notices');
   ok('the banner card has a start time beside the end time', [await page.locator('#banner-from').getAttribute('type'), await page.locator('#banner-until').getAttribute('type')], ['datetime-local', 'datetime-local']);

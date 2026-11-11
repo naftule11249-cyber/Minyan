@@ -38,7 +38,7 @@ const BASE = 'http://localhost:8790/', FIXED = Date.UTC(2026, 10, 18, 14, 10);
   ok('the website holding newer settings than the page was built with does not let anyone past the PIN box', [await page.locator('#pin-input').count(), await page.locator('#tab-home').count()], [1, 0]);
   elsewhere({}, FIXED - 3000e3); await wake();
   ok('nor do newer settings arriving while the PIN box is showing', [await page.locator('#pin-input').count(), await page.locator('#tab-home').count(), await page.locator('.abar').count()], [1, 0, 0]);
-  await page.fill('#pin-input', '1234'); await page.press('#pin-input', 'Enter'); await page.waitForSelector('#tab-home'); await page.waitForTimeout(400);
+  await page.fill('#pin-input', process.env.MINYAN_PIN || '1234'); await page.press('#pin-input', 'Enter'); await page.waitForSelector('#tab-home'); await page.waitForTimeout(400);
 
   /* the ordinary way: nobody else, no questions */
   await banner('מעריב היום בשעה 6:00'); await save();

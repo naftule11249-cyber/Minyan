@@ -12,7 +12,7 @@ const { chromium } = require('playwright');
   page.on('console', m => { if (m.type() === 'error' && !/favicon|ERR_TUNNEL|ERR_NAME_NOT_RESOLVED|ERR_INTERNET|ERR_CONNECTION/.test(m.text())) errors.push(m.text()); });
   await page.goto('http://localhost:8790/admin.html', { waitUntil: 'networkidle' });
   await page.evaluate(() => { try { localStorage.clear(); } catch (e) {} }); await page.reload({ waitUntil: 'networkidle' });
-  await page.waitForSelector('#pin-input'); await page.fill('#pin-input', '1234'); await page.press('#pin-input', 'Enter');
+  await page.waitForSelector('#pin-input'); await page.fill('#pin-input', process.env.MINYAN_PIN || '1234'); await page.press('#pin-input', 'Enter');
   await page.waitForSelector('#tab-today');
   ok('the back end opens on Home, and "This week" is one press away', await page.locator('#tab-home').getAttribute('aria-selected'), 'true');
   await page.click('#tab-today'); await page.waitForTimeout(150);
@@ -46,7 +46,7 @@ const { chromium } = require('playwright');
   ok('board shows the moved and the added minyan', [tileTimes.indexOf('7:33') >= 0, tileTimes.indexOf('4:10') >= 0], [true, true]);
   // undo
   await page.goto('http://localhost:8790/admin.html', { waitUntil: 'networkidle' }); await page.waitForTimeout(300);
-  if (await page.locator('#pin-input').count()) { await page.fill('#pin-input', '1234'); await page.press('#pin-input', 'Enter'); }
+  if (await page.locator('#pin-input').count()) { await page.fill('#pin-input', process.env.MINYAN_PIN || '1234'); await page.press('#pin-input', 'Enter'); }
   await page.waitForSelector('#tab-today'); await page.click('#tab-today'); await page.waitForTimeout(150); /* the back end opens on Home now */
   ok('undo offered when today has changes', await page.locator('#page-today button:has-text("Back to the regular schedule")').count(), 1);
   await page.click('#page-today button:has-text("Back to the regular schedule")'); await page.waitForTimeout(600);

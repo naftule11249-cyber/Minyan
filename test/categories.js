@@ -7,7 +7,7 @@ const { chromium } = require('playwright');
   page.on('pageerror', e => errors.push('pageerror: ' + e.message)); page.on('console', m => { if (m.type() === 'error' && !/favicon|ERR_TUNNEL|ERR_NAME_NOT_RESOLVED|ERR_INTERNET|ERR_CONNECTION/.test(m.text())) errors.push(m.text()); });
   await page.goto('http://localhost:8790/admin.html', { waitUntil: 'networkidle' });
   await page.evaluate(() => { try { localStorage.clear(); } catch (e) {} }); await page.reload({ waitUntil: 'networkidle' });
-  await page.waitForSelector('#pin-input'); await page.fill('#pin-input', '1234'); await page.press('#pin-input', 'Enter');
+  await page.waitForSelector('#pin-input'); await page.fill('#pin-input', process.env.MINYAN_PIN || '1234'); await page.press('#pin-input', 'Enter');
   await page.waitForSelector('#tab-general'); await page.click('#tab-general');
   await page.fill('#f-name', 'בדיקת קטגוריות'); // an unsaved edit that must survive adding a category
   await page.click('button:has-text("+ Add category")'); await page.waitForSelector('#t-name-3');

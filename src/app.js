@@ -69,7 +69,7 @@
   /* the moment a minyan counts from: its start, or its milestone when that is the big number */
   function keyMs(e) { return bigIsMilestone(e.tefilla) ? e.ms + (+e.tefilla.offset || 0) * 60000 : e.ms; }
   /* the zman countdown box: the next of the chosen zmanim still ahead today */
-  var COUNTDOWN_DEFAULT = ['shema', 'tefilla', 'candles', 'sunset'], COUNTDOWN_KEYS = ['shema', 'tefilla', 'chatzos', 'minchag', 'minchak', 'candles', 'sunset', 'tzeis', 'tzeis60', 'tzeis72'];
+  var COUNTDOWN_DEFAULT = ['shema', 'tefilla', 'candles', 'sunset'], COUNTDOWN_KEYS = ['shemaMGA', 'shema', 'tefillaMGA', 'tefilla', 'chatzos', 'minchag', 'minchak', 'candles', 'sunset', 'tzeis', 'tzeis60', 'tzeis72'];
   /* ר״ת (72) is the same moment as the board's nightfall when that is set to 72 minutes: then it is left out everywhere */
   function rtSame() { return +cfg.tzeisMinutes === 72 && cfg.showTzeis !== false; }
   function zmanHidden(k) { return (k === 'tzeis' && cfg.showTzeis === false) || (k === 'tzeis72' && (!cfg.showRT || rtSame())) || (k === 'tzeis60' && cfg.show60 === false); }
@@ -101,7 +101,7 @@
   /* the zmanim after the next one, in the day's order (the lobby's next-zman box lists a few) */
   function laterZmanim(info, z, rd, afterMs, n) {
     var tz = loc().tz, out = [];
-    ['alos', 'sunrise', 'shema', 'tefilla', 'chatzos', 'minchag', 'minchak', 'candles', 'sunset', 'tzeis', 'tzeis60', 'tzeis72'].forEach(function (k) {
+    ['alos', 'sunrise', 'shemaMGA', 'shema', 'tefillaMGA', 'tefilla', 'chatzos', 'minchag', 'minchak', 'candles', 'sunset', 'tzeis60', 'tzeis', 'tzeis72'].forEach(function (k) {
       if (k === 'candles' && info.candles !== 'day') return;
       if (zmanHidden(k)) return;
       var v = z[k]; if (v == null || isNaN(v)) return;
@@ -153,7 +153,7 @@
       today: 'Today', tomorrow: 'Tomorrow', tonight: 'tonight', nextMinyan: 'Next minyan', nowMinyan: 'Now', thenNext: 'Next', nextZman: 'Next zman', zmanim: 'Today\'s zmanim', none: 'No minyanim listed', showEarlier: 'Show earlier', badgeNext: 'Next', badgeNow: 'Now', badgeLast: 'Gone', board: '', special: 'Special schedule', noMinyanim: 'No minyanim are listed for the coming days.', fastStart: 'Fast begins', fastEnd: 'Fast ends', motzaeiShabbos: 'Shabbos ends', motzaeiYT: 'Yom Tov ends', omerTonight: 'Tonight we count', omer: 'Sefiras HaOmer', laomer: ' la\'omer', clock: 'The time', timesBy: 'Times for ', chul: 'Diaspora calendar', eretz: 'Eretz Yisroel calendar', parsha: ' · Parshas ',
       days: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Shabbos'], types: { weekday: 'Weekday schedule', sunday: 'Sunday schedule', friday: 'Erev Shabbos schedule', shabbos: 'Shabbos schedule', yomtov: 'Yom Tov schedule', erev_yomtov: 'Erev Yom Tov schedule', chol_hamoed: 'Chol Hamoed schedule', rosh_chodesh: 'Rosh Chodesh schedule', fast: 'Fast day schedule', chanukah: 'Chanukah schedule', purim: 'Purim schedule', yomkippur: 'Yom Kippur schedule' },
       minyanim: function (name) { return ({ 'שחרית': 'Shacharis', 'מנחה': 'Mincha', 'מעריב': 'Maariv' }[name] || name) + ' minyanim'; },
-      zmanNames: { alos: 'Alos hashachar', sunrise: 'Sunrise (netz)', shema: 'Sof zman Shema', tefilla: 'Sof zman tefilla', chatzos: 'Chatzos', minchag: 'Mincha gedola', minchak: 'Mincha ketana', plag: 'Plag hamincha', candles: 'Candle lighting', sunset: 'Sunset (shkiah)', tzeis: 'Nightfall (tzeis)', tzeis60: '60 minutes after sunset', tzeis72: 'Rabbeinu Tam (72)' } },
+      zmanNames: { alos: 'Alos hashachar', sunrise: 'Sunrise (netz)', shemaMGA: 'Sof zman Shema (MGA)', shema: 'Sof zman Shema (Gra)', tefillaMGA: 'Sof zman tefilla (MGA)', tefilla: 'Sof zman tefilla (Gra)', chatzos: 'Chatzos', minchag: 'Mincha gedola', minchak: 'Mincha ketana', plag: 'Plag hamincha', candles: 'Candle lighting', sunset: 'Sunset (shkiah)', tzeis: 'Nightfall (tzeis)', tzeis60: '60 minutes after sunset', tzeis72: 'Rabbeinu Tam (72)' } },
     yi: { preview: 'פארויסבליק', lastTefilla: 'סוף זמן תפילה', lastChatzos: 'לעצטער פאר חצות', runEvery: function (every) { return 'יעדע ' + every + ' מינוט'; }, runFrom: 'פון', runTo: 'ביז', uiLangLabel: 'שפראך פון די איינשטעלונגען', sameAsBoard: 'ווי דער לוח', zmanimOf: 'זמנים פון ', remindMe: 'דערמאנונג', minutesBefore: 'מינוט פריער', before: 'פאר', todayOnly: 'נאר היינט', thatDayOnly: 'נאר יענעם טאג', everyDay: 'יעדן טאג', everyDayAt: 'יעדן טאג אין דער צייט', remNote: 'א מעלדונג אויף דעם מכשיר, אויך ווען די אַפּ איז פארמאכט.', cancel: 'אפשטעלן', setRem: 'שטעלן א דערמאנונג', setting: 'שטעלט…', remSet: 'די דערמאנונג איז געשטעלט: ', remFail: 'די דערמאנונג האט זיך נישט געלאזט שטעלן: ', minBefore: ' מינוט פאר ', todayOnlyP: ' (נאר היינט)',
       picks: { first: 'דער ערשטער מנין פון טאג', last: 'דער לעצטער מנין פון טאג', 'before:shema': 'דער לעצטער מנין פאר סוף זמן ק״ש', 'before:tefilla': 'דער לעצטער מנין פאר סוף זמן תפילה', 'before:chatzos': 'דער לעצטער מנין פאר חצות', 'before:sunset': 'דער לעצטער מנין פאר שקיעה', 'before:tzeis': 'דער לעצטער מנין פאר צאת הכוכבים' }, pickWith: function (label, name) { return label.replace('מנין', name); },
       remTitle: 'דערמאנונגען אויפן טעלעפאן', remHint: 'א מעלדונג פאר די מנינים אדער זמנים וואס איר קלויבט אויס, אויך ווען די אַפּ איז פארמאכט. מען קען אויך דריקן אויף יעדן מנין אויפן לוח, אדער אויף יעדן זמן אין דער ליסטע, צו שטעלן א דערמאנונג.', zmanimGroup: 'זמנים', remove: 'אראפנעמען די דערמאנונג', noRems: 'נאך נישטא קיין דערמאנונגען.', addRem: '+ דערמאנונג', maxRems: 'ביז 10 דערמאנונגען', dailyAt: ' דער טעגליכער לוח יעדן אינדערפרי ', remUpdate: 'דערמאנונגען אפדעיטן', remOn: 'דערמאנונגען אנצינדן', remOff: 'דערמאנונגען פארלעשן', remAtLeast: 'לייגט צו כאטש איין דערמאנונג.', turningOn: 'צינדט אן…', remsOn: 'די דערמאנונגען זענען אן אויף דעם מכשיר.', remOnFail: 'די דערמאנונגען האבן זיך נישט געלאזט אנצינדן: ',
@@ -564,7 +564,7 @@
   }
   /* the hallway screen: only the next three zmanim, large; the first of them carries the countdown. Once the day's are over they come
      from tomorrow, and a tomorrow one that fills the row late in the day is marked. */
-  var ZMAN_ORDER = ['alos', 'sunrise', 'shema', 'tefilla', 'chatzos', 'minchag', 'minchak', 'candles', 'sunset', 'tzeis', 'tzeis60', 'tzeis72'];
+  var ZMAN_ORDER = ['alos', 'sunrise', 'shemaMGA', 'shema', 'tefillaMGA', 'tefilla', 'chatzos', 'minchag', 'minchak', 'candles', 'sunset', 'tzeis60', 'tzeis', 'tzeis72'];
   /* the zman that has just gone, so the hallway screen can show one on either side of the one it is counting to */
   function prevZman(info, z, rd, now) {
     var tz = loc().tz, best = null;
@@ -716,7 +716,7 @@
     return wrap;
   }
   function zmanimPanel(info, z, title) {
-    var keys = ['alos', 'sunrise', 'shema', 'tefilla', 'chatzos', 'minchag', 'minchak', 'candles', 'sunset', 'tzeis', 'tzeis60', 'tzeis72'];
+    var keys = ['alos', 'sunrise', 'shemaMGA', 'shema', 'tefillaMGA', 'tefilla', 'chatzos', 'minchag', 'minchak', 'candles', 'sunset', 'tzeis60', 'tzeis', 'tzeis72'];
     var ul = el('ul', { class: 'zlist' }), rd = info.rd, nowMin = title ? -1 : Cal.nowInTz(Date.now(), loc().tz).min, canRemind = !title && canSetReminders(), nowMs = Date.now(), tz = loc().tz, zt = zmanimFor(rd + 1), L = S(); /* another day's panel: no "passed" marks, no reminders */
     var h = info.heb, nightFast = (h.m === 7 && h.d === 10) || (h.m === 5 && info.fast); /* Yom Kippur and Tisha B'Av begin the evening before */
     if (info.fast && !nightFast) ul.appendChild(el('li', { class: 'hi' }, [el('span', { text: L.fastStart }), el('span', { class: 'z num', text: fmtTime(z.alos) })]));
@@ -828,7 +828,7 @@
   function urlB64ToBytes(b) { b = b.replace(/-/g, '+').replace(/_/g, '/'); while (b.length % 4) b += '='; var bin = atob(b), out = new Uint8Array(bin.length), i; for (i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i); return out; }
   function notifyBase() { return cfg.notifyUrl.trim().replace(/\/+$/, ''); }
   /* ---------- reminders: which minyan, how long before, every day or today only ---------- */
-  var ZMAN_KEYS = ['alos', 'sunrise', 'shema', 'tefilla', 'chatzos', 'minchag', 'minchak', 'candles', 'sunset', 'tzeis', 'tzeis60', 'tzeis72'];
+  var ZMAN_KEYS = ['alos', 'sunrise', 'shemaMGA', 'shema', 'tefillaMGA', 'tefilla', 'chatzos', 'minchag', 'minchak', 'candles', 'sunset', 'tzeis60', 'tzeis', 'tzeis72'];
   function picksFor(t) { return t.period === 'pm' ? ['first', 'last', 'before:sunset', 'before:tzeis'] : ['first', 'last', 'before:shema', 'before:tefilla', 'before:chatzos']; }
   function pushPrefs() { var st = pushState(); return (st && st.prefs) || { reminders: [], daily: null }; }
   function isoOf(rd) { return MinyanEngine.isoDate(rd); }

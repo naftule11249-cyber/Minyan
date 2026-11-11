@@ -7,7 +7,7 @@ const { chromium } = require('playwright');
   page.on('pageerror', e => errors.push('pageerror: ' + e.message)); page.on('console', m => { if (m.type() === 'error' && !/favicon|ERR_TUNNEL|ERR_NAME_NOT_RESOLVED|ERR_INTERNET|ERR_CONNECTION/.test(m.text())) errors.push(m.text()); });
   await page.goto('http://localhost:8790/admin.html', { waitUntil: 'networkidle' });
   await page.evaluate(() => { try { localStorage.clear(); } catch (e) {} }); await page.reload({ waitUntil: 'networkidle' });
-  await page.waitForSelector('#pin-input'); await page.fill('#pin-input', '1234'); await page.press('#pin-input', 'Enter');
+  await page.waitForSelector('#pin-input'); await page.fill('#pin-input', process.env.MINYAN_PIN || '1234'); await page.press('#pin-input', 'Enter');
   await page.waitForSelector('#tab-notices'); await page.click('#tab-notices');
   console.log('the banner has its own page, the donations theirs:', await page.locator('#tab-notices .lbl').textContent(), '|', await page.locator('#tab-donations .lbl').textContent(), '| old sponsor rows:', await page.locator('.sponsor-row').count());
   await page.fill('#banner-text', 'אין מעריב בלב אהרן הערב');

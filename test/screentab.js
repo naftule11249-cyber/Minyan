@@ -21,7 +21,7 @@ const NOTICES = [{ title: 'פרנס חודש כסלו', name: 'מו״ה יעקב
     await page.bringToFront();
     await page.goto(BASE + 'admin.html', { waitUntil: 'networkidle' });
     await page.waitForSelector('#pin-input, #tab-home');
-    if (await page.locator('#pin-input').count()) { await page.fill('#pin-input', '1234'); await page.press('#pin-input', 'Enter'); }
+    if (await page.locator('#pin-input').count()) { await page.fill('#pin-input', process.env.MINYAN_PIN || '1234'); await page.press('#pin-input', 'Enter'); }
     await page.waitForSelector('#tab-home'); await page.waitForTimeout(300);
     await page.click('#tab-screen'); await page.waitForTimeout(200);
   }

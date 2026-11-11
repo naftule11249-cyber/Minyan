@@ -30,7 +30,7 @@ const THREE = [
   }
   async function enter(page) {
     await page.waitForSelector('#pin-input, #tab-donations'); /* the PIN is asked once per sitting; a reload goes straight back in */
-    if (await page.locator('#pin-input').count()) { await page.fill('#pin-input', '1234'); await page.press('#pin-input', 'Enter'); }
+    if (await page.locator('#pin-input').count()) { await page.fill('#pin-input', process.env.MINYAN_PIN || '1234'); await page.press('#pin-input', 'Enter'); }
     await page.waitForSelector('#tab-donations'); await page.click('#tab-donations'); await page.waitForTimeout(250);
   }
   const cards = page => page.evaluate(() => Array.from(document.querySelectorAll('.dn-card')).map(c => ({
