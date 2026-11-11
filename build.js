@@ -31,7 +31,7 @@ const ogHead = '<meta property="og:type" content="website"><meta property="og:ti
 if (!site) console.warn('siteUrl is empty: share previews need the full site address (set it under Edit → General once the site is online, or in config.default.json).');
 const full = '<!doctype html><html lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>' + reset + '</style>' + pwaHead + ogHead + '</head><body>' + body + '</body></html>';
 fs.writeFileSync(path.join(dist, 'index.html'), full);
-const adminFull = full.replace('<title>' + esc(name) + '</title>', '<title>' + esc(name) + ' – Admin</title>').replace('<head>', '<head><meta name="robots" content="noindex,nofollow">');
+const adminFull = full.replace('<title>' + esc(name) + '</title>', '<title>' + esc(name) + ' – Admin</title>').replace('<head>', '<head><meta name="robots" content="noindex,nofollow"><meta name="minyan-page" content="admin">'); /* the page says what it is, whatever address the host serves it at */
 fs.writeFileSync(path.join(dist, 'admin.html'), adminFull);
 // short ways in: /admin for the back end, /screen for the TV itself, /tv for the preview on a phone.
 // They are plain pages next to the others, never folders: a folder address ends in "/", which the service

@@ -1043,7 +1043,12 @@
   }
 
   /* ---------- admin ---------- */
-  function isAdminPage() { return /(^|\/)admin\.html$/i.test(location.pathname) || location.hash === '#admin'; }
+  /* The admin page knows itself by what it is, not only by its address: a host that serves admin.html at the short address /admin
+     (GitHub Pages does) must still open the back end there, not the board. */
+  function isAdminPage() {
+    return /(^|\/)admin(\.html|\/)?$/i.test(location.pathname) || location.hash === '#admin' ||
+      !!document.querySelector('meta[name="minyan-page"][content="admin"]');
+  }
   function canEditNow() { return isAdminPage() && (mode === 'artifact' ? canEdit : true); }
   function sha256Hex(str) {
     return crypto.subtle.digest('SHA-256', new TextEncoder().encode(str)).then(function (buf) {
