@@ -44,6 +44,20 @@ const NOTICES = [
   ok('the frame is the TV\'s shape and fits the page', await page.evaluate(() => { const st = document.querySelector('.home-stage').getBoundingClientRect(), f = document.getElementById('home-tv'); const k = +(/scale\(([\d.]+)\)/.exec(f.style.transform) || [0, 0])[1];
     return [Math.abs(st.width / st.height - 16 / 9) < 0.06, st.right <= window.innerWidth, k > 0.3 && k < 0.6, document.documentElement.scrollWidth <= window.innerWidth]; }), [true, true, true, true]);
 
+  /* the picture keeps to its frame whatever happens to the page around it */
+  const framed = page => page.evaluate(() => { const st = document.querySelector('.home-stage'), f = document.getElementById('home-tv'), k = +(/scale\(([\d.]+)\)/.exec(f.style.transform) || [0, 0])[1], w = st.clientWidth;
+    return [Math.abs(k - w / 1920) < 0.002, Math.abs(st.clientHeight - w * 9 / 16) <= 1.5, w > 200]; });
+  await page.evaluate(() => { document.querySelector('.home-tv').style.width = '60%'; }); await page.waitForTimeout(350);
+  ok('when the frame itself changes size (no window resize), the picture is fitted to it again', await framed(page), [true, true, true]);
+  await page.evaluate(() => { document.querySelector('.home-tv').style.width = ''; }); await page.waitForTimeout(350);
+  await page.click('#tab-general'); await page.evaluate(() => { const f = document.getElementById('home-tv'); f.style.transform = 'scale(1)'; }); /* as if it had been measured too early */
+  await page.setViewportSize({ width: 1100, height: 900 }); await page.click('#tab-home'); await page.waitForTimeout(500);
+  ok('coming back to Home after the window changed while it was out of sight, the whole screen is in the frame again', await framed(page), [true, true, true]);
+  await page.setViewportSize({ width: 1280, height: 900 }); await page.waitForTimeout(300);
+  ok('the picture itself is a way to the large view, and so is the button', [await page.locator('#home-zoom').getAttribute('href'), await page.locator('#home-open').getAttribute('href'), await page.locator('#home-zoom').evaluate(e => { const r = e.getBoundingClientRect(), s = document.querySelector('.home-stage').getBoundingClientRect(); return r.width >= s.width - 20 && r.height >= s.height - 20; })],
+    ['index.html?view=display&full=1', 'index.html?view=display&full=1', true]);
+  ok('the picture carries no button of its own over the screen', await tv(page).locator('#fs-btn').count(), 0);
+
   /* another day */
   await page.click('#home-at'); s = await shown(page);
   ok('"Another day" starts at tomorrow morning: the screen\'s own clock is moved there', [await page.inputValue('#home-date'), await page.inputValue('#home-time'), await page.locator('#home-tv').getAttribute('data-url'), s.day, s.clock, await page.locator('.home-cap').textContent()],

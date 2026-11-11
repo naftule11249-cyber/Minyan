@@ -1083,6 +1083,20 @@
     document.body.appendChild(t);
     setTimeout(function () { t.remove(); }, ms || 3500);
   }
+  /* A question that must be answered before going on: a title, what it is about, and a button for each answer. Escape and the
+     first button marked `safe` are the way out that changes nothing. */
+  function askBox(title, nodes, buttons) {
+    var prev = document.activeElement, old = $('#askbox'); if (old) old.remove();
+    var foot = el('div', { class: 'dn-foot' }, [el('span', { class: 'sp' })]), back;
+    function close() { document.removeEventListener('keydown', onKey, true); back.remove(); if (prev && prev.focus) { try { prev.focus(); } catch (e) {} } }
+    function onKey(ev) { if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); close(); buttons.forEach(function (b) { if (b.cancel && b.act) b.act(); }); } }
+    buttons.forEach(function (b) { foot.appendChild(el('button', { type: 'button', class: 'btn' + (b.kind ? ' ' + b.kind : ''), id: b.id || null, 'data-nodirty': '1', text: b.text, onclick: function () { close(); if (b.act) b.act(); } })); });
+    back = el('div', { class: 'dn-modal', id: 'askbox', dir: 'ltr' }, [el('div', { class: 'dn-sheet ask', role: 'alertdialog', 'aria-modal': 'true', 'aria-label': title }, [
+      el('div', { class: 'dn-head' }, [el('h2', { text: title })]), el('div', { class: 'dn-body one' }, [el('div', { class: 'ask-body' }, nodes)]), foot])]);
+    document.addEventListener('keydown', onKey, true);
+    ($('#overlay') || document.body).appendChild(back);
+    var first = foot.querySelector('.btn.primary') || foot.querySelector('.btn'); if (first) first.focus();
+  }
   function overlay(content, cls) {
     var old = $('#overlay'); if (old) old.remove();
     var o = el('div', { id: 'overlay', class: 'overlay ' + (cls || 'full'), dir: 'ltr' }, [el('div', { class: 'panel' }, [content])]);
@@ -1090,7 +1104,7 @@
     ui.adminOpen = true;
   }
   function closeOverlay() { ui.adminOpen = false; render(); }
-  function openAdmin() { ui.adminDirty = false; if (mode !== 'artifact' && !pinOk) showPin(); else buildAdmin(); }
+  function openAdmin() { ui.adminDirty = false; if (mode !== 'artifact' && !pinOk) showPin(); else { ui.formBase = ui.inc || 0; buildAdmin(); } }
   function showPin() {
     var input = el('input', { type: 'password', id: 'pin-input', inputmode: 'numeric', autocomplete: 'off' });
     var msg = el('div', { class: 'hint' });
@@ -1100,7 +1114,7 @@
         if (ok) {
           pinOk = true;
           try { sessionStorage.setItem('minyan-pin', '1'); } catch (e) {}
-          ui.pinValue = input.value; ui.adminDirty = false; closeOverlay(); buildAdmin();
+          ui.pinValue = input.value; ui.adminDirty = false; closeOverlay(); ui.formBase = ui.inc || 0; buildAdmin();
         } else { msg.textContent = 'Wrong PIN'; input.select(); }
       });
     } }, [
@@ -1616,6 +1630,124 @@
     /* the banner's page */
     var np = el('div', { class: 'col' });
     /* a Hebrew date beside a civil one: the three boxes write the civil date, and follow it when it is typed */
+  /* A calendar that opens on the Hebrew month. Each day shows its Hebrew date large and its civil date small; Shabbos carries its
+     parsha, and Rosh Chodesh, Yom Tov, Chol Hamoed, Chanukah, Purim and the fasts are named and coloured. Under the grid a line
+     spells out the day the pointer or the keyboard is on. A switch shows the same by civil months.
+       o.range()  -> { from: iso, to: iso, end: 'from' | 'to' }  the two ends and the one being chosen
+       o.pick(iso)                                               a day was pressed ('' = no date)
+       o.close()                                                 Done was pressed */
+  var CAL_SHORT = { 'חול המועד סוכות': 'חוה״מ', 'חול המועד פסח': 'חוה״מ', 'שבעה עשר בתמוז': 'י״ז בתמוז', 'יום הכיפורים': 'יום כיפור', 'ערב יום כיפור': 'ערב יו״כ', 'ערב ראש השנה': 'ערב ר״ה',
+    'שמיני עצרת ושמחת תורה': 'שמחת תורה', 'שביעי של פסח': 'שביעי ש״פ', 'אחרון של פסח': 'אחרון ש״פ' };
+  var CIVIL_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  function hebCalendar(o) {
+    var israel = !!o.israel, todayRd = Cal.nowInTz(Date.now(), loc().tz).rd, byCivil = false, viewRd = todayRd, focusRd = null, wantFocus = false;
+    var root = el('div', { class: 'hcal', dir: 'rtl' });
+    function iso(rd) { return MinyanEngine.isoDate(rd); }
+    function rdOf(v) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || ''); return m ? Cal.rdFromGreg(+m[1], +m[2], +m[3]) : null; }
+    function civilLong(rd) { var g = Cal.gregFromRD(rd); return new Date(Date.UTC(g.y, g.m - 1, g.d)).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }); }
+    /* the month on show: its first day, its length, and what to call it in both calendars */
+    function month(rd) {
+      var first, len, a, b;
+      if (byCivil) {
+        var g = Cal.gregFromRD(rd); first = Cal.rdFromGreg(g.y, g.m, 1); len = Cal.rdFromGreg(g.m === 12 ? g.y + 1 : g.y, g.m === 12 ? 1 : g.m + 1, 1) - first;
+        a = Cal.hebFromRD(first); b = Cal.hebFromRD(first + len - 1);
+        return { first: first, len: len, title: CIVIL_MONTHS[g.m - 1] + ' ' + g.y, sub: Cal.monthName(a.y, a.m) + (a.m !== b.m ? ' – ' + Cal.monthName(b.y, b.m) : '') + ' ' + Cal.gematria(b.y % 1000) };
+      }
+      var h = Cal.hebFromRD(rd); first = Cal.rdFromHeb(h.y, h.m, 1); len = Cal.hebMonthLength(h.y, h.m);
+      a = Cal.gregFromRD(first); b = Cal.gregFromRD(first + len - 1);
+      return { first: first, len: len, title: Cal.monthName(h.y, h.m) + ' ' + Cal.gematria(h.y % 1000), sub: CIVIL_MONTHS[a.m - 1] + (a.m !== b.m ? ' – ' + CIVIL_MONTHS[b.m - 1] : '') + ' ' + b.y };
+    }
+    /* everything there is to say about one day */
+    function about(rd) {
+      var info = Cal.dayInfo(rd, israel), labels = info.labels.slice(), special = labels.filter(function (l) { return l.indexOf('ראש חודש') !== 0; });
+      var week = Cal.parshaOfWeek(rd, israel) || '', parsha = info.shabbos ? week : ''; /* a Shabbos that is Yom Tov has no parsha of its own */
+      var tag = parsha ? parsha : special.length ? (CAL_SHORT[special[0]] || special[0]) : info.roshChodesh ? 'ר״ח' : ''; /* a Shabbos is named by its parsha; its colour still tells Chanukah or Rosh Chodesh */
+      var line = Cal.DAY_NAMES[info.dow] + (parsha ? ' פרשת ' + parsha : '') + ' · ' + Cal.formatHeb(info.heb) + (labels.length ? ' · ' + labels.join(' · ') : '') + (!parsha && week ? ' · פרשת השבוע: ' + week : '');
+      return { info: info, tag: tag, line: line, civil: civilLong(rd), kind: info.yomtov ? 'yt' : info.fast ? 'fast' : (info.cholHamoed || info.chanukah || info.purim) ? 'moed' : info.roshChodesh ? 'rc' : '' };
+    }
+    function step(n) { /* a month back or forward, by whichever calendar is on show */
+      var mo = month(viewRd); viewRd = n > 0 ? mo.first + mo.len : mo.first - 1; focusRd = null; paint();
+    }
+    function paint() {
+      var r = o.range() || {}, a = rdOf(r.from), b = rdOf(r.to), end = r.end === 'to' ? 'to' : 'from', mo = month(viewRd), i, rd;
+      var hadFocus = wantFocus || root.contains(document.activeElement) && document.activeElement.classList.contains('hcal-day');
+      wantFocus = false;
+      root.textContent = '';
+      root.setAttribute('data-end', end); root.setAttribute('data-view', byCivil ? 'civil' : 'heb');
+      /* the head: back and forward, the month in both calendars, a list to jump far, today, and the switch between the two calendars */
+      var jump = el('select', { class: 'hcal-jump', 'aria-label': 'Jump to a month', 'data-nodirty': '1' }), y, m, yNow, first;
+      if (byCivil) {
+        yNow = Cal.gregFromRD(todayRd).y;
+        for (y = yNow - 1; y <= yNow + 3; y++) for (m = 1; m <= 12; m++) { first = Cal.rdFromGreg(y, m, 1); jump.appendChild(el('option', { value: String(first), text: CIVIL_MONTHS[m - 1] + ' ' + y })); }
+      } else {
+        yNow = Cal.hebFromRD(todayRd).y;
+        for (y = yNow - 1; y <= yNow + 3; y++) [7, 8, 9, 10, 11, 12, 13, 1, 2, 3, 4, 5, 6].forEach(function (hm) { if (hm === 13 && !Cal.hebLeap(y)) return; var f = Cal.rdFromHeb(y, hm, 1); jump.appendChild(el('option', { value: String(f), text: Cal.monthName(y, hm) + ' ' + Cal.gematria(y % 1000) })); });
+      }
+      if (!Array.prototype.some.call(jump.options, function (op) { return op.value === String(mo.first); })) jump.insertBefore(el('option', { value: String(mo.first), text: mo.title }), jump.firstChild);
+      jump.value = String(mo.first);
+      jump.addEventListener('change', function () { viewRd = +jump.value; focusRd = null; paint(); });
+      function nav(n, label) { return el('button', { type: 'button', class: 'hcal-nav' + (n > 0 ? ' next' : ' prev'), 'aria-label': label, title: label, 'data-nodirty': '1', onclick: function () { step(n); } }, [svgIcon('chev')]); }
+      function seg(civil, text) { var on = byCivil === civil; return el('button', { type: 'button', class: 'hcal-seg' + (on ? ' on' : ''), 'aria-pressed': String(on), 'data-nodirty': '1', 'data-cal': civil ? 'civil' : 'heb', text: text, onclick: function () { if (byCivil === civil) return; byCivil = civil; paint(); } }); }
+      root.appendChild(el('div', { class: 'hcal-head', dir: 'ltr' }, [
+        nav(-1, 'The month before'),
+        el('div', { class: 'hcal-title' }, [jump, el('div', { class: 'hcal-sub', dir: 'auto', text: mo.sub })]),
+        nav(1, 'The month after')]));
+      root.appendChild(el('div', { class: 'hcal-tools', dir: 'ltr' }, [
+        el('div', { class: 'hcal-segs', role: 'group', 'aria-label': 'Which calendar the months follow' }, [seg(false, 'Hebrew months'), seg(true, 'Civil months')]),
+        el('button', { type: 'button', class: 'hcal-today', 'data-nodirty': '1', text: 'Today', onclick: function () { viewRd = todayRd; focusRd = todayRd; wantFocus = true; paint(); } })]));
+      root.appendChild(el('div', { class: 'hcal-dow', 'aria-hidden': 'true' }, Cal.DAY_SHORT.map(function (dname, k) { return el('span', { class: k === 6 ? 'shab' : '', text: dname }); })));
+      /* the days */
+      var grid = el('div', { class: 'hcal-grid', role: 'grid', 'aria-label': mo.title }), lead = Cal.mod(mo.first, 7), cells = {};
+      for (i = 0; i < lead; i++) grid.appendChild(el('span', { class: 'hcal-pad', 'aria-hidden': 'true' }));
+      if (focusRd == null || focusRd < mo.first || focusRd >= mo.first + mo.len) focusRd = (end === 'to' ? b : a) != null && (end === 'to' ? b : a) >= mo.first && (end === 'to' ? b : a) < mo.first + mo.len ? (end === 'to' ? b : a) : (todayRd >= mo.first && todayRd < mo.first + mo.len ? todayRd : mo.first);
+      for (i = 0; i < mo.len; i++) {
+        rd = mo.first + i;
+        (function (rd) {
+          var t = about(rd), g = Cal.gregFromRD(rd), h = t.info.heb, shut = end === 'to' && a != null && rd < a; /* the last day cannot come before the first */
+          var cls = 'hcal-day' + (t.info.shabbos ? ' shab' : '') + (t.kind ? ' ' + t.kind : '') + (rd === todayRd ? ' today' : '') + (a != null && rd === a ? ' a' : '') + (b != null && rd === b ? ' b' : '') + (a != null && b != null && rd > a && rd < b ? ' in' : '') + (shut ? ' shut' : '');
+          var big = byCivil ? String(g.d) : Cal.gematria(h.d), small = byCivil ? Cal.gematria(h.d) + (h.d === 1 || i === 0 ? ' ' + Cal.monthName(h.y, h.m) : '') : (g.d === 1 || i === 0 ? CIVIL_MONTHS[g.m - 1] + ' ' : '') + g.d;
+          var btn = el('button', { type: 'button', class: cls, role: 'gridcell', 'data-iso': iso(rd), 'data-nodirty': '1', tabindex: rd === focusRd ? '0' : '-1', 'aria-label': t.line + ' · ' + t.civil, 'aria-selected': String((a != null && rd === a) || (b != null && rd === b)), title: t.line + ' · ' + t.civil }, [
+            el('span', { class: 'hd', text: big }), el('span', { class: 'cd', dir: byCivil ? 'rtl' : 'ltr', text: small }), el('span', { class: 'tg', text: t.tag })]);
+          if (shut) btn.setAttribute('aria-disabled', 'true');
+          btn.addEventListener('click', function () { if (shut) return; focusRd = rd; wantFocus = true; o.pick(iso(rd)); });
+          btn.addEventListener('mouseenter', function () { say(rd); }); btn.addEventListener('focus', function () { focusRd = rd; say(rd); });
+          cells[rd] = btn; grid.appendChild(btn);
+        })(rd);
+      }
+      grid.addEventListener('mouseleave', function () { say(null); });
+      grid.addEventListener('keydown', function (ev) {
+        var move = { ArrowLeft: 1, ArrowRight: -1, ArrowDown: 7, ArrowUp: -7 }[ev.key]; /* the week runs from the right, so left is the day after */
+        if (ev.key === 'PageDown' || ev.key === 'PageUp') { ev.preventDefault(); var keepDay = focusRd - mo.first; step(ev.key === 'PageDown' ? 1 : -1); var m2 = month(viewRd); focusRd = m2.first + Math.min(keepDay, m2.len - 1); wantFocus = true; paint(); return; }
+        if (!move) return;
+        ev.preventDefault();
+        var to = focusRd + move;
+        if (to < mo.first || to >= mo.first + mo.len) { viewRd = to; focusRd = to; wantFocus = true; paint(); return; }
+        focusRd = to; Object.keys(cells).forEach(function (k) { cells[k].tabIndex = +k === to ? 0 : -1; }); cells[to].focus();
+      });
+      root.appendChild(grid);
+      /* the day in words, and the way out */
+      var line = el('div', { class: 'hcal-line', 'aria-live': 'polite' });
+      function say(rd) {
+        var r2 = rd != null ? rd : (end === 'to' ? b : a), t;
+        line.textContent = '';
+        if (r2 == null) { line.appendChild(el('span', { class: 'none', dir: 'ltr', text: 'Point at a day, or press one, to read all about it.' })); return; }
+        t = about(r2);
+        line.appendChild(el('span', { class: 'heb', text: t.line })); line.appendChild(el('span', { class: 'civ', dir: 'ltr', text: t.civil }));
+      }
+      say(null);
+      root.appendChild(line);
+      root.appendChild(el('div', { class: 'hcal-foot', dir: 'ltr' }, [
+        el('span', { class: 'hcal-which', text: end === 'to' ? 'Choosing the last day' : 'Choosing the first day' }),
+        el('span', { class: 'sp' }),
+        el('button', { type: 'button', class: 'btn small', 'data-nodirty': '1', 'data-cal': 'none', text: end === 'to' ? 'No last day' : 'No first day', title: end === 'to' ? 'It stays on the board until it is removed' : 'It is on the board from the moment it is saved', onclick: function () { o.pick(''); } }),
+        el('button', { type: 'button', class: 'btn small primary', 'data-nodirty': '1', 'data-cal': 'done', text: 'Done', onclick: function () { o.close(); } })]));
+      if (hadFocus && cells[focusRd]) { try { cells[focusRd].focus({ preventScroll: true }); } catch (e) { cells[focusRd].focus(); } }
+    }
+    return { el: root, paint: paint,
+      /* open on the month of the end being chosen (today's month when it has no date yet), by Hebrew months */
+      open: function () { var r = o.range() || {}, at = rdOf(r.end === 'to' ? (r.to || r.from) : (r.from || r.to)); byCivil = false; viewRd = at != null ? at : todayRd; focusRd = at; wantFocus = true; paint(); },
+      show: function (isoDay) { var at = rdOf(isoDay); if (at != null) { viewRd = at; focusRd = at; } paint(); } };
+  }
   function hebPicker(input) {
     var wrap = el('span', { class: 'hebpick' }), dSel = el('select', { 'aria-label': 'Hebrew day' }), mSel = el('select', { 'aria-label': 'Hebrew month' }), ySel = el('select', { 'aria-label': 'Hebrew year' }), shown = el('span', { class: 'hebshow' });
     var thisY = Cal.hebFromRD(Cal.nowInTz(Date.now(), loc().tz).rd).y, quiet = false;
@@ -1669,7 +1801,9 @@
        on this device, published or not. */
     var hp = el('div', { class: 'col', id: 'page-home', 'data-nodirty': '1' });
     ui.home = ui.home || { mode: 'now', date: MinyanEngine.isoDate(todayRd + 1), time: '08:00' };
-    var H = ui.home, homeFrame = el('iframe', { id: 'home-tv', title: 'The hallway screen', scrolling: 'no', tabindex: '-1' }), homeStage = el('div', { class: 'home-stage' }, [homeFrame]);
+    var H = ui.home, homeFrame = el('iframe', { id: 'home-tv', title: 'The hallway screen', scrolling: 'no', tabindex: '-1' }),
+      homeZoom = el('a', { class: 'home-zoom', id: 'home-zoom', target: '_blank', rel: 'noopener', 'aria-label': 'Open the screen large', title: 'Open the screen large' }), /* a frame swallows a tap: this lies over it and opens the large view */
+      homeStage = el('div', { class: 'home-stage' }, [homeFrame, homeZoom]);
     var homeCap = el('div', { class: 'home-cap', role: 'status' }), homeFacts = el('dl', { class: 'home-facts' }), homeWhen = el('div', { class: 'home-when' });
     var homeUnsaved = el('div', { class: 'home-note warn', text: 'You have changes that are not saved yet. Press Save and they appear here.' }); homeUnsaved.hidden = true;
     var fHDate = inp('home-date', H.date, { type: 'date' }), hHDate = hebPicker(fHDate), homeCivil = el('span', { class: 'dn-civil' });
@@ -1683,7 +1817,12 @@
     var HOME_DAYS = [['Tomorrow', todayRd + 1], ['Friday', nextDay(function (x) { return x.dow === 5; })], ['Shabbos', nextDay(function (x) { return x.dow === 6; })], ['Rosh Chodesh', nextDay(function (x) { return x.roshChodesh; })]];
     var HOME_TIMES = [['Morning', '07:30'], ['Midday', '13:00'], ['Evening', '18:00'], ['Night', '21:30']];
     function clock12(min) { var h = Math.floor(min / 60), m = min % 60; return ((h + 11) % 12 + 1) + ':' + pad2(m) + (h < 12 ? ' AM' : ' PM'); }
-    function fitHome() { var w = homeStage.clientWidth; if (!w) return; var k = w / 1920; homeStage.style.height = Math.round(1080 * k) + 'px'; homeFrame.style.transform = 'scale(' + k + ')'; }
+    function fitHome() {
+      var w = homeStage.clientWidth; if (!w) return;
+      var k = w / 1920, hgt = Math.round(1080 * k) + 'px', tr = 'scale(' + k + ')';
+      if (homeStage.style.height !== hgt) homeStage.style.height = hgt;
+      if (homeFrame.style.transform !== tr) homeFrame.style.transform = tr;
+    }
     function fact(label, value, rtl) { homeFacts.appendChild(el('dt', { text: label })); homeFacts.appendChild(el('dd', rtl ? { dir: 'rtl', text: value } : { dir: 'auto', text: value })); }
     function paintHome(force) {
       var at = H.mode === 'at', rd = at ? homeRd() : todayRd, min = at ? homeMin() : Math.floor(Cal.nowInTz(Date.now(), loc().tz).min), ok = rd != null && min != null;
@@ -1709,7 +1848,7 @@
       homeCivil.textContent = civil;
       homeCap.textContent = at ? 'The screen as it will be on ' + civil + ' at ' + clock12(min) + '.' : 'The screen as it is right now.';
       var url = homeUrl();
-      homeOpen.setAttribute('href', url);
+      homeOpen.setAttribute('href', url); homeZoom.setAttribute('href', url);
       if (force || homeFrame.getAttribute('data-url') !== url) { homeFrame.setAttribute('data-url', url); homeFrame.src = url + (force ? '&r=' + Date.now() : ''); }
       /* what that day holds, in words */
       var sc = scheduleFor(rd), kindOfDay = sc.override ? 'A special date' + (sc.override.label ? ': ' + sc.override.label : '') : sc.roll && sc.roll.name ? 'Extra schedule: ' + sc.roll.name : ((Cal.DAY_TYPES.filter(function (t) { return t[0] === sc.type; })[0] || [])[3] || sc.type || 'Regular');
@@ -1730,9 +1869,16 @@
     hp.appendChild(homeWhen); hp.appendChild(homeUnsaved);
     hp.appendChild(el('div', { class: 'home-tv' }, [homeStage, el('div', { class: 'home-stand' })]));
     hp.appendChild(homeCap); hp.appendChild(homeFacts);
-    hp.appendChild(el('div', { class: 'home-note', text: 'This is the hallway screen itself, with what is saved on this device. The TV shows the same once you publish. On a phone, turn it sideways for a bigger picture.' }));
+    hp.appendChild(el('div', { class: 'home-note', text: 'This is the hallway screen itself, with what is saved on this device. The TV shows the same once you publish. Tap the picture to see it large; on a phone, turn it sideways.' }));
     if (ui.homeFit) window.removeEventListener('resize', ui.homeFit); /* a rebuild of the back end leaves one listener, not one more each time */
     ui.homeFit = fitHome; window.addEventListener('resize', fitHome);
+    /* The frame is measured whenever its own size changes, not only when the window's does: the page laid out a moment after it
+       was built, a scroll bar appearing, a phone turned. Measured once too early, the picture stayed at full size and showed only
+       its top corner. */
+    if (ui.homeWatch) { try { ui.homeWatch.disconnect(); } catch (e) {} ui.homeWatch = null; }
+    if (window.ResizeObserver) { ui.homeWatch = new ResizeObserver(function () { fitHome(); }); ui.homeWatch.observe(homeStage); }
+    homeFrame.addEventListener('load', fitHome);
+    [60, 300, 1200].forEach(function (ms) { setTimeout(fitHome, ms); });
     pages.home = hp;
 
     /* ---------- donations: who sponsors what on the board, and from when to when ----------
@@ -1769,7 +1915,7 @@
     function effSize(x) { var v = x.sizeOwn || kindSize(x.kind); return v === 'normal' ? '' : v; }
     var dons = (d.notices || []).filter(function (n) { return ((n.name || '') + (n.body || '') + (n.lead || '')).trim(); }).map(function (n) {
       var kd = guessKind(n);
-      return { id: n.id || '', no: +n.no || 0, kind: kd, lead: n.lead || '', name: n.name || '', body: n.body || '', logo: n.logo || '', from: n.from || '', to: n.to || '',
+      return { id: n.id || '', no: +n.no || 0, kind: kd, lead: n.lead || '', name: n.name || '', body: n.body || '', logo: n.logo || '', from: n.from || '', to: n.to || '', off: !!n.off,
         titleOwn: n.titleOwn != null ? n.titleOwn : ((n.title || '') === titleFor(kd, n.from, n.to) ? '' : (n.title || '')),
         sizeOwn: n.sizeOwn != null ? n.sizeOwn : ((n.size || 'normal') === kindSize(kd) ? '' : (n.size || 'normal')) };
     });
@@ -1779,12 +1925,16 @@
     function boardOrder(a, b) { return kindIndex(a.kind) - kindIndex(b.kind) || (a.from || '').localeCompare(b.from || '') || a.no - b.no; }
     function donNotices() {
       return dons.slice().sort(boardOrder).map(function (x) {
-        return { id: x.id, no: x.no, kind: x.kind, title: effTitle(x), titleOwn: (x.titleOwn || '').trim(), lead: (x.lead || '').trim(), name: (x.name || '').trim(), body: (x.body || '').trim(),
+        var n = { id: x.id, no: x.no, kind: x.kind, title: effTitle(x), titleOwn: (x.titleOwn || '').trim(), lead: (x.lead || '').trim(), name: (x.name || '').trim(), body: (x.body || '').trim(),
           size: effSize(x), sizeOwn: x.sizeOwn || '', logo: (x.logo || '').trim(), from: x.from || '', to: x.to || '' };
+        if (x.off) n.off = true; /* switched off: kept in the list, not shown on the board */
+        return n;
       });
     }
-    function donState(x) { return x.from && todayIso < x.from ? 'soon' : x.to && todayIso > x.to ? 'done' : 'on'; }
-    var STATE_TEXT = { on: 'On the board', soon: 'Coming up', done: 'Finished' };
+    /* where a donation stands today; a switched-off one is off whatever its dates say */
+    function dateState(x) { return x.from && todayIso < x.from ? 'soon' : x.to && todayIso > x.to ? 'done' : 'on'; }
+    function donState(x) { return x.off ? 'off' : dateState(x); }
+    var STATE_TEXT = { on: 'On the board', soon: 'Coming up', done: 'Finished', off: 'Switched off' };
     function dayWord(n) { return n === 1 ? '1 day' : n + ' days'; }
     function whenText(x, side) {
       var r = rdOf(side === 'from' ? x.from : x.to), n;
@@ -1822,7 +1972,7 @@
       var back = el('div', { class: 'dn-modal' }, [sheet]), api = { sheet: sheet, changed: false, close: close };
       function close() { document.removeEventListener('keydown', onKey, true); back.remove(); if (prev && prev.focus) { try { prev.focus(); } catch (e) {} } }
       function onKey(ev) {
-        if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); close(); return; }
+        if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); if (api.escape && api.escape()) return; close(); return; } /* something open inside the form (its calendar) closes first */
         if (ev.key !== 'Tab') return;
         var f = Array.prototype.filter.call(sheet.querySelectorAll('button, input, select, textarea, summary'), function (n) { return !n.disabled && n.offsetParent !== null; });
         if (!f.length) return;
@@ -1845,8 +1995,40 @@
       var k0 = kindById(w.kind), r0 = periodRange(k0 ? k0.period : 'day', 0);
       var fName = inp('dn-name-' + fid, src ? src.name : '', { autocomplete: 'off', placeholder: 'מו״ה ראובן בן יעקב הי״ו' });
       var fBody = el('textarea', { id: 'dn-body-' + fid, dir: 'auto', rows: '3', placeholder: 'לעילוי נשמת …' }); fBody.value = src ? src.body : '';
-      var fFrom = inp('dn-from-' + fid, orig ? orig.from : r0.from, { type: 'date' }), fTo = inp('dn-to-' + fid, orig ? orig.to : r0.to, { type: 'date' });
-      var hFrom = hebPicker(fFrom), hTo = hebPicker(fTo), fromCivil = el('span', { class: 'dn-civil' }), toCivil = el('span', { class: 'dn-civil' });
+      /* The two days are kept as civil dates, as everywhere, and chosen in a calendar that opens on the Hebrew month. Each has a
+         button that shows it in both calendars; pressing one opens the calendar under them for that end. */
+      var fFrom = el('input', { type: 'hidden', id: 'dn-from-' + fid, value: orig ? orig.from : r0.from }), fTo = el('input', { type: 'hidden', id: 'dn-to-' + fid, value: orig ? orig.to : r0.to });
+      var picking = null, calBox = el('div', { class: 'dn-cal' }); calBox.hidden = true;
+      function dateButton(which) { return el('button', { type: 'button', class: 'dn-date', id: 'dn-' + which + 'btn-' + fid, 'data-end': which, 'aria-expanded': 'false', onclick: function () { setPicking(picking === which ? null : which); } }); }
+      var bFrom = dateButton('from'), bTo = dateButton('to');
+      var cal = hebCalendar({ israel: !!d.israel,
+        range: function () { return { from: fFrom.value, to: fTo.value, end: picking || 'from' }; },
+        pick: function (isoDay) {
+          datesTouched = true;
+          if (picking === 'to') { fTo.value = isoDay; afterDates(); setPicking(null); bTo.focus(); }
+          else { fFrom.value = isoDay; if (isoDay && fTo.value && fTo.value < isoDay) fTo.value = isoDay; afterDates(); if (isoDay) setPicking('to'); else { setPicking(null); bFrom.focus(); } } /* the first day chosen, the calendar goes straight on to the last */
+          changed();
+        },
+        close: function () { var was = picking; setPicking(null); (was === 'to' ? bTo : bFrom).focus(); } });
+      calBox.appendChild(cal.el);
+      function paintDates() {
+        [[bFrom, fFrom, 'First day', 'No first day', 'On the board as soon as it is saved'], [bTo, fTo, 'Last day', 'No last day', 'Stays until it is removed']].forEach(function (t) {
+          var b = t[0], v = t[1].value, on = picking === b.getAttribute('data-end');
+          b.textContent = '';
+          b.appendChild(el('span', { class: 'dn-datelbl', text: t[2] }));
+          b.appendChild(el('span', { class: 'dn-hebd', dir: v ? 'rtl' : 'ltr', text: v ? hebDate(v) : t[3] }));
+          b.appendChild(el('span', { class: 'dn-civil', text: v ? civilDate(v) : t[4] }));
+          b.appendChild(svgIcon('today'));
+          b.classList.toggle('on', on); b.setAttribute('aria-expanded', String(on));
+        });
+        if (picking) cal.paint();
+      }
+      function setPicking(which) {
+        picking = which; calBox.hidden = !which;
+        paintDates();
+        if (which) { cal.open(); try { calBox.scrollIntoView({ block: 'nearest' }); } catch (e) {} }
+      }
+      function afterDates() { errDates.textContent = ''; paintQuick(); refresh(); }
       var fLead = inp('dn-lead-' + fid, src ? src.lead : (k0 ? k0.lead || '' : ''));
       var fTitle = inp('dn-title-' + fid, src ? src.titleOwn : '');
       var fSize = el('select', { id: 'dn-size-' + fid }, [opt('', 'As this kind usually is'), opt('big', 'Big'), opt('normal', 'Normal'), opt('small', 'Small'), opt('tiny', 'Smallest')]);
@@ -1862,9 +2044,10 @@
       function refresh() {
         var c = current(), empty = !(c.name + c.body).trim();
         stage.textContent = ''; stage.appendChild(sponsorPanel(c));
-        stageNote.textContent = empty ? 'The name and the lines appear here as you type.' : donState({ from: fFrom.value, to: fTo.value }) === 'on' ? 'This is on the board from the moment you publish.' : donState({ from: fFrom.value, to: fTo.value }) === 'soon' ? 'It goes on the board by itself on its first day.' : 'These dates have passed, so it will not be on the board.';
+        var ds = dateState({ from: fFrom.value, to: fTo.value });
+        stageNote.textContent = empty ? 'The name and the lines appear here as you type.' : orig && orig.off ? 'This donation is switched off, so it is not on the board. Switch it on in the list to show it.' : ds === 'on' ? 'This is on the board from the moment you publish.' : ds === 'soon' ? 'It goes on the board by itself on its first day.' : 'These dates have passed, so it will not be on the board.';
         fTitle.placeholder = titleFor(w.kind, fFrom.value, fTo.value) || 'The words at the top of the panel';
-        fromCivil.textContent = civilDate(fFrom.value); toCivil.textContent = civilDate(fTo.value);
+        paintDates();
       }
       function paintKinds() {
         kindRow.textContent = '';
@@ -1886,16 +2069,16 @@
             [el('bdi', { text: r.text }), r.sub ? el('span', { class: 'dn-chipsub', text: r.sub }) : null]));
         });
       }
-      function setDates(a, b) { fFrom.value = a; fTo.value = b; hFrom.sync(); hTo.sync(); errDates.textContent = ''; paintQuick(); refresh(); }
+      function setDates(a, b) { fFrom.value = a; fTo.value = b; errDates.textContent = ''; paintQuick(); refresh(); if (picking) cal.show(picking === 'to' ? b : a); }
       function setKind(kid) {
         var was = kindById(w.kind), now = kindById(kid);
         if (!fLead.value.trim() || (was && fLead.value.trim() === (was.lead || '').trim())) fLead.value = now ? (now.lead || '') : ''; /* the lead-in follows the kind unless it was written by hand */
         w.kind = kid;
-        if (isNew && !datesTouched) { var r = periodRange(now ? now.period : 'day', 0); fFrom.value = r.from; fTo.value = r.to; hFrom.sync(); hTo.sync(); } /* a new donation takes its kind's usual length */
+        if (isNew && !datesTouched) { var r = periodRange(now ? now.period : 'day', 0); fFrom.value = r.from; fTo.value = r.to; } /* a new donation takes its kind's usual length */
         placeTitle(); paintKinds(); paintQuick(); refresh(); changed();
         var sel = kindRow.querySelector('.on'); if (sel) sel.focus();
       }
-      fFrom.addEventListener('change', function () { datesTouched = true; if (fTo.value && fFrom.value && fTo.value < fFrom.value) { fTo.value = fFrom.value; hTo.sync(); } errDates.textContent = ''; paintQuick(); refresh(); });
+      fFrom.addEventListener('change', function () { datesTouched = true; if (fTo.value && fFrom.value && fTo.value < fFrom.value) fTo.value = fFrom.value; errDates.textContent = ''; paintQuick(); refresh(); });
       fTo.addEventListener('change', function () { datesTouched = true; errDates.textContent = ''; paintQuick(); refresh(); });
       [fName, fBody, fLead, fTitle, fLogo].forEach(function (f) { f.addEventListener('input', function () { errName.textContent = ''; refresh(); changed(); }); });
       fSize.addEventListener('change', function () { refresh(); changed(); });
@@ -1903,7 +2086,7 @@
         var nameV = fName.value.trim(), bodyV = fBody.value.trim();
         errName.textContent = ''; errDates.textContent = '';
         if (!nameV && !bodyV) { errName.textContent = 'Enter the name of the donor.'; fName.focus(); return; }
-        if (fFrom.value && fTo.value && fTo.value < fFrom.value) { errDates.textContent = 'The last day is before the first day. Pick a later last day.'; hTo.wrap.querySelector('select').focus(); return; }
+        if (fFrom.value && fTo.value && fTo.value < fFrom.value) { errDates.textContent = 'The last day is before the first day. Pick a later last day.'; setPicking('to'); return; }
         var rec = orig || { id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), no: ++donSeq };
         rec.kind = w.kind; rec.lead = fLead.value.trim(); rec.name = nameV; rec.body = bodyV; rec.logo = fLogo.value.trim(); rec.from = fFrom.value; rec.to = fTo.value; rec.sizeOwn = fSize.value;
         rec.titleOwn = fTitle.value.trim() === titleFor(w.kind, fFrom.value, fTo.value) ? '' : fTitle.value.trim();
@@ -1928,10 +2111,8 @@
         el('div', { class: 'fields' }, [field('Name', fName, el('div', null, [errName, el('div', { class: 'dn-hint', text: 'Titles such as מו״ה and הי״ו are set small by themselves, so the name stands out.' })]))]),
         el('div', { class: 'fields' }, [field('In honor of', fBody, el('div', { class: 'dn-hint', text: 'Each line you write is a line on the panel.' }))]),
         el('div', { class: 'field' }, [el('span', { class: 'dn-label', text: 'When it is on the board' }), quick]),
-        el('div', { class: 'fields dn-datepair' }, [
-          el('div', { class: 'field' }, [el('label', { for: fFrom.id, text: 'First day' }), el('div', { class: 'hebrow' }, [hFrom.wrap]), el('div', { class: 'dn-civilrow' }, [fFrom, fromCivil])]),
-          el('div', { class: 'field' }, [el('label', { for: fTo.id, text: 'Last day' }), el('div', { class: 'hebrow' }, [hTo.wrap]), el('div', { class: 'dn-civilrow' }, [fTo, toCivil])])]),
-        errDates, moreBox]);
+        el('div', { class: 'dn-datepair' }, [bFrom, bTo, fFrom, fTo]),
+        calBox, errDates, moreBox]);
       var body = el('div', { class: 'dn-body' }, [form, el('aside', { class: 'dn-preview' }, [el('div', { class: 'dn-label', text: 'How it looks on the board' }), stage, stageNote])]);
       var saveMain = el('button', { type: 'button', class: 'btn primary', id: 'dn-save', text: isConnected() ? 'Save and publish' : 'Save donation', onclick: function () { save(isConnected()); } });
       var saveOnly = isConnected() ? el('button', { type: 'button', class: 'btn', id: 'dn-save-only', text: 'Save only', onclick: function () { save(false); } }) : null;
@@ -1952,6 +2133,7 @@
       footNormal();
       form.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' && ev.target.tagName === 'INPUT' && ev.target.type !== 'date') { ev.preventDefault(); saveMain.click(); } });
       m = dnModal(orig ? 'Edit donation ' + numText(orig.no) : 'Add a donation', body, foot);
+      m.escape = function () { if (!picking) return false; var was = picking; setPicking(null); (was === 'to' ? bTo : bFrom).focus(); return true; };
       paintKinds(); paintQuick(); refresh();
       fName.focus();
     }
@@ -2016,7 +2198,7 @@
       return q.toLowerCase().split(/\s+/).filter(Boolean).every(function (part) { return hay.indexOf(part) >= 0; });
     }
     function donSorted(list) {
-      var rank = { on: 0, soon: 1, done: 2 };
+      var rank = { on: 0, soon: 1, off: 2, done: 3 };
       return list.slice().sort(function (a, b) {
         if (ui.dn.sort === 'new') return (b.from || '').localeCompare(a.from || '') || b.no - a.no;
         if (ui.dn.sort === 'old') return (a.from || '').localeCompare(b.from || '') || a.no - b.no;
@@ -2029,8 +2211,24 @@
     }
     function donCard(x) {
       var st = donState(x), k = kindById(x.kind), sub = donSub(x), acts = el('div', { class: 'dn-acts' });
+      /* On or off: off keeps the donation here with everything it holds, and takes it off the board and the screen until it is
+         switched on again. Like the form's own button it publishes straight away where the website is connected, since a switch
+         that waited for a second press would look as if it had done nothing. */
+      function flip(on) {
+        x.off = !on;
+        ui.dn.flash = x.id; clearTimeout(ui.dn.flashT); ui.dn.flashT = setTimeout(function () { ui.dn.flash = ''; }, 3000);
+        setDirty(true); paintList();
+        saveConfig(collect(), isConnected() ? { publish: true } : null);
+      }
+      function onOff() {
+        var box = el('input', { type: 'checkbox', role: 'switch', 'data-act': 'onoff', 'data-nodirty': '1', 'aria-label': (x.off ? 'Switch on ' : 'Switch off ') + donName(x) });
+        box.checked = !x.off;
+        box.addEventListener('change', function () { flip(box.checked); });
+        return el('label', { class: 'switch dn-switch', 'data-nodirty': '1', title: x.off ? 'Off: kept here, not on the board. Switch it on to show it again.' : 'On. Switch it off to take it off the board without removing it.' }, [box, el('span', { class: 'swl', text: x.off ? 'Off' : 'On' })]);
+      }
       function actsNormal() {
         acts.textContent = '';
+        acts.appendChild(onOff());
         acts.appendChild(el('button', { type: 'button', class: 'btn small', 'data-act': 'edit', 'data-nodirty': '1', onclick: function () { openDonation(x); } }, [svgIcon('edit'), el('span', { text: 'Edit' })]));
         acts.appendChild(el('button', { type: 'button', class: 'btn small', 'data-act': 'copy', 'data-nodirty': '1', title: 'Start a new donation with these details', onclick: function () { openDonation(null, x); } }, [svgIcon('copy'), el('span', { text: 'Copy' })]));
         acts.appendChild(el('span', { class: 'sp' }));
@@ -2056,10 +2254,11 @@
         acts]);
     }
     function paintList() {
-      var counts = { all: dons.length, on: 0, soon: 0, done: 0 };
+      var counts = { all: dons.length, on: 0, soon: 0, done: 0, off: 0 };
       dons.forEach(function (x) { counts[donState(x)]++; });
+      if (ui.dn.filter === 'off' && !counts.off) ui.dn.filter = 'all'; /* the last one switched back on: its list is gone, so show them all */
       dnFilters.textContent = '';
-      [['all', 'All'], ['on', 'On the board'], ['soon', 'Coming up'], ['done', 'Finished']].forEach(function (f) {
+      [['all', 'All'], ['on', 'On the board'], ['soon', 'Coming up'], ['done', 'Finished']].concat(counts.off ? [['off', 'Switched off']] : []).forEach(function (f) {
         var on = ui.dn.filter === f[0];
         dnFilters.appendChild(el('button', { type: 'button', class: 'dn-chip' + (on ? ' on' : ''), 'aria-pressed': String(on), 'data-filter': f[0], 'data-nodirty': '1', onclick: function () { ui.dn.filter = f[0]; paintList(); } }, [el('span', { text: f[1] }), el('span', { class: 'dn-count num', text: String(counts[f[0]]) })]));
       });
@@ -2172,7 +2371,7 @@
       [n >> 16 & 255, n >> 8 & 255, n & 255].forEach(function (c) { var v = Math.max(0, Math.min(255, Math.round((steps > 0 ? Math.max(c, 8) : c) * f))); out += (v < 16 ? '0' : '') + v.toString(16); });
       return out;
     }
-    var cWallBase = card('Background and boxes', 'The colour behind everything on the hallway screen, and the colour of the boxes on it. A lit screen shows a colour lighter than a wall does, so set these standing in front of the TV: press Darker or Lighter, save, and the screen follows within a minute or two.');
+    var cWallBase = card('Background and boxes', 'The colour behind everything on the hallway screen, and the colour of the boxes on it. A lit screen shows a colour lighter than a wall does, so set these standing in front of the TV: press Darker or Lighter, then Save and Publish, and the screen follows within a minute or two.');
     var baseRows = el('div', { class: 'shades' }), BASE = [['pageBg', 'The background', true], ['frameBg', 'The boxes', true], ['frameLine', 'The line around the boxes', false]];
     BASE.forEach(function (b) {
       var key = b[0], col = el('input', { type: 'color', id: 'w-' + key, value: wall[key] || lookWall(key), 'aria-label': b[1] + ': choose any colour' }),
@@ -2528,7 +2727,9 @@
       out.remoteConfigUrl = fRemote.value.trim();
       out.smsNumber = fSms.value.trim();
       out.smsLang = fSmsLang.value;
-      out.savedAt = Date.now();
+      /* A save is always newer than anything this page has seen, whatever this device's clock says: boards take the settings
+         with the later stamp, so a change saved on a phone whose clock runs behind another's must still come out later. */
+      out.savedAt = Math.max(Date.now(), (cfg.savedAt || 0) + 1, (ui.inc || 0) + 1);
       return out;
     }
     function validate(c) {
@@ -2551,6 +2752,7 @@
         setCfg(c);
         if (r.reloads) { toast('Saved. Reloading the page…', 8000); return; }
         ui.adminDirty = false; render(); buildAdmin(c); /* stay in the settings, on the same tab, with the board behind refreshed */
+        if (ui.reloadWhenSaved && !(opts && opts.publish)) { toast('Saved. Loading the newer version of this page…', 4000); setTimeout(function () { location.reload(); }, 900); return; }
         var pend = pendingChanges().length;
         if (opts && opts.publish) publishNow();
         else if (r.configured) toast(pend ? 'Saved. ' + pend + (pend === 1 ? ' change is' : ' changes are') + ' not yet published: Publish when you are ready.' : 'Saved. Nothing new to publish.', 6000);
@@ -2641,7 +2843,7 @@
       return buildHtml(c).then(function (html) { return artifactNs.publish(html); }).then(function () { return { reloads: true }; });
     }
     return new Promise(function (res, rej) {
-      try { localStorage.setItem('minyan-config', JSON.stringify(c)); res(); } catch (e) { rej(e); }
+      try { localStorage.setItem('minyan-config', JSON.stringify(c)); localStorage.setItem('minyan-base', String(ui.formBase || ui.inc || 0)); res(); } catch (e) { rej(e); }
     }).then(function () { return { reloads: false, published: false, configured: ghConfigured(ghSettings()) }; }); /* publishing is its own step: the Publish tab lists what changed first */
   }
   /* ---------- publishing: what is saved on this device vs. what the website has ---------- */
@@ -2727,7 +2929,11 @@
     (a.notices || []).filter(shown).forEach(function (x) { na[donKey(x)] = x; }); (b.notices || []).filter(shown).forEach(function (x) { nb[donKey(x)] = x; });
     /* a donation saved before donations had their own marks is the same one once it has them */
     Object.keys(nb).forEach(function (k) { if (na[k]) return; var y = nb[k], old = Object.keys(na).filter(function (j) { return !nb[j] && same(board(na[j]), board(y)); })[0]; if (old) { na[k] = na[old]; delete na[old]; } });
-    Object.keys(nb).forEach(function (k) { if (!na[k]) out.push('Donation added: ' + donLabel(nb[k])); else if (!same(board(na[k]), board(nb[k]))) out.push('Donation changed: ' + donLabel(nb[k])); });
+    Object.keys(nb).forEach(function (k) {
+      if (!na[k]) { out.push('Donation added: ' + donLabel(nb[k]) + (nb[k].off ? ' (switched off)' : '')); return; }
+      if (!same(board(na[k]), board(nb[k]))) out.push('Donation changed: ' + donLabel(nb[k]));
+      if (!!na[k].off !== !!nb[k].off) out.push('Donation switched ' + (nb[k].off ? 'off' : 'on') + ': ' + donLabel(nb[k]));
+    });
     Object.keys(na).forEach(function (k) { if (!nb[k]) out.push('Donation removed: ' + donLabel(na[k])); });
     if (!same(a.donationKinds, b.donationKinds)) out.push('Kinds of donation changed');
     if (!same(a.banner, b.banner)) out.push(b.banner && b.banner.text ? 'Banner: ' + b.banner.text + (b.banner.from ? ' · from ' + b.banner.from.replace('T', ' ') : '') + (b.banner.until ? ' · until ' + b.banner.until.replace('T', ' ') : '') : 'Banner cleared');
@@ -2741,16 +2947,50 @@
     return o;
   }
   /* send what is saved on this device to the website (GitHub); the board and the app pick it up within minutes */
-  function publishNow() {
+  /* Two hands on the settings. ui.inc is the savedAt of the newest published settings this page has taken in; the back end's form
+     remembers the one it was built on (ui.formBase), and a save on this device writes that down ('minyan-base'), so a publish
+     knows which published version its settings grew from. If the website has moved on since — another phone, another tab, an
+     older page left open for hours — publishing would quietly undo that work. So it stops, says what would change, and asks. */
+  function publishNow(force) {
     var s = ghSettings(), c = localDraft() || cfg;
     if (!ghConfigured(s)) { toast('Connect the website first: Publish tab, GitHub token'); return Promise.resolve(false); }
     toast('Publishing…', 4000);
-    return ghPublish(c, s).then(function () {
-      try { localStorage.setItem('minyan-remote', JSON.stringify(c)); localStorage.setItem('minyan-published-at', String(Date.now())); } catch (e) {}
+    var base = 0; try { base = +(localStorage.getItem('minyan-base')) || 0; } catch (e) {}
+    return ghPublish(c, s, force ? 0 : base).then(function () {
+      try { localStorage.setItem('minyan-remote', JSON.stringify(c)); localStorage.setItem('minyan-published-at', String(Date.now())); localStorage.setItem('minyan-base', String(c.savedAt || 0)); } catch (e) {}
+      ui.inc = ui.formBase = c.savedAt || 0;
       toast('Published. Everyone gets the update within a few minutes.', 6000);
-      if (ui.adminOpen) { ui.adminDirty = false; buildAdmin(cfg); }
+      if (backEndShowing()) { ui.adminDirty = false; buildAdmin(cfg); }
       return true;
-    }, function (e) { toast('Publishing failed: ' + (e && e.message || e), 9000); return false; });
+    }, function (e) {
+      if (e && e.newer) { $('#toast') && $('#toast').remove(); askAboutNewer(e.newer, c); return false; }
+      toast('Publishing failed: ' + (e && e.message || e), 9000); return false;
+    });
+  }
+  /* the back end is open and unlocked: its own bar is on the page. (ui.adminOpen is also true while only the PIN box is showing.) */
+  function backEndShowing() { return !!(ui.adminOpen && (mode === 'artifact' || pinOk) && document.querySelector('#overlay .abar')); }
+  function askAboutNewer(theirs, mine) {
+    var when = new Date(theirs.savedAt || 0).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    var diff = describeChanges(theirs, mine), list = el('ul', { class: 'ask-list' });
+    diff.slice(0, 8).forEach(function (line) { list.appendChild(el('li', { dir: 'auto', text: line })); });
+    if (diff.length > 8) list.appendChild(el('li', { text: 'and ' + (diff.length - 8) + ' more' }));
+    askBox('The website has newer settings', [
+      el('p', { text: 'Settings were published from another phone or another open page on ' + when + ', after this page last took the website\'s settings. Nothing has been published from here yet.' }),
+      diff.length ? el('p', { class: 'ask-sub', text: 'If you publish from here, this is what changes on the website, their newer work included:' }) : null,
+      diff.length ? list : null,
+      el('p', { class: 'ask-sub', text: '"Take the newer settings" loads what the website has; make your change again after that and publish. What was saved on this device is kept under Backup → Previous versions.' })], [
+      { text: 'Cancel', id: 'ask-cancel', cancel: true },
+      { text: 'Publish mine anyway', kind: 'danger', id: 'ask-mine', act: function () { publishNow(true); } },
+      { text: 'Take the newer settings', kind: 'primary', id: 'ask-theirs', act: function () { takeNewer(theirs, mine); } }]);
+  }
+  function takeNewer(theirs, mine) {
+    try {
+      var hist = JSON.parse(localStorage.getItem('minyan-history') || '[]'); hist.unshift({ at: Date.now(), cfg: mine }); localStorage.setItem('minyan-history', JSON.stringify(hist.slice(0, 10))); /* what was here is not thrown away */
+      localStorage.setItem('minyan-remote', JSON.stringify(theirs)); localStorage.removeItem('minyan-config'); localStorage.setItem('minyan-base', String(theirs.savedAt || 0));
+    } catch (e) {}
+    setCfg(theirs); ui.inc = ui.formBase = theirs.savedAt || 0;
+    if (backEndShowing()) { ui.adminDirty = false; buildAdmin(cfg); } else render();
+    toast('The newer settings are loaded. Make your change again, then publish.', 8000);
   }
 
   /* ---------- central schedule file (self-hosted site and app) ---------- */
@@ -2778,8 +3018,15 @@
     }).then(function (c) {
       if (!c) return false;
       try { localStorage.setItem('minyan-remote', JSON.stringify(c)); } catch (e) {}
-      var changed = applyIfNewer(c);
+      var was = cfg.savedAt || 0, changed = applyIfNewer(c), newer = changed && (c.savedAt || 0) > was;
+      if (changed) { ui.inc = Math.max(ui.inc || 0, c.savedAt || 0); if (!ui.adminOpen) { try { localStorage.setItem('minyan-base', String(ui.inc)); } catch (e) {} } }
       if (changed && !ui.adminOpen) render();
+      if (newer && backEndShowing()) { /* the back end itself, not the PIN box that stands in front of it */
+        if (!ui.adminDirty) { /* nothing typed here: the page simply follows the website, on the same tab */
+          ui.formBase = ui.inc; try { localStorage.setItem('minyan-base', String(ui.inc)); } catch (e) {}
+          buildAdmin(cfg); toast('Newer settings, published from another phone or page, were loaded here.', 7000);
+        } else toast('Newer settings were just published from another phone or page. Publishing from here will ask before replacing them.', 9000);
+      }
       return changed;
     });
   }
@@ -2799,7 +3046,9 @@
       return 'Connection OK';
     });
   }
-  function ghPublish(c, s) {
+  /* base: the savedAt of the published settings these grew from; when the website holds something newer than that, nothing is
+     written and the newer settings are handed back instead (0 = write whatever is there) */
+  function ghPublish(c, s, base) {
     var branch = s.branch || 'main', api = ghApi(s), headers = ghHeaders(s);
     headers['Content-Type'] = 'application/json';
     return fetch(api + '?ref=' + encodeURIComponent(branch), { headers: headers, cache: 'no-store' }).then(function (r) {
@@ -2807,6 +3056,11 @@
       if (!r.ok) throw new Error('GitHub ' + r.status);
       return r.json();
     }).then(function (existing) {
+      if (base && existing && existing.content) {
+        var theirs = null;
+        try { var bin = atob(String(existing.content).replace(/\s+/g, '')), bytes = new Uint8Array(bin.length), i; for (i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i); theirs = JSON.parse(new TextDecoder().decode(bytes)); } catch (e) { theirs = null; }
+        if (theirs && theirs.schedules && (theirs.savedAt || 0) > base && (theirs.savedAt || 0) !== (c.savedAt || 0)) { var stop = new Error('The website has newer settings'); stop.newer = theirs; throw stop; }
+      }
       var body = { message: 'Update minyan schedule', content: utf8b64(JSON.stringify(c, null, 1)), branch: branch };
       if (existing && existing.sha) body.sha = existing.sha;
       return fetch(api, { method: 'PUT', headers: headers, body: JSON.stringify(body) });
@@ -2853,8 +3107,36 @@
       window.addEventListener('online', check);
     }).catch(function () {});
     navigator.serviceWorker.addEventListener('controllerchange', function () {
-      if (hadController && !reloaded && !ui.adminOpen) { reloaded = true; location.reload(); }
+      if (!hadController || reloaded) return;
+      if (!ui.adminOpen || !ui.adminDirty) { reloaded = true; location.reload(); return; } /* an open back end with nothing unsaved is not left running the old page for hours */
+      ui.reloadWhenSaved = true; toast('A newer version of this page is ready. It loads by itself after your next Save.', 9000);
     });
+  }
+
+  /* The hallway screen in a browser window that still shows its tabs and address bar: a "Full screen" button in the corner takes
+     them away. It shows for a few seconds when the page opens and whenever the mouse moves or the screen is touched, and never
+     once the screen is full (its own doing, F11, or an installed app). A browser only goes full screen at a press, so the page
+     cannot do it by itself. */
+  function setupFullScreen() {
+    var root = document.documentElement, go = root.requestFullscreen || root.webkitRequestFullscreen;
+    if (!go || window.top !== window || currentView().kind !== 'display' || document.getElementById('fs-btn')) return;
+    var btn = el('button', { type: 'button', class: 'fs-btn', id: 'fs-btn', 'aria-label': 'Full screen' }, [svgIcon('tv'), el('span', { text: 'מסך מלא · Full screen' })]), timer = null;
+    function isFull() {
+      return !!(document.fullscreenElement || document.webkitFullscreenElement) || (window.matchMedia && window.matchMedia('(display-mode: fullscreen)').matches) ||
+        (window.innerHeight >= screen.height - 1 && window.innerWidth >= screen.width - 1);
+    }
+    function show(ms) {
+      clearTimeout(timer);
+      if (isFull()) { btn.classList.remove('show'); root.classList.add('fs-on'); return; }
+      root.classList.remove('fs-on'); btn.classList.add('show');
+      timer = setTimeout(function () { btn.classList.remove('show'); }, ms || 6000);
+    }
+    btn.addEventListener('click', function () { try { var p = go.call(root); if (p && p.then) p.then(function () { show(); }, function () {}); } catch (e) {} });
+    ['mousemove', 'touchstart', 'keydown'].forEach(function (ev) { window.addEventListener(ev, function () { show(); }, { passive: true }); });
+    ['fullscreenchange', 'webkitfullscreenchange'].forEach(function (ev) { document.addEventListener(ev, function () { show(); }); });
+    window.addEventListener('resize', function () { show(); });
+    document.body.appendChild(btn);
+    show(12000);
   }
 
   /* ---------- boot ---------- */
@@ -2866,15 +3148,27 @@
     inArtifact = !!(window.claude && typeof window.claude.use === 'function');
     if (inArtifact) mode = 'artifact';
     else {
-      try { applyIfNewer(JSON.parse(localStorage.getItem('minyan-remote') || 'null')); } catch (e) {}
-      try { applyIfNewer(JSON.parse(localStorage.getItem('minyan-config') || 'null')); } catch (e) {}
+      var bakedAt = cfg.savedAt || 0, remoteAt = 0, usingDraft = false, baseAt = 0;
+      try { var r0 = JSON.parse(localStorage.getItem('minyan-remote') || 'null'); if (applyIfNewer(r0)) remoteAt = r0.savedAt || 0; } catch (e) {}
+      try { var l0 = JSON.parse(localStorage.getItem('minyan-config') || 'null'); usingDraft = applyIfNewer(l0) && (l0.savedAt || 0) > Math.max(bakedAt, remoteAt); } catch (e) {}
+      try { baseAt = +(localStorage.getItem('minyan-base')) || 0; } catch (e) {}
+      /* the published settings this page stands on: the newest it holds, or, when a save made on this device is in use, the ones that save grew from */
+      ui.inc = usingDraft ? (baseAt || Math.max(bakedAt, remoteAt)) : Math.max(bakedAt, remoteAt);
       try { pinOk = sessionStorage.getItem('minyan-pin') === '1'; } catch (e) {}
       startPreview();
-      /* the lobby address on a phone: show the TV preview (the lobby as the TV renders it, scaled down) instead of a squeezed lobby */
+      /* The screen's address on something small: show the picture of the whole screen (the screen as the TV draws it, scaled to
+         fit) instead of a squeezed screen. A window too narrow for the three columns, an upright tablet, or one as low as a
+         phone on its side always gets the picture, &full=1 or not: the screen cuts off what does not fit there. (&full=1 is for a small TV, whose
+         browser may report half its pixels.) What the address asked for — a day to show, a size — goes along. */
       var v0 = currentView();
-      if (v0.kind === 'display' && !v0.full && Math.max(window.innerWidth, window.innerHeight) < 1000) { location.replace('tv.html'); return; }
+      var vw0 = window.innerWidth, vh0 = window.innerHeight;
+      if (v0.kind === 'display' && window.top === window && (vw0 <= 820 || vh0 < 500 || (vw0 < vh0 && vw0 < 1000) || (!v0.full && Math.max(vw0, vh0) < 1000))) {
+        var keep = location.search.replace(/^\?/, '').split('&').filter(function (kv) { return /^(at|size)=/.test(kv); }).join('&');
+        location.replace('tv.html' + (keep ? '?' + keep : '')); return;
+      }
     }
     render();
+    setupFullScreen();
     /* opened by itself, a preview says that it is one, so it is never taken for the board as it is today */
     if (ui.preview && window.top === window) document.body.appendChild(el('div', { class: 'preview-badge', dir: 'rtl', text: S().preview + ' · ' + Cal.formatHeb(Cal.hebFromRD(ui.preview.rd)) + ' · ' + fmtTime(ui.preview.min) }));
     setInterval(tick, 1000);

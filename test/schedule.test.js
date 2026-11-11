@@ -122,4 +122,12 @@ if (fails) { console.log(fails + ' FAILING'); process.exit(1); } else console.lo
   ok('banner with only an end time: shown right away', (mk({ text: 'x', until: '2026-11-05T01:30' }).activeBanner(at(2026, 1, 1, 0, 0)) || {}).text, 'x');
   ok('banner with only a start time: stays once it starts', [mk({ text: 'x', from: '2026-10-31T19:00' }).activeBanner(at(2026, 10, 31, 18, 0)), (mk({ text: 'x', from: '2026-10-31T19:00' }).activeBanner(at(2027, 10, 31, 18, 0)) || {}).text], [null, 'x']);
 }
+{
+  /* donations: on within their dates, and never while switched off */
+  const day = Cal.rdFromGreg(2026, 11, 18), mkN = ns => (E.MinyanEngine || E)(Object.assign({}, cfg, { notices: ns }));
+  const N = [{ title: 'פרנס חודש כסלו', name: 'א', from: '2026-11-11', to: '2026-12-10' }, { title: 'נר למאור', name: 'ב', from: '2026-11-11', to: '2026-12-10', off: true }, { title: 'פרנס היום', name: 'ג', from: '2026-12-01', to: '2026-12-01' }, { title: 'empty', name: '', body: '' }];
+  ok('a donation switched off is not on the board whatever its dates; one outside its dates or with nothing in it is not either', mkN(N).activeNotices(day).map(n => n.name), ['א']);
+  ok('switched on again it is back', mkN(N.map(n => Object.assign({}, n, { off: false }))).activeNotices(day).map(n => n.name), ['א', 'ב']);
+  ok('on its own day the one-day donation joins them', mkN(N).activeNotices(Cal.rdFromGreg(2026, 12, 1)).map(n => n.name), ['א', 'ג']);
+}
 ok('צאת (60) is 60 minutes after sunset', Math.round(Cal.zmanim(sunRd, cfg.location).tzeis60 - Cal.zmanim(sunRd, cfg.location).sunset), 60);

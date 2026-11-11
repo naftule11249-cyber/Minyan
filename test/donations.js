@@ -81,8 +81,8 @@ const THREE = [
     ['2026-11-18', '2026-11-18', ['Today', 'Tomorrow'], 'פרנס היום', 'sponsor sp-xs']);
   await page.locator('.dn-sheet .dn-quick .dn-chip', { hasText: 'Tomorrow' }).click(); await page.waitForTimeout(100);
   ok('"Tomorrow" sets both days and shows them in Hebrew and in the civil calendar; the preview waits for a name',
-    [await page.inputValue('[id^="dn-from-"]'), await page.inputValue('[id^="dn-to-"]'), await page.locator('.dn-sheet .dn-civil').first().textContent(), await page.evaluate(() => Array.from(document.querySelectorAll('.dn-form .hebpick')[0].querySelectorAll('select')).map(s => s.options[s.selectedIndex].text)), await page.locator('.dn-note').textContent()],
-    ['2026-11-19', '2026-11-19', 'Thu, Nov 19, 2026', ['ט׳', 'כסלו', 'תשפ״ז'], 'The name and the lines appear here as you type.']);
+    [await page.inputValue('[id^="dn-from-"]'), await page.inputValue('[id^="dn-to-"]'), await page.locator('.dn-sheet .dn-civil').first().textContent(), await page.locator('.dn-date .dn-hebd').allTextContents(), await page.locator('.dn-note').textContent()],
+    ['2026-11-19', '2026-11-19', 'Thu, Nov 19, 2026', ['ט׳ כסלו תשפ״ז', 'ט׳ כסלו תשפ״ז'], 'The name and the lines appear here as you type.']);
   await page.fill('[id^="dn-name-"]', '  מו״ה אלעזר ליבערמאן הי״ו  '); await page.fill('[id^="dn-body-"]', 'לע״נ אביו\nהרב משה יודא לייב ב״ר יחיאל מיכל זצ״ל');
   ok('the preview reads as the board will: the name large, its titles small; it says the panel goes up by itself on its day', [await page.locator('.dn-stage .n .nm').textContent(), await page.locator('.dn-stage .n .hon').allTextContents(), await page.locator('.dn-err').first().textContent(), await page.locator('.dn-note').textContent()], ['אלעזר ליבערמאן', ['מו״ה', 'הי״ו'], '', 'It goes on the board by itself on its first day.']);
   await page.locator('#dn-save').dblclick(); await saved(page);
@@ -121,19 +121,91 @@ const THREE = [
   await page.locator('.dn-card[data-no="4"] [data-act="edit"]').click(); await page.waitForTimeout(200);
   await page.fill('[id^="dn-body-"]', 'לע״נ אביו'); await page.mouse.click(8, 450); await page.waitForTimeout(150);
   ok('but not once something has been typed: a slip does not lose it', [await formOpen(page), await page.inputValue('[id^="dn-body-"]')], [1, 'לע״נ אביו']);
-  /* the last day before the first */
-  await page.fill('[id^="dn-to-"]', '2026-11-17'); await page.locator('[id^="dn-to-"]').dispatchEvent('change');
+  /* ---- the calendar: it opens on the Hebrew month, and tells all there is to tell about each day ---- */
+  const calTitle = page => page.locator('.hcal-jump').evaluate(e => e.options[e.selectedIndex].text);
+  const dayCell = (page, iso) => page.locator('.hcal-day[data-iso="' + iso + '"]');
+  const cellSays = (page, iso) => dayCell(page, iso).evaluate(c => [c.querySelector('.hd').textContent, c.querySelector('.cd').textContent.trim(), c.querySelector('.tg').textContent, c.className.replace('hcal-day', '').trim()]);
+  ok('the two days are shown in both calendars, each on a button of its own, and no calendar is open yet', [await page.locator('.dn-date').evaluateAll(bs => bs.map(b => Array.from(b.querySelectorAll('span:not(.ico)')).map(x => x.textContent))), await page.locator('.hcal').isVisible()],
+    [[['First day', 'ט׳ כסלו תשפ״ז', 'Thu, Nov 19, 2026'], ['Last day', 'ט׳ כסלו תשפ״ז', 'Thu, Nov 19, 2026']], false]);
+  await page.click('.dn-date[data-end="to"]'); await page.waitForTimeout(200);
+  ok('pressing "Last day" opens the calendar under it, on the Hebrew month of that day, with the civil months it spans', [await calTitle(page), await page.locator('.hcal-sub').textContent(), await page.locator('.hcal-day').count(), await page.locator('.hcal-which').textContent(), await page.locator('.hcal').getAttribute('data-view'), await page.locator('.dn-date[data-end="to"]').getAttribute('aria-expanded')],
+    ['כסלו תשפ״ז', 'Nov – Dec 2026', 30, 'Choosing the last day', 'heb', 'true']);
+  ok('the week runs from the right, as on a לוח: Sunday on the right, Shabbos on the left', [await page.locator('.hcal-dow span').allTextContents(), await page.evaluate(() => { const x = iso => document.querySelector('.hcal-day[data-iso="' + iso + '"]').getBoundingClientRect(); return x('2026-11-15').left > x('2026-11-16').left && x('2026-11-21').left < x('2026-11-20').left && Math.abs(x('2026-11-15').top - x('2026-11-21').top) < 2; })],
+    [['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש״ק'], true]);
+  ok('each day carries its Hebrew date large and its civil date small; Rosh Chodesh, a Shabbos with its parsha, Chanukah and today are told apart',
+    [await cellSays(page, '2026-11-11'), await cellSays(page, '2026-11-14'), await cellSays(page, '2026-12-01'), await cellSays(page, '2026-12-05'), await cellSays(page, '2026-12-06'), (await cellSays(page, '2026-11-18'))[3].indexOf('today') >= 0],
+    [['א׳', 'Nov 11', 'ר״ח', 'rc shut'], ['ד׳', '14', 'תולדות', 'shab shut'], ['כ״א', 'Dec 1', '', ''], ['כ״ה', '5', 'וישב', 'shab moed'], ['כ״ו', '6', 'חנוכה', 'moed'], true]);
+  await dayCell(page, '2026-12-05').hover(); await page.waitForTimeout(80);
+  ok('pointing at a day spells it out in full under the calendar', await page.locator('.hcal-line span').allTextContents(), ['שבת קודש פרשת וישב · כ״ה כסלו תשפ״ז · חנוכה', 'Sat, Dec 5, 2026']);
+  await dayCell(page, '2026-12-10').hover(); await page.waitForTimeout(80);
+  ok('a weekday names the week\'s parsha too, and both of its occasions', await page.locator('.hcal-line span').allTextContents(), ['יום חמישי · ל׳ כסלו תשפ״ז · חנוכה · ראש חודש טבת · פרשת השבוע: מקץ', 'Thu, Dec 10, 2026']);
+  /* the last day cannot come before the first */
+  ok('choosing the last day, the days before the first one are shut', [await dayCell(page, '2026-11-17').getAttribute('aria-disabled'), await dayCell(page, '2026-11-19').getAttribute('aria-disabled')], ['true', null]);
+  await dayCell(page, '2026-11-17').click({ force: true }); await page.waitForTimeout(100);
+  ok('and pressing one does nothing', [await page.inputValue('[id^="dn-to-"]'), await page.locator('.hcal').isVisible()], ['2026-11-19', true]);
+  await page.evaluate(() => { const t = document.querySelector('[id^="dn-to-"]'); t.value = '2026-11-17'; t.dispatchEvent(new Event('change', { bubbles: true })); });
   await page.click('#dn-save'); await page.waitForTimeout(150);
-  ok('a last day before the first is refused beside the dates', [await page.locator('.dn-form > .dn-err').textContent(), await formOpen(page)], ['The last day is before the first day. Pick a later last day.', 1]);
-  /* moving the first day past the last one carries the last day along */
-  await page.fill('[id^="dn-from-"]', '2026-11-25'); await page.locator('[id^="dn-from-"]').dispatchEvent('change'); await page.waitForTimeout(100);
-  ok('moving the first day past the last carries the last day with it, and the message goes', [await page.inputValue('[id^="dn-to-"]'), await page.locator('.dn-form > .dn-err').textContent()], ['2026-11-25', '']);
-  /* the Hebrew boxes write the civil date */
-  await page.evaluate(() => { const sel = document.querySelectorAll('.dn-form .hebpick')[1].querySelectorAll('select'); sel[0].value = '20'; sel[0].dispatchEvent(new Event('change', { bubbles: true })); });
-  await page.waitForTimeout(100);
-  ok('choosing כ׳ in the Hebrew day box sets the civil date beside it', [await page.inputValue('[id^="dn-to-"]'), await page.locator('.dn-sheet .dn-civil').nth(1).textContent()], ['2026-11-30', 'Mon, Nov 30, 2026']);
+  ok('a last day before the first, however it got there, is refused beside the dates', [await page.locator('.dn-form > .dn-err').textContent(), await formOpen(page), await page.locator('.hcal-which').textContent()], ['The last day is before the first day. Pick a later last day.', 1, 'Choosing the last day']);
+  /* moving the first day past the last one carries the last day along, and the calendar goes straight on to the last day */
+  await page.click('.dn-date[data-end="from"]'); await page.waitForTimeout(150);
+  await dayCell(page, '2026-11-25').click(); await page.waitForTimeout(150);
+  ok('moving the first day past the last carries the last day with it, the message goes, and the calendar moves on to the last day by itself', [await page.inputValue('[id^="dn-from-"]'), await page.inputValue('[id^="dn-to-"]'), await page.locator('.dn-form > .dn-err').textContent(), await page.locator('.hcal-which').textContent()],
+    ['2026-11-25', '2026-11-25', '', 'Choosing the last day']);
+  await dayCell(page, '2026-11-30').click(); await page.waitForTimeout(150);
+  ok('pressing כ׳ כסלו sets the last day, in both calendars, and the calendar closes', [await page.inputValue('[id^="dn-to-"]'), await page.locator('.dn-date .dn-hebd').allTextContents(), await page.locator('.dn-sheet .dn-civil').nth(1).textContent(), await page.locator('.hcal').isVisible()],
+    ['2026-11-30', ['ט״ו כסלו תשפ״ז', 'כ׳ כסלו תשפ״ז'], 'Mon, Nov 30, 2026', false]);
+  /* moving about in it */
+  await page.click('.dn-date[data-end="to"]'); await page.waitForTimeout(150);
+  ok('opened again it shows the days chosen: the two ends marked, the days between them shaded', [await page.locator('.hcal-day.a').getAttribute('data-iso'), await page.locator('.hcal-day.b').getAttribute('data-iso'), await page.locator('.hcal-day.in').count()], ['2026-11-25', '2026-11-30', 4]);
+  await page.click('.hcal-nav.next'); await page.waitForTimeout(120);
+  ok('the arrow goes on to the next Hebrew month: טבת, with its fast', [await calTitle(page), await page.locator('.hcal-sub').textContent(), await cellSays(page, '2026-12-20'), await cellSays(page, '2026-12-11')], ['טבת תשפ״ז', 'Dec – Jan 2027', ['י׳', '20', 'עשרה בטבת', 'fast'], ['א׳', 'Dec 11', 'חנוכה', 'moed']]);
+  await page.click('.hcal-nav.prev'); await page.click('.hcal-nav.prev'); await page.waitForTimeout(120);
+  ok('and back, past where it started', await calTitle(page), 'חשון תשפ״ז');
+  await page.selectOption('.hcal-jump', { label: 'תשרי תשפ״ח' }); await page.waitForTimeout(150);
+  ok('the list of months jumps a year ahead in one go: תשרי, with its Yomim Tovim named', [await calTitle(page), await page.locator('.hcal-day').evaluateAll(ds => ds.filter(d => /yt|fast/.test(d.className)).map(d => d.querySelector('.hd').textContent + ' ' + d.querySelector('.tg').textContent))],
+    ['תשרי תשפ״ח', ['א׳ ראש השנה', 'ב׳ ראש השנה', 'ג׳ צום גדליה', 'י׳ יום כיפור', 'ט״ו סוכות', 'ט״ז סוכות', 'כ״ב שמיני עצרת', 'כ״ג שמחת תורה']]);
+  await page.click('.hcal-seg[data-cal="civil"]'); await page.waitForTimeout(150);
+  ok('"Civil months" shows the same days by the civil month, the Hebrew date small in each', [await calTitle(page), await page.locator('.hcal-sub').textContent(), await page.locator('.hcal-day').count(), await cellSays(page, '2027-10-02')], ['Oct 2027', 'אלול – תשרי תשפ״ח', 31, ['2', 'א׳ תשרי', 'ראש השנה', 'shab yt']]);
+  await page.click('.hcal-today'); await page.waitForTimeout(150);
+  ok('"Today" comes back to the present month', [await calTitle(page), (await cellSays(page, '2026-11-18'))[3].indexOf('today') >= 0], ['Nov 2026', true]);
+  await page.click('.hcal-seg[data-cal="heb"]'); await page.waitForTimeout(150);
+  /* by keyboard */
+  await dayCell(page, '2026-11-30').focus(); await page.keyboard.press('ArrowLeft'); await page.keyboard.press('ArrowDown'); await page.waitForTimeout(80);
+  ok('the arrow keys walk the days: left is the day after (the week runs from the right), down is a week on', await page.evaluate(() => document.activeElement.getAttribute('data-iso')), '2026-12-08');
+  await page.keyboard.press('PageDown'); await page.waitForTimeout(120);
+  ok('Page Down turns the month and keeps the place', [await calTitle(page), await page.evaluate(() => document.activeElement.getAttribute('data-iso'))], ['טבת תשפ״ז', '2027-01-07']);
+  await page.keyboard.press('Escape'); await page.waitForTimeout(120);
+  ok('Escape closes the calendar, not the form, and nothing was changed by looking', [await page.locator('.hcal').isVisible(), await formOpen(page), await page.inputValue('[id^="dn-to-"]'), await page.evaluate(() => document.activeElement.getAttribute('data-end'))], [false, 1, '2026-11-30', 'to']);
+  await page.click('.dn-date[data-end="to"]'); await page.waitForTimeout(120);
+  ok('the calendar opens on Hebrew months every time, whatever it was left on', [await page.locator('.hcal').getAttribute('data-view'), await calTitle(page)], ['heb', 'כסלו תשפ״ז']);
+  await page.click('.hcal [data-cal="none"]'); await page.waitForTimeout(120);
+  ok('"No last day" leaves it open-ended, and says what that means', [await page.inputValue('[id^="dn-to-"]'), await page.locator('.dn-date[data-end="to"] span:not(.ico)').allTextContents(), await page.locator('.hcal').isVisible()], ['', ['Last day', 'No last day', 'Stays until it is removed'], false]);
+  await page.click('.dn-date[data-end="to"]'); await page.waitForTimeout(120);
+  await dayCell(page, '2026-11-30').click(); await page.waitForTimeout(150);
   await page.click('#dn-save'); await saved(page);
   ok('the change is saved on the card', (await cards(page)).filter(c => c.no === '#004').map(c => [c.start, c.end, c.rel]), [['ט״ו כסלו תשפ״ז', 'כ׳ כסלו תשפ״ז', ['starts in 7 days', 'ends in 12 days']]]);
+
+  /* ---- on and off ---- */
+  const switchOf = (page, no) => page.locator('.dn-card[data-no="' + no + '"] .dn-switch');
+  const switches = page => page.locator('.dn-card').evaluateAll(cs => cs.map(c => [c.querySelector('.dn-no').textContent, c.querySelector('[data-act="onoff"]').checked, c.querySelector('.dn-switch .swl').textContent, c.querySelector('.dn-st').textContent]));
+  ok('every donation has a switch, and all start on', [(await switches(page)).every(r => r[1] === true && r[2] === 'On'), (await counts(page)).some(t => /Switched off/.test(t))], [true, false]);
+  await switchOf(page, 1).click(); await saved(page);
+  ok('switching one off keeps it in the list, marked and counted as switched off', [(await switches(page)).filter(r => r[0] === '#001')[0], (await counts(page)).filter(t => /On the board|Switched off/.test(t)), (await cards(page)).length, /^Saved/.test(await page.locator('.abar .status').textContent())],
+    [['#001', false, 'Off', 'Switched off'], ['On the board2', 'Switched off1'], 5, true]);
+  ok('and takes it off the board, though its dates have not passed', (await boardPanels(page)).map(p => p[0]).indexOf('פרנס חודש כסלו'), -1);
+  await page.reload({ waitUntil: 'networkidle' }); await enter(page);
+  ok('it is still off after the page is opened again', (await switches(page)).filter(r => r[0] === '#001')[0], ['#001', false, 'Off', 'Switched off']);
+  await page.click('[data-filter="off"]'); await page.waitForTimeout(100);
+  ok('"Switched off" lists just those', (await cards(page)).map(c => c.no), ['#001']);
+  await page.locator('.dn-card[data-no="1"] [data-act="edit"]').click(); await page.waitForTimeout(200);
+  ok('its form says why it is not on the board, and still holds everything', [await page.locator('.dn-note').textContent(), await page.inputValue('[id^="dn-name-"]')], ['This donation is switched off, so it is not on the board. Switch it on in the list to show it.', 'מו״ה יעקב יואל פריעדמאן הי״ו']);
+  await page.click('#dn-cancel'); await page.waitForTimeout(100);
+  await switchOf(page, 1).click(); await saved(page);
+  ok('switching it on again puts it back: on the board, the list back to all, the "Switched off" filter gone', [(await switches(page)).filter(r => r[0] === '#001')[0], (await counts(page)).some(t => /Switched off/.test(t)), (await cards(page)).length, (await boardPanels(page))[0][0]],
+    [['#001', true, 'On', 'On the board'], false, 5, 'פרנס חודש כסלו']);
+  await page.locator('.dn-card[data-no="1"] [data-act="onoff"]').focus(); await page.keyboard.press('Space'); await saved(page);
+  ok('the switch works from the keyboard too', (await switches(page)).filter(r => r[0] === '#001')[0][2], 'Off');
+  await switchOf(page, 1).click(); await saved(page);
 
   /* ---- copying ---- */
   await page.locator('.dn-card[data-no="2"] [data-act="copy"]').click(); await page.waitForTimeout(200);
@@ -212,7 +284,7 @@ const THREE = [
   await page.click('#dn-add'); await page.waitForTimeout(200);
   await page.locator('.dn-sheet .dn-quick .dn-chip').nth(1).click(); await page.waitForTimeout(100);
   ok('in אלול next month is תשרי of the new year, whole', [await page.locator('.dn-sheet .dn-quick .dn-chip bdi').allTextContents(), await page.locator('.dn-stage .t').textContent(),
-    await page.evaluate(() => Array.from(document.querySelectorAll('.dn-form .hebpick')).map(p => Array.from(p.querySelectorAll('select')).map(s => s.options[s.selectedIndex].text).join(' ')))],
+    await page.locator('.dn-date .dn-hebd').allTextContents()],
     [['אלול', 'תשרי'], 'פרנס חודש תשרי', ['א׳ תשרי תשפ״ח', 'ל׳ תשרי תשפ״ח']]);
   await ctx.close();
   ({ ctx, page } = await open(null, [], Date.UTC(2026, 10, 22, 4, 30))); /* Saturday night 11:30 PM in New York: still Shabbos's date, the week not yet turned */

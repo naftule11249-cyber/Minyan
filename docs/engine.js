@@ -108,6 +108,7 @@ var MinyanEngine = (function () {
     function activeNotices(rd) {
       var iso = isoDate(rd);
       return (cfg.notices || []).filter(function (n) {
+        if (n.off) return false; /* switched off in the back end: kept, not shown */
         if (!((n.body || '') + (n.name || '') + (n.lead || '')).trim()) return false; /* a name on its own is a sponsor too */
         if (n.from && iso < n.from) return false;
         if (n.to && iso > n.to) return false;
