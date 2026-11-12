@@ -415,10 +415,20 @@
       return (s.byTefilla[t.id] || []).map(function (e) { var tt = (s.tefillos && s.tefillos[t.id]) || t; return fmtTime(e.start) + (bare ? '' : (tt.milestone && e.milestone != null ? ' (' + tt.milestone + ' ' + fmtTime(e.milestone) + ')' : '') + (e.room ? ' ' + e.room : '')); }).join(' · ');
     }
     function name(s, t, suffix) { var n = ((s.tefillos && s.tefillos[t.id]) || t).name; return n !== t.name ? n : n + suffix; } /* a tefilla with a name of its own that day (מנחה וקבלת שבת) needs no ערש״ק */
+    /* the week's shiurim and the like (This week tab → "Shabbos box"), in small type under the tefilla they follow */
+    var satIso = MinyanEngine.isoDate(w.sat), extras = (cfg.shabbosExtras || []).filter(function (x) { return x && x.name && (!x.week || x.week === 'every' || x.week === satIso); });
+    function small(when) {
+      extras.filter(function (x) { return x.when === when; }).forEach(function (x) {
+        ul.appendChild(el('li', { class: 'sm' }, [el('span', null, [el('span', { class: 'sm-n', text: x.name }), x.detail ? el('span', { class: 'sm-d', text: x.detail }) : null]), el('span', { class: 'z num', text: x.time || '' })]));
+      });
+    }
     li(zmanName('candles'), fmtTime(w.candlesMin), true);
     tefillos().forEach(function (t) { if (isPmMinyan(t)) { var v = times(fs, t); if (v) li(name(fs, t, en ? ' (Friday)' : ' ערש״ק'), v); } });
-    tefillos().forEach(function (t) { if (t.kind === 'event') return; var v = times(ss, t, t.id === 'shacharis' || t.period === 'am'); if (v) li(name(ss, t, en ? ' (Shabbos)' : ' שב״ק'), v); });
+    small('fri');
+    small('morning');
+    tefillos().forEach(function (t) { if (t.kind === 'event') return; var v = times(ss, t, t.id === 'shacharis' || t.period === 'am'); if (v) li(name(ss, t, en ? ' (Shabbos)' : ' שב״ק'), v); if (t.id === 'shacharis' || t.period === 'am') small('day'); });
     li(L.motzaeiShabbos, fmtTime(w.motzash), true);
+    small('motzash');
     return ul;
   }
   function shabbosSection(w) { return el('section', { class: 'tefilla shabbos-box' }, [el('h3', { text: shabbosTitle(w) }), shabbosList(w)]); }
@@ -3023,6 +3033,35 @@
       if (touched.length > 1 || (touched.length === 1 && touched[0] !== st.iso)) row.appendChild(el('span', { class: 'hint', text: 'Also saves: ' + touched.filter(function (k2) { return k2 !== st.iso; }).map(function (k2) { return dayName(quickDays[k2].rd); }).join(', ') }));
       if (existing) row.appendChild(el('button', { type: 'button', class: 'btn', text: 'Back to the regular schedule for ' + (isToday ? 'today' : 'this day'), 'data-nodirty': '1', onclick: function () { var c = collect(); c.overrides = c.overrides.filter(function (o) { return o.date !== st.iso; }); saveConfig(c); } }));
       tp.appendChild(row);
+      tp.appendChild(shabbosExtrasCard());
+    }
+    /* the Shabbos box's small lines: shiurim, אבות ובנים, מלוה מלכה … changed from week to week, saved with the main Save */
+    var SX_WHEN = [['fri', 'Friday night'], ['morning', 'Shabbos morning'], ['day', 'After Shacharis'], ['motzash', 'Motzei Shabbos']];
+    function shabbosExtrasCard() {
+      d.shabbosExtras = d.shabbosExtras || [];
+      var c = card('Shabbos box: shiurim and more', 'Small lines in the Shabbos zmanim box on the board (from Thursday night). A line can be for every week or only for this Shabbos. Saved with Save.');
+      var list = el('div', { class: 'col sxlist' }), nextSat = todayRd + Cal.mod(6 - Cal.mod(todayRd, 7), 7), satIso = MinyanEngine.isoDate(nextSat);
+      function paint() {
+        list.textContent = '';
+        d.shabbosExtras.forEach(function (x, i) {
+          var when = el('select', { 'aria-label': 'When' }, SX_WHEN.map(function (o) { return el('option', { value: o[0], text: o[1] }); })); when.value = x.when || 'fri';
+          var nm = el('input', { type: 'text', dir: 'auto', value: x.name || '', placeholder: 'שיעור בפרשת השבוע', 'aria-label': 'Name' });
+          var tm = el('input', { type: 'text', dir: 'auto', value: x.time || '', placeholder: '8:45 / אחר התפילה', 'aria-label': 'Time', class: 'sxtime' });
+          var dt = el('input', { type: 'text', dir: 'auto', value: x.detail || '', placeholder: 'ע״י … • בחדר …', 'aria-label': 'Details' });
+          var wk = el('select', { 'aria-label': 'Which weeks' }, [el('option', { value: 'every', text: 'Every week' }), el('option', { value: satIso, text: 'Only this Shabbos' })]);
+          wk.value = x.week && x.week !== 'every' ? (x.week === satIso ? satIso : 'every') : 'every';
+          if (x.week && x.week !== 'every' && x.week !== satIso) { wk.appendChild(el('option', { value: x.week, text: 'Only ' + x.week })); wk.value = x.week; }
+          when.addEventListener('change', function () { x.when = when.value; });
+          nm.addEventListener('input', function () { x.name = nm.value; }); tm.addEventListener('input', function () { x.time = tm.value; }); dt.addEventListener('input', function () { x.detail = dt.value; });
+          wk.addEventListener('change', function () { x.week = wk.value; });
+          list.appendChild(el('div', { class: 'sxrow' }, [when, nm, tm, dt, wk, el('button', { type: 'button', class: 'btn small danger', text: 'Remove', onclick: function () { d.shabbosExtras.splice(i, 1); paint(); } })]));
+        });
+        if (!d.shabbosExtras.length) list.appendChild(el('div', { class: 'hint', text: 'No lines yet.' }));
+      }
+      paint();
+      c.body.appendChild(list);
+      c.body.appendChild(el('div', null, [el('button', { type: 'button', class: 'btn small', text: '+ Add a line', onclick: function () { d.shabbosExtras.push({ when: 'fri', name: '', time: '', detail: '', week: 'every' }); paint(); } })]));
+      return c;
     }
     renderToday();
     pages.today = tp;
@@ -3236,6 +3275,7 @@
       out.remoteConfigUrl = fRemote.value.trim();
       out.smsNumber = fSms.value.trim();
       out.smsLang = fSmsLang.value;
+      out.shabbosExtras = (d.shabbosExtras || []).filter(function (x) { return x && String(x.name || "").trim(); });
       out.shere = collectShere();
       /* A save is always newer than anything this page has seen, whatever this device's clock says: boards take the settings
          with the later stamp, so a change saved on a phone whose clock runs behind another's must still come out later. */
