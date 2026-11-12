@@ -385,11 +385,13 @@
     var tomorrow = isToday ? scheduleFor(s.rd + 1) : null, out = [], allSwitched = true;
     tefillos().forEach(function (t) {
       if (isToday && ui.shabbosWin && isPmMinyan(t)) return; /* Mincha and Maariv give their place to the Shabbos zmanim */
+      var next = tomorrow;
+      if (next && ui.shabbosWin && next.info.shabbos && t.kind !== 'event') next = scheduleFor(s.rd + 2); /* Shabbos's Shacharis is in the Shabbos box: after chatzos on Friday, Sunday's minyanim */
       var list = s.byTefilla[t.id] || [], fromTomorrow = false;
-      if (tomorrow && t.kind !== 'event' && tefillaOver(t, list, s.rd, now) && (tomorrow.byTefilla[t.id] || []).length) { list = tomorrow.byTefilla[t.id]; fromTomorrow = true; }
+      if (next && t.kind !== 'event' && tefillaOver(t, list, s.rd, now) && (next.byTefilla[t.id] || []).length) { list = next.byTefilla[t.id]; fromTomorrow = true; }
       if (!fromTomorrow && t.kind !== 'event') allSwitched = false;
-      var day = fromTomorrow ? tomorrow : s;
-      out.push({ t: (day.tefillos && day.tefillos[t.id]) || t, list: list, fromTomorrow: fromTomorrow, tomorrow: tomorrow }); /* the tefilla as that day has it: its name and second time can differ by the kind of day */
+      var day = fromTomorrow ? next : s;
+      out.push({ t: (day.tefillos && day.tefillos[t.id]) || t, list: list, fromTomorrow: fromTomorrow, tomorrow: next, todayRd: s.rd }); /* the tefilla as that day has it: its name and second time can differ by the kind of day */
     });
     if (isToday) ui.todayAllSwitched = allSwitched;
     return out;
@@ -434,7 +436,9 @@
   function shabbosSection(w) { return el('section', { class: 'tefilla shabbos-box' }, [el('h3', { text: shabbosTitle(w) }), shabbosList(w)]); }
   /* a day by the name people call it: Shabbos, a Yom Tov by its own name (פסח, שבועות …), otherwise the day of the week */
   function dayName(info) { return info.shabbos ? S().days[6] : info.yomtov && info.labels && info.labels.length ? info.labels[0] : S().days[info.dow]; }
-  function sectionTitle(x) { return x.t.kind === 'event' ? x.t.name : S().minyanim(x.t.name) + (x.fromTomorrow ? ' – ' + S().tomorrow + ', ' + dayName(x.tomorrow.info) : ''); }
+  /* "מחר, יום ראשון" — or just the day's name when it is further on (Sunday's minyanim shown on Friday afternoon) */
+  function whenLabel(x, short) { var t1 = x.tomorrow && x.tomorrow.rd === x.todayRd + 1; return short ? (t1 ? S().tomorrow : dayName(x.tomorrow.info)) : (t1 ? S().tomorrow + ', ' : '') + dayName(x.tomorrow.info); }
+  function sectionTitle(x) { return x.t.kind === 'event' ? x.t.name : S().minyanim(x.t.name) + (x.fromTomorrow ? ' – ' + whenLabel(x) : ''); }
   function entryState(e, now, up) { if (up && sameEntry(e, up.entry)) return 'next'; if (e.ms <= now) return now - e.ms < nowWindowMs() ? 'now' : 'past'; return ''; }
   function dayHead(s, isToday) { return el('div', { class: 'day-head' }, [el('h2', { text: isToday ? S().today : S().days[s.info.dow] + ' – ' + Cal.formatHeb(s.info.heb) }), el('span', { class: 'sub', text: typeLabel(s) })]); }
   /* the board's day chips: today, tomorrow and the five days after, each with its Hebrew date; a tap shows that day's minyanim and zmanim */
@@ -583,7 +587,7 @@
           r.s.rooms && r.s.rooms.length ? el('span', { class: 'rooms', text: r.s.rooms.join(' · ') }) : null]));
       });
       if (late.children.length) nodes.push(late);
-      out.push({ t: t, title: sectionTitle(x), sub: t.name + (x.fromTomorrow ? ' – ' + S().tomorrow + ', ' + dayName(x.tomorrow.info) : ''), nodes: nodes });
+      out.push({ t: t, title: sectionTitle(x), sub: t.name + (x.fromTomorrow ? ' – ' + whenLabel(x) : ''), nodes: nodes });
     });
     return out;
   }
@@ -748,7 +752,7 @@
     if (!lists.length) return wrap;
     var ids = lists.map(function (x) { return x.t.id; }), want = ui.phoneTab || (up ? up.entry.tefilla.id : null), active = ids.indexOf(want) >= 0 ? want : ids[0];
     var tabs = el('div', { class: 'ttabs', role: 'tablist' });
-    lists.forEach(function (x) { tabs.appendChild(el('button', { type: 'button', role: 'tab', 'aria-selected': String(x.t.id === active), text: x.t.name + (x.fromTomorrow ? ' · ' + S().tomorrow : ''), onclick: function () { ui.phoneTab = x.t.id; render(); } })); });
+    lists.forEach(function (x) { tabs.appendChild(el('button', { type: 'button', role: 'tab', 'aria-selected': String(x.t.id === active), text: x.t.name + (x.fromTomorrow ? ' · ' + whenLabel(x, true) : ''), onclick: function () { ui.phoneTab = x.t.id; render(); } })); });
     wrap.appendChild(tabs);
     var x = lists.filter(function (l) { return l.t.id === active; })[0], t = x.t, sec = el('section', { class: 'tefilla' });
     sec.appendChild(el('h3', null, [sectionTitle(x)]));
@@ -2908,7 +2912,7 @@
         });
         if (shown.length > MOST) chips.appendChild(el('span', { class: 'os-more', text: 'and ' + (shown.length - MOST) + ' more' })); /* a long day is told, not spelled out */
         if (!shown.length) chips.appendChild(el('span', { class: 'os-none', text: 'No frame for it right now' }));
-        rows.appendChild(el('div', { class: 'os-row' }, [el('div', { class: 'os-name', dir: 'rtl', text: x.t.name + (x.fromTomorrow ? ' – ' + S().tomorrow : '') }), chips, hid ? el('div', { class: 'os-hid', text: hid + ' not shown' }) : null]));
+        rows.appendChild(el('div', { class: 'os-row' }, [el('div', { class: 'os-name', dir: 'rtl', text: x.t.name + (x.fromTomorrow ? ' – ' + whenLabel(x, true) : '') }), chips, hid ? el('div', { class: 'os-hid', text: hid + ' not shown' }) : null]));
       });
       onScreen.textContent = '';
       onScreen.appendChild(el('div', { class: 'os-head' }, [el('span', { class: 'os-dot', 'aria-hidden': 'true' }), el('span', { class: 'os-title', text: 'On the screen now' }),
