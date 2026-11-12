@@ -2571,123 +2571,174 @@
 
     pages.notices = np;
 
-    /* shere: the barber's hours, answered in Yiddish to anyone who texts שערן (src/shere.js) */
-    var shp = el('div', { class: 'col' }), sh = MinyanShere.settings(d), EN_DOW = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    /* shere: the barber's hours, answered in Yiddish to anyone who texts שערן (src/shere.js). Laid out like the This week tab:
+       day buttons along the top, one day open at a time, its sets of hours as rows with "+ Add hours" and Remove. */
+    var shp = el('div', { class: 'col', id: 'page-shere' }), sh = MinyanShere.settings(d), EN_DOW = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Shabbos'];
+    var shToday = Cal.nowInTz(Date.now(), loc().tz).rd, shWeekState = clone(sh.week), shDaysState = {}, shPrices = Object.assign({ adult: '', kid: '', ytAdult: '', ytKid: '', ytDays: 0 }, sh.prices || {});
+    Object.keys(sh.days || {}).forEach(function (k) { if (k >= MinyanShere.iso(shToday)) shDaysState[k] = clone(sh.days[k]); }); /* past changes are dropped */
     function hhmm(min) { return min == null || !isFinite(min) ? '' : pad2(Math.floor(min / 60)) + ':' + pad2(Math.round(min) % 60); }
-    var cShText = card('Texts', 'Anyone who texts one of these words to the shul\'s number gets this week\'s shere hours, in Yiddish. Every other text is answered as before.');
+    function shOut(extra) { return Object.assign({}, d, { shere: Object.assign(collectShere(), extra || {}) }); }
+
+    /* Texts */
+    var cShText = card('Texts', 'Anyone who texts one of these words to the shul\'s number gets this week\'s shere hours and price, in Yiddish. Every other text is answered as before.');
     var fShOn = chk('sh-on', sh.on, 'Answer these texts with the shere hours');
     var fShWords = inp('sh-words', sh.words), fShNote = inp('sh-note', sh.note, { placeholder: 'optional: a line at the end of every answer' });
     var shPreview = el('pre', { class: 'shere-preview', dir: 'rtl', lang: 'yi' });
     cShText.body.appendChild(el('div', { class: 'checks' }, [fShOn]));
     cShText.body.appendChild(el('div', { class: 'fields' }, [field('Words that get the answer (separate with commas)', fShWords), field('Extra line', fShNote)]));
     cShText.body.appendChild(el('div', { class: 'field' }, [el('label', { text: 'Someone who texts now gets:' }), shPreview]));
-    /* a shere time: a clock time, or a zman with minutes before (−) or after (+) it; "Automatic" = the Erev Shabbos rule below */
+
+    /* a time: a clock time, or a zman with minutes before (−) or after (+) it; "Automatic" = the Erev Shabbos rule */
     var SH_ZMAN_EN = { alos: 'Alos', sunrise: 'Sunrise (netz)', shema: 'Sof zman Shema', tefilla: 'Sof zman tefilla', chatzos: 'Chatzos', minchag: 'Mincha gedola', minchak: 'Mincha ketana', plag: 'Plag hamincha', candles: 'Candle lighting', sunset: 'Shkiah (sunset)', tzeis: 'Tzeis', tzeis72: 'Rabbeinu Tam (72)' };
-    function shTime(id, value, auto, label) {
-      var kind = el('select', { id: id, 'aria-label': label + ': clock time or zman' }), t = el('input', { type: 'time', id: id + '-t', 'aria-label': label + ' time' }),
-        off = el('input', { type: 'number', id: id + '-o', step: '5', inputmode: 'numeric', 'aria-label': label + ': minutes before (−) or after (+) the zman', placeholder: '0' }),
+    var shUid = 0;
+    function shTime(label, value, auto, onChange, rdFn, up) {
+      var id = 'sh-t-' + (++shUid), kind = el('select', { id: id, 'aria-label': label + ': clock time or zman' }), t = el('input', { type: 'time', 'aria-label': label + ' time' }),
+        off = el('input', { type: 'number', step: '5', inputmode: 'numeric', placeholder: '0', 'aria-label': label + ': minutes before (−) or after (+) the zman' }),
         offWrap = el('span', { class: 'shoff' }, [off, el('span', { text: 'min' })]), hint = el('div', { class: 'hint shres' });
       if (auto) kind.appendChild(el('option', { value: 'auto', text: 'Automatic (before Shabbos)' }));
       kind.appendChild(el('option', { value: 'clock', text: 'Clock time' }));
       MinyanShere.ZMANIM.forEach(function (k) { kind.appendChild(el('option', { value: k, text: SH_ZMAN_EN[k] || k })); });
-      function show() { t.hidden = kind.value !== 'clock'; offWrap.hidden = kind.value === 'clock' || kind.value === 'auto'; }
-      function set(v) {
-        var p = MinyanShere.parse(v);
-        if (!p) { kind.value = auto ? 'auto' : 'clock'; t.value = ''; off.value = ''; }
-        else if (p.min != null) { kind.value = 'clock'; t.value = hhmm(p.min); off.value = ''; }
-        else { kind.value = p.zman; off.value = p.off ? String(p.off) : ''; }
-        show();
+      function get() { if (kind.value === 'auto') return ''; if (kind.value === 'clock') return t.value; var o = Math.round(+off.value) || 0; return kind.value + (o ? (o > 0 ? '+' : '') + o : ''); }
+      function paint() {
+        t.hidden = kind.value !== 'clock'; offWrap.hidden = kind.value === 'clock' || kind.value === 'auto';
+        var v = get(), p = MinyanShere.parse(v), rd = rdFn(), x;
+        if (!v) { x = MinyanShere.day(shOut(), rd, false); hint.textContent = x && x.auto != null ? '= ' + engine.fmtTime(x.auto) + ' on ' + engine.fmtDate(rd) : ''; }
+        else if (p && p.zman) { var m = MinyanShere.resolve(shOut(), rd, v, up); hint.textContent = m == null ? '' : '= ' + engine.fmtTime(m) + ' on ' + engine.fmtDate(rd); }
+        else hint.textContent = '';
       }
-      function get() {
-        if (kind.value === 'auto') return '';
-        if (kind.value === 'clock') return t.value;
-        var o = Math.round(+off.value) || 0;
-        return kind.value + (o ? (o > 0 ? '+' : '') + o : '');
-      }
-      kind.addEventListener('change', function () { if (kind.value === 'clock' && !t.value) t.value = '10:00'; show(); });
-      set(value);
-      return { wrap: el('div', { class: 'shtime' }, [el('div', { class: 'shtime-row' }, [kind, t, offWrap]), hint]), get: get, set: set, hint: hint, id: id };
+      var p0 = MinyanShere.parse(value);
+      if (!p0) { kind.value = auto ? 'auto' : 'clock'; t.value = auto ? '' : '10:00'; } else if (p0.min != null) { kind.value = 'clock'; t.value = hhmm(p0.min); } else { kind.value = p0.zman; off.value = p0.off ? String(p0.off) : ''; }
+      kind.addEventListener('change', function () { if (kind.value === 'clock' && !t.value) t.value = '10:00'; onChange(get()); paint(); });
+      t.addEventListener('change', function () { onChange(get()); paint(); });
+      off.addEventListener('input', function () { onChange(get()); paint(); });
+      paint();
+      return el('div', { class: 'field shtime' }, [el('label', { for: id, text: label }), el('div', { class: 'shtime-row' }, [kind, t, offWrap]), hint]);
     }
-    function shField(label, w) { return el('div', { class: 'field' }, [el('label', { for: w.id, text: label }), w.wrap]); }
-    var cShWeek = card('Regular weekly hours', 'Used every week, unless one day is changed below. Each time is a clock time or a zman with minutes before (−30) or after (+30) it. Shabbos and Yom Tov are left out by themselves; Erev Yom Tov closes before the zman, like Friday.');
-    var shWeek = sh.week.map(function (w, i) {
-      var r = { open: el('input', { type: 'checkbox', id: 'sh-open-' + i }), from: shTime('sh-from-' + i, w.from, false, 'From'), until: shTime('sh-until-' + i, w.until, i === 5, 'Until'), kids: el('input', { type: 'checkbox', id: 'sh-kids-' + i }) };
-      r.open.checked = !!w.open; r.kids.checked = !!w.kids;
-      cShWeek.body.appendChild(el('div', { class: 'shwk' }, [el('div', { class: 'shname' }, [el('b', { text: EN_DOW[i] })]),
-        el('label', { for: r.open.id, class: 'shchk' }, [r.open, ' Open']), shField('From', r.from), shField('Until', r.until),
-        el('label', { for: r.kids.id, class: 'shchk' }, [r.kids, ' Kids too'])]));
-      return r;
-    });
-    var cShZman = card('Erev Shabbos and Erev Yom Tov', 'When "Automatic" closes: this many minutes before the zman, every Friday and Erev Yom Tov. Zman times are rounded to the minutes below (a start up, an end down).');
+    /* the sets of hours of one day, as rows; "+ Add hours" for a second set (Friday morning and afternoon) */
+    function rangesEditor(list, opts, changed) {
+      var box = el('div', { class: 'col shranges' });
+      function paint() {
+        box.textContent = '';
+        list.forEach(function (r, i) {
+          var kids = el('input', { type: 'checkbox', id: 'sh-k-' + (++shUid) }); kids.checked = !!r.kids;
+          kids.addEventListener('change', function () { r.kids = kids.checked; changed(); });
+          box.appendChild(el('div', { class: 'shrange' }, [
+            el('div', { class: 'shnum', text: list.length > 1 ? (i === 0 ? 'Morning' : i === 1 ? 'Afternoon' : 'Hours ' + (i + 1)) : 'Hours' }),
+            shTime('From', r.from, false, function (v) { r.from = v || '10:00'; changed(); }, opts.rd, true),
+            shTime('Until', r.until, opts.auto, function (v) { r.until = v; changed(); }, opts.rd, false),
+            el('label', { for: kids.id, class: 'shchk' }, [kids, ' Kids too']),
+            list.length > 1 ? el('button', { type: 'button', class: 'btn small danger', text: 'Remove', onclick: function () { list.splice(i, 1); paint(); changed(); } }) : el('span')]));
+        });
+        if (!list.length) box.appendChild(el('div', { class: 'hint', text: 'No hours yet.' }));
+        box.appendChild(el('div', null, [el('button', { type: 'button', class: 'btn small', text: '+ Add hours', onclick: function () {
+          var last = list[list.length - 1], lp = last && MinyanShere.parse(last.until);
+          list.push({ from: lp && lp.min != null ? last.until : '13:00', until: opts.auto ? '' : '18:00', kids: last ? last.kids : true });
+          if (last && opts.auto && !last.until) last.until = '12:00'; /* the automatic end moves to the new last set */
+          paint(); changed();
+        } })]));
+      }
+      paint();
+      return box;
+    }
+
+    /* Regular hours: Sunday to Friday, one at a time */
+    var cShWeek = card('Regular hours', 'Every week, unless a date is changed in the calendar. A day can have more than one set of hours, like Friday morning and afternoon: "+ Add hours". Each time is a clock time or a zman with minutes before (−30) or after (+30) it.');
+    var shWeekDay = ui.shWeekDay == null ? 5 : ui.shWeekDay, shWeekChips = el('div', { class: 'daychips', role: 'tablist' }), shWeekBody = el('div', { class: 'col' });
+    function nextOf(dow) { return shToday + Cal.mod(dow - Cal.mod(shToday, 7), 7); }
+    function paintWeek() {
+      shWeekChips.textContent = '';
+      EN_DOW.slice(0, 6).forEach(function (n, i) {
+        var w = shWeekState[i];
+        shWeekChips.appendChild(el('button', { type: 'button', role: 'tab', class: 'daychip' + (i === shWeekDay ? ' on' : ''), 'aria-selected': String(i === shWeekDay), 'data-nodirty': '1', onclick: function () { shWeekDay = ui.shWeekDay = i; paintWeek(); } }, [
+          el('span', { class: 'dc-day', text: n }), el('span', { class: 'dc-date', text: !w.open ? 'Closed' : w.ranges.length > 1 ? w.ranges.length + ' sets of hours' : 'Open' })]));
+      });
+      shWeekBody.textContent = '';
+      var w = shWeekState[shWeekDay], open = el('input', { type: 'checkbox', id: 'sh-wopen' }); open.checked = !!w.open;
+      open.addEventListener('change', function () { w.open = open.checked; if (w.open && !w.ranges.length) w.ranges.push({ from: '10:00', until: shWeekDay === 5 ? '' : '20:00', kids: true }); paintWeek(); paintShere(); });
+      shWeekBody.appendChild(el('div', { class: 'checks' }, [el('label', { for: open.id }, [open, ' Open on ' + EN_DOW[shWeekDay]])]));
+      if (w.open) shWeekBody.appendChild(rangesEditor(w.ranges, { auto: shWeekDay === 5, rd: function () { return nextOf(shWeekDay); } }, function () { paintShere(); paintChipsOnly(); }));
+    }
+    function paintChipsOnly() { Array.prototype.forEach.call(shWeekChips.children, function (b, i) { var w = shWeekState[i]; b.lastChild.textContent = !w.open ? 'Closed' : w.ranges.length > 1 ? w.ranges.length + ' sets of hours' : 'Open'; }); }
+    cShWeek.body.appendChild(shWeekChips); cShWeek.body.appendChild(shWeekBody);
+
+    /* Calendar: any date can have its own hours, price, a note, or be closed */
+    var cShCal = card('Calendar: special dates', 'Pick a date to give it its own hours, price or note, or to close it. Shabbos and Yom Tov are closed by themselves; Erev Yom Tov is marked. A gold dot is a date you changed.');
+    var shCalBox = el('div', { class: 'col' }), shSel = ui.shSel && ui.shSel >= shToday ? ui.shSel : shToday;
+    function firstOfMonth(rd) { var g = Cal.gregFromRD(rd); return Cal.rdFromGreg(g.y, g.m, 1); }
+    var shMonthRd = ui.shMonth && ui.shMonth >= firstOfMonth(shToday) ? ui.shMonth : firstOfMonth(shSel);
+    function paintCal() {
+      shCalBox.textContent = '';
+      var g = Cal.gregFromRD(shMonthRd), monthName = new Date(Date.UTC(g.y, g.m - 1, 1)).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+      var h0 = Cal.hebFromRD(shMonthRd), h1 = Cal.hebFromRD(shMonthRd + 27), hebName = Cal.monthName(h0.y, h0.m) + (h1.m !== h0.m ? ' – ' + Cal.monthName(h1.y, h1.m) : '') + ' ' + Cal.gematria(h1.y % 1000);
+      shCalBox.appendChild(el('div', { class: 'shcal-head' }, [
+        el('button', { type: 'button', class: 'btn small', 'data-nodirty': '1', text: '‹', 'aria-label': 'Previous month', disabled: shMonthRd > firstOfMonth(shToday) ? null : 'disabled', onclick: function () { shMonthRd = ui.shMonth = firstOfMonth(shMonthRd - 1); paintCal(); } }),
+        el('div', { class: 'shcal-title' }, [el('b', { text: monthName }), el('span', { dir: 'rtl', text: hebName })]),
+        el('button', { type: 'button', class: 'btn small', 'data-nodirty': '1', text: '›', 'aria-label': 'Next month', onclick: function () { shMonthRd = ui.shMonth = firstOfMonth(shMonthRd + 31); paintCal(); } })]));
+      var grid = el('div', { class: 'shcal' });
+      ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Shab'].forEach(function (n) { grid.appendChild(el('div', { class: 'shcal-dow', text: n })); });
+      for (var k = 0; k < Cal.mod(shMonthRd, 7); k++) grid.appendChild(el('div'));
+      for (var rd = shMonthRd; Cal.gregFromRD(rd).m === g.m; rd++) (function (rd) {
+        var info = Cal.dayInfo(rd, !!d.israel), holy = info.shabbos || info.yomtov, past = rd < shToday, iso = MinyanShere.iso(rd), h = Cal.hebFromRD(rd);
+        var tag = info.yomtov ? info.labels[0] : info.candles === 'day' && Cal.mod(rd, 7) !== 5 ? 'ערב יו״ט' : MinyanShere.price(shOut(), rd).yt ? '$ יו״ט' : '';
+        grid.appendChild(el('button', { type: 'button', class: 'shcal-day' + (holy ? ' holy' : '') + (past ? ' past' : '') + (rd === shSel ? ' on' : '') + (shDaysState[iso] ? ' has' : '') + (rd === shToday ? ' today' : ''),
+          'data-nodirty': '1', disabled: holy || past ? 'disabled' : null, 'aria-label': engine.fmtDate(rd) + (tag ? ' ' + tag : ''), 'aria-pressed': String(rd === shSel), onclick: function () { shSel = ui.shSel = rd; paintCal(); } }, [
+          el('span', { class: 'n', text: String(Cal.gregFromRD(rd).d) }), el('span', { class: 'h', text: Cal.gematria(h.d) }), tag ? el('span', { class: 't', text: tag }) : null]));
+      })(rd);
+      shCalBox.appendChild(grid);
+      shCalBox.appendChild(dayEditor(shSel));
+    }
+    function dayEditor(rd) {
+      var iso = MinyanShere.iso(rd), base = MinyanShere.day(shOut({ days: {} }), rd, false);
+      if (!base) return el('div', { class: 'hint', text: 'Shabbos and Yom Tov are closed by themselves.' });
+      var bp = MinyanShere.price(shOut({ days: {} }), rd);
+      var st = shDaysState[iso] ? clone(shDaysState[iso]) : { closed: !base.open, ranges: clone(base.specs), note: '', price: {} };
+      st.ranges = MinyanShere.rangesOf(st, base.specs); st.price = st.price || {};
+      var wrap = el('div', { class: 'shday' + (shDaysState[iso] ? ' changed' : '') });
+      var back = el('button', { type: 'button', class: 'btn small', text: 'Back to regular', onclick: function () { delete shDaysState[iso]; paintCal(); paintShere(); } });
+      back.hidden = !shDaysState[iso];
+      function save() { shDaysState[iso] = { closed: st.closed, ranges: clone(st.ranges), note: st.note, price: clone(st.price) }; wrap.classList.add('changed'); back.hidden = false; var cell = $('.shcal-day.on', shCalBox); if (cell) cell.classList.add('has'); paintShere(); }
+      var closed = el('input', { type: 'checkbox', id: 'sh-dclosed' }); closed.checked = !!st.closed;
+      var hoursBox = rangesEditor(st.ranges, { auto: base.erev, rd: function () { return rd; } }, save); hoursBox.hidden = !!st.closed;
+      closed.addEventListener('change', function () { st.closed = closed.checked; hoursBox.hidden = st.closed; save(); });
+      var note = inp('sh-dnote', st.note, { placeholder: 'optional' }); note.addEventListener('input', function () { st.note = note.value.trim(); save(); });
+      var pa = inp('sh-dprice', st.price.adult || '', { inputmode: 'decimal', placeholder: bp.adult || 'none' }), pk = inp('sh-dpricek', st.price.kid || '', { inputmode: 'decimal', placeholder: bp.kid || 'none' });
+      pa.addEventListener('input', function () { st.price.adult = pa.value.trim(); save(); }); pk.addEventListener('input', function () { st.price.kid = pk.value.trim(); save(); });
+      wrap.appendChild(el('div', { class: 'shday-head' }, [el('div', null, [el('div', { class: 'd', text: EN_DOW[base.dow] + ' · ' + engine.fmtDate(rd) }), el('div', { class: 'cdesc', dir: 'rtl', text: base.label + ' · ' + base.heb })]), back]));
+      wrap.appendChild(el('div', { class: 'checks' }, [el('label', { for: closed.id }, [closed, ' Closed this day'])]));
+      wrap.appendChild(hoursBox);
+      wrap.appendChild(el('div', { class: 'fields' }, [field('Note for this day', note), field('Price this day' + (bp.yt ? ' (before Yom Tov)' : ''), pa), field('Kids this day', pk)]));
+      return wrap;
+    }
+    cShCal.body.appendChild(shCalBox);
+
+    /* Prices */
+    var cShPrice = card('Prices', 'Said with the hours. Before Yom Tov the price can go up: from the number of days you set, through Erev Yom Tov. A date in the calendar can have its own price. Leave a box empty to say nothing.', F);
+    function moneyInp(key, ph) { var i = inp('sh-p-' + key, shPrices[key], { inputmode: 'decimal', placeholder: ph }); i.addEventListener('input', function () { shPrices[key] = i.value.trim(); }); return i; }
+    var fYtDays = inp('sh-p-ytdays', shPrices.ytDays || 0, { type: 'number', min: '0', max: '30', inputmode: 'numeric' });
+    fYtDays.addEventListener('input', function () { shPrices.ytDays = Math.max(0, Math.min(30, Math.round(+fYtDays.value) || 0)); paintCal(); });
+    cShPrice.body.appendChild(el('div', { class: 'fields' }, [field('Regular price', moneyInp('adult', '$15')), field('Kids', moneyInp('kid', '$10'))]));
+    cShPrice.body.appendChild(el('div', { class: 'fields' }, [field('Before Yom Tov', moneyInp('ytAdult', '$20')), field('Kids before Yom Tov', moneyInp('ytKid', '$15')),
+      field('Days before Yom Tov the higher price starts (0 = Erev Yom Tov only)', stepper(fYtDays, 1))]));
+
+    /* Erev Shabbos and Erev Yom Tov */
+    var cShZman = card('Erev Shabbos and Erev Yom Tov', '"Automatic" closes this many minutes before the zman, every Friday and Erev Yom Tov. Times by a zman are rounded to the minutes below (a start up, an end down).', F);
     var fShZman = el('select', { id: 'sh-zman' }, [el('option', { value: 'candles', text: 'Candle lighting' }), el('option', { value: 'sunset', text: 'Sunset (shkiah)' })]); fShZman.value = sh.zman === 'sunset' ? 'sunset' : 'candles';
     var fShBefore = inp('sh-before', sh.before, { type: 'number', min: '0', max: '600', inputmode: 'numeric' }), fShRound = inp('sh-round', sh.round, { type: 'number', min: '1', max: '30', inputmode: 'numeric' });
     cShZman.body.appendChild(el('div', { class: 'fields' }, [field('Minutes before', stepper(fShBefore, 5)), field('Counted from', fShZman), field('Round to (minutes)', fShRound)]));
-    function shereNoDays() {
+
+    function collectShere() {
+      var days = {};
+      Object.keys(shDaysState).forEach(function (k) { if (k >= MinyanShere.iso(shToday)) days[k] = shDaysState[k]; });
       return { on: $('#sh-on', shp).checked, words: fShWords.value.trim(), note: fShNote.value.trim(), zman: fShZman.value,
         before: Math.max(0, Math.min(600, Math.round(+fShBefore.value) || 0)), round: Math.max(1, Math.min(30, Math.round(+fShRound.value) || 1)),
-        week: shWeek.map(function (r) { return { open: r.open.checked, from: r.from.get() || '10:00', until: r.until.get(), kids: r.kids.checked }; }), days: {} };
-    }
-    var cShDays = card('One day different', 'Change the hours, kids or a note for one day, or close it. Only that day changes; "Back to regular" undoes it.');
-    var shDays = [], shToday = Cal.nowInTz(Date.now(), loc().tz).rd;
-    for (var shi = 0; shi < 15; shi++) (function (rd) {
-      var x = MinyanShere.day(d, rd); if (!x) return;
-      var r = { rd: rd, date: x.date, erev: x.erev, touched: false, reset: false, from: shTime('sh-d-from-' + rd, x.fromSpec, false, 'From'), until: shTime('sh-d-until-' + rd, x.untilSpec, x.erev, 'Until'),
-        kids: el('select', { id: 'sh-d-kids-' + rd }, [el('option', { value: 'yes', text: 'Kids too' }), el('option', { value: 'no', text: 'No kids' })]),
-        closed: el('input', { type: 'checkbox', id: 'sh-d-closed-' + rd }), note: inp('sh-d-note-' + rd, x.note, { placeholder: 'optional' }) };
-      r.kids.value = x.kids ? 'yes' : 'no'; r.closed.checked = !x.open;
-      var tag = el('span', { class: 'shtag', text: 'changed' }), back = el('button', { type: 'button', class: 'btn small', text: 'Back to regular' });
-      var row = el('div', { class: 'shdayrow' }, [el('div', { class: 'shname' }, [el('b', { text: EN_DOW[x.dow] + ', ' + engine.fmtDate(rd) }), el('span', { dir: 'rtl', text: x.label + ' · ' + x.heb }), tag]),
-        el('div', { class: 'shfields' }, [shField('From', r.from), shField('Until', r.until), field('Kids', r.kids), field('Note', r.note), el('label', { for: r.closed.id, class: 'shchk' }, [r.closed, ' Closed']), back])]);
-      function mark(on) { row.classList.toggle('changed', on); tag.hidden = !on; back.hidden = !on; }
-      mark(x.changed);
-      row.addEventListener('input', function () { r.touched = true; r.reset = false; mark(true); });
-      row.addEventListener('change', function () { r.touched = true; r.reset = false; mark(true); });
-      back.addEventListener('click', function () {
-        r.touched = false; r.reset = true; mark(false);
-        var b = MinyanShere.day(Object.assign({}, d, { shere: shereNoDays() }), rd, false);
-        if (b) { r.from.set(b.fromSpec); r.until.set(b.untilSpec); r.kids.value = b.kids ? 'yes' : 'no'; r.closed.checked = !b.open; r.note.value = ''; }
-        paintShere();
-      });
-      shDays.push(r); cShDays.body.appendChild(row);
-    })(shToday + shi);
-    function collectShere() {
-      var s = shereNoDays(), probe = Object.assign({}, d, { shere: s }), byDate = {};
-      shDays.forEach(function (r) { byDate[r.date] = r; });
-      Object.keys(sh.days || {}).forEach(function (k) { if (!byDate[k] && k >= MinyanShere.iso(shToday)) s.days[k] = sh.days[k]; }); /* changes further ahead stay; past ones are dropped */
-      shDays.forEach(function (r) {
-        if (r.reset) return;
-        if (!r.touched) { if (sh.days[r.date]) s.days[r.date] = sh.days[r.date]; return; }
-        var b = MinyanShere.day(probe, r.rd, false); if (!b) return;
-        var o = { closed: r.closed.checked, note: r.note.value.trim(), from: '', until: '', kids: '' }, f = r.from.get(), u = r.until.get();
-        if (f && f !== b.fromSpec) o.from = f;
-        if (u !== b.untilSpec && (u || !b.erev)) o.until = u; /* "Automatic" only means something on an Erev */
-        if ((r.kids.value === 'yes') !== b.kids) o.kids = r.kids.value;
-        if (!b.open && !o.closed && !o.from && !o.until) o.from = b.fromSpec; /* opening a day that is normally closed */
-        if (o.closed || o.note || o.from || o.until || o.kids) s.days[r.date] = o;
-      });
-      return s;
-    }
-    /* under each time, what it comes to: for a day row that date, for a weekly row the coming one */
-    function paintTimes(s) {
-      var probe = Object.assign({}, d, { shere: s });
-      function res(w, rd, up) { var v = w.get(); if (!v) return 'automatic'; var m = MinyanShere.resolve(probe, rd, v, up); return m == null ? '' : engine.fmtTime(m); }
-      shWeek.forEach(function (r, i) {
-        var rd = shToday + Cal.mod(i - Cal.mod(shToday, 7), 7), x = MinyanShere.day(probe, rd, false);
-        r.from.hint.textContent = MinyanShere.parse(r.from.get()) && MinyanShere.parse(r.from.get()).zman ? 'This ' + EN_DOW[i] + ': ' + res(r.from, rd, true) : '';
-        r.until.hint.textContent = (!r.until.get() && x ? 'This ' + EN_DOW[i] + ': ' + engine.fmtTime(x.until) : MinyanShere.parse(r.until.get()) && MinyanShere.parse(r.until.get()).zman ? 'This ' + EN_DOW[i] + ': ' + res(r.until, rd, false) : '');
-      });
-      shDays.forEach(function (r) {
-        var x = MinyanShere.day(probe, r.rd, false);
-        r.from.hint.textContent = MinyanShere.parse(r.from.get()) && MinyanShere.parse(r.from.get()).zman ? '= ' + res(r.from, r.rd, true) : '';
-        r.until.hint.textContent = !r.until.get() ? (x ? '= ' + engine.fmtTime(x.auto) : '') : MinyanShere.parse(r.until.get()) && MinyanShere.parse(r.until.get()).zman ? '= ' + res(r.until, r.rd, false) : '';
-      });
+        prices: clone(shPrices), week: clone(shWeekState), days: days };
     }
     function paintShere() {
-      try { var cs = collectShere(); shPreview.textContent = MinyanShere.text(Object.assign({}, d, { shere: cs }), Date.now()); paintTimes(cs); } catch (e) { shPreview.textContent = '—'; }
+      try { shPreview.textContent = MinyanShere.text(shOut(), Date.now()); } catch (e) { shPreview.textContent = '—'; }
     }
     shp.addEventListener('input', paintShere); shp.addEventListener('change', paintShere);
-    [cShText, cShWeek, cShZman, cShDays].forEach(function (c) { shp.appendChild(c); });
-    paintShere();
+    [cShText, cShWeek, cShCal, cShPrice, cShZman].forEach(function (c) { shp.appendChild(c); });
+    paintWeek(); paintCal(); paintShere();
     pages.shere = shp;
 
     /* the hallway screen: its colours, and which minyanim it shows */

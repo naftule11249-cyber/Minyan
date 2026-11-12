@@ -71,18 +71,19 @@ The Schedule tab has a page for every kind of day. **Erev Shabbos (Friday)**, **
 
 ## Shere (the barber's hours)
 
-The admin page's **Shere** tab sets the barber's hours, and anyone who texts **שערן** (or another word listed there) to the shul's number gets the rest of this week's hours back, in Yiddish:
+The admin page's **Shere** tab sets the barber's hours and prices, and anyone who texts **שערן** (or another word listed there) to the shul's number gets the rest of this week back, in Yiddish:
 
 ```
 שערן די וואך:
 היינט, זונטאג ביז מיטוואך: פון 10:00 ביז 8:00, אויך קינדער
 דאנערשטאג: פון 10:00 ביז 9:00, אויך קינדער
-ערב שבת פרשת ויצא (י׳ כסלו): פון 8:00 ביז 3:15, נישט פאר קינדער
+ערב שבת פרשת ויצא (י׳ כסלו): פון 8:00 ביז 12:00, אויך קינדער; פון 1:30 ביז 3:15, נישט פאר קינדער
+פרייז: $15, קינדער $10
 ```
 
-- **Regular weekly hours**: Sunday to Friday, open or not, from, until, and whether kids come too. Every from and until is a clock time or a zman with minutes before or after it (`sunset-30`, `sunrise+20`, `plag`), rounded to the tab's minutes. Friday's "until" set to Automatic closes a set number of minutes before candle lighting (or sunset).
-- **Erev Yom Tov** is found by itself and closes before the zman like Friday; Shabbos and Yom Tov are left out.
-- **One day different**: the next two weeks, each day with its own hours, kids, a note, or Closed; "Back to regular" undoes it.
+- **Regular hours**: Sunday to Friday, one day at a time (like the This week tab). A day can have more than one set of hours (Friday morning and afternoon), each with its own "kids too". Every from and until is a clock time or a zman with minutes before or after it (`sunset-30`, `sunrise+20`, `plag`); Friday's last "until" can be Automatic: a set number of minutes before candle lighting or sunset.
+- **Calendar: special dates**: a month calendar with the Hebrew dates. Any date can get its own hours, price or note, or be closed; Shabbos and Yom Tov are closed by themselves and Erev Yom Tov is marked.
+- **Prices**: a regular price and a kids' price, and a higher price before Yom Tov, from a number of days before it through Erev Yom Tov.
 - It is off until "Answer these texts" is ticked; every other text is answered as before. The logic is `src/shere.js`, used by the admin preview and the text responder alike.
 
 ## Quick changes for today
