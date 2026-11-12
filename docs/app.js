@@ -411,13 +411,13 @@
   function shabbosList(w) {
     var ul = el('ul', { class: 'zlist shabbos-z' }), L = S(), en = L.today === 'Today', fs = scheduleFor(w.fri), ss = scheduleFor(w.sat);
     function li(label, value, hi) { ul.appendChild(el('li', hi ? { class: 'hi' } : null, [el('span', { text: label }), el('span', { class: 'z num', text: value })])); }
-    function times(s, t) {
-      return (s.byTefilla[t.id] || []).map(function (e) { var tt = (s.tefillos && s.tefillos[t.id]) || t; return fmtTime(e.start) + (tt.milestone && e.milestone != null ? ' (' + tt.milestone + ' ' + fmtTime(e.milestone) + ')' : '') + (e.room ? ' ' + e.room : ''); }).join(' · ');
+    function times(s, t, bare) { /* bare: the start time alone, as Shabbos Shacharis is given (ברכות only, no room) */
+      return (s.byTefilla[t.id] || []).map(function (e) { var tt = (s.tefillos && s.tefillos[t.id]) || t; return fmtTime(e.start) + (bare ? '' : (tt.milestone && e.milestone != null ? ' (' + tt.milestone + ' ' + fmtTime(e.milestone) + ')' : '') + (e.room ? ' ' + e.room : '')); }).join(' · ');
     }
     function name(s, t, suffix) { var n = ((s.tefillos && s.tefillos[t.id]) || t).name; return n !== t.name ? n : n + suffix; } /* a tefilla with a name of its own that day (מנחה וקבלת שבת) needs no ערש״ק */
     li(zmanName('candles'), fmtTime(w.candlesMin), true);
     tefillos().forEach(function (t) { if (isPmMinyan(t)) { var v = times(fs, t); if (v) li(name(fs, t, en ? ' (Friday)' : ' ערש״ק'), v); } });
-    tefillos().forEach(function (t) { if (t.kind === 'event') return; var v = times(ss, t); if (v) li(name(ss, t, en ? ' (Shabbos)' : ' שב״ק'), v); });
+    tefillos().forEach(function (t) { if (t.kind === 'event') return; var v = times(ss, t, t.id === 'shacharis' || t.period === 'am'); if (v) li(name(ss, t, en ? ' (Shabbos)' : ' שב״ק'), v); });
     li(L.motzaeiShabbos, fmtTime(w.motzash), true);
     return ul;
   }

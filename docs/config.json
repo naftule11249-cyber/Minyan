@@ -61,7 +61,7 @@
    "maariv": "#off 07:00"
   },
   "shabbos": {
-   "shacharis": "#off 08:00 ברך משה // example\n#off 09:00 דברי יואל // example\n09:30 היכל אדל // example\n#off 10:00 שלמה יודא // example",
+   "shacharis": "#off 08:00 ברך משה // example\n#off 09:00 דברי יואל // example\n09:30\n#off 10:00 שלמה יודא // example",
    "mincha": "fricandles+35^5",
    "maariv": "#off 07:00"
   },
@@ -134,7 +134,7 @@
  "overrides": [],
  "smsNumber": "+1 929 828 7677",
  "remoteConfigUrl": "",
- "savedAt": 1794506683833,
+ "savedAt": 1794506884958,
  "siteUrl": "https://minyan.cascadeshul.org/",
  "logo": "",
  "wallLogo": "logo-name.png",
