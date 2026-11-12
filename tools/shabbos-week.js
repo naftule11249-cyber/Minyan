@@ -38,6 +38,7 @@ const args = process.argv.slice(2), arg = k => { const i = args.indexOf(k); retu
     shacharis: sh ? t(sh.start) : '',
     hodu: sh && sh.milestone != null ? t(sh.milestone) : '',
     minchaShabbos: mS ? t(mS.start) : '',
+    extras: (cfg.shabbosExtras || []).filter(x => x && x.name && (!x.week || x.week === 'every' || x.week === MinyanEngine.isoDate(sat))).map(x => ({ when: x.when, name: x.name, time: x.time || '', detail: x.detail || '' })), /* This week tab → Shabbos box lines */
     friday: { mincha: list(fs_, 'mincha'), maariv: list(fs_, 'maariv') },
     shabbosDay: { shacharis: list(ss, 'shacharis'), mincha: list(ss, 'mincha'), maariv: list(ss, 'maariv') }
   };
