@@ -366,11 +366,18 @@
   function amidahMinutes() { var m = cfg.amidahMinutes; return m == null || m === '' || isNaN(+m) ? 15 : Math.max(0, +m); }
   function nowWindowMs() { var m = cfg.nowMinutes; m = (m == null || m === '') ? 20 : +m; return (isNaN(m) || m < 0 ? 20 : m) * 60000; }
   /* per tefilla: today's list, or tomorrow's once all of today's minyanim are over (after chatzos for Shacharis) */
+  /* today's Shacharis stays on the board until chatzos, even after its last minyan, before tomorrow's takes its place */
+  function staysUntil(t, rd) {
+    if (t.id !== 'shacharis' && t.period !== 'am') return 0;
+    var c = zmanimFor(rd).chatzos;
+    return isFinite(c) ? Cal.epochFromWall(rd, c, loc().tz) : 0;
+  }
+  function tefillaOver(t, list, rd, now) { return list.every(function (e) { return now - e.ms >= nowWindowMs(); }) && now >= staysUntil(t, rd); }
   function tefillaLists(s, now, isToday) {
     var tomorrow = isToday ? scheduleFor(s.rd + 1) : null, out = [], allSwitched = true;
     tefillos().forEach(function (t) {
       var list = s.byTefilla[t.id] || [], fromTomorrow = false;
-      if (tomorrow && t.kind !== 'event' && list.every(function (e) { return now - e.ms >= nowWindowMs(); }) && (tomorrow.byTefilla[t.id] || []).length) { list = tomorrow.byTefilla[t.id]; fromTomorrow = true; }
+      if (tomorrow && t.kind !== 'event' && tefillaOver(t, list, s.rd, now) && (tomorrow.byTefilla[t.id] || []).length) { list = tomorrow.byTefilla[t.id]; fromTomorrow = true; }
       if (!fromTomorrow && t.kind !== 'event') allSwitched = false;
       var day = fromTomorrow ? tomorrow : s;
       out.push({ t: (day.tefillos && day.tefillos[t.id]) || t, list: list, fromTomorrow: fromTomorrow, tomorrow: tomorrow }); /* the tefilla as that day has it: its name and second time can differ by the kind of day */
@@ -399,7 +406,7 @@
     wrap.appendChild(dayHead(s, isToday));
     tefillaLists(s, now, isToday).forEach(function (x) {
       var t = x.t, list = x.list, sec = el('section', { class: 'tefilla' + (x.fromTomorrow || !isToday ? ' tomo' : '') });
-      if ($('#app').classList.contains('display') && !x.fromTomorrow && list.every(function (e) { return e.ms <= now && now - e.ms >= nowWindowMs(); })) return;
+      if ($('#app').classList.contains('display') && !x.fromTomorrow && list.every(function (e) { return e.ms <= now; }) && tefillaOver(t, list, s.rd, now)) return;
       sec.appendChild(el('h3', null, [sectionTitle(x)]));
       if (!list.length) { sec.appendChild(el('div', { class: 'none', text: S().none })); }
       else {
