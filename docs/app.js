@@ -1461,7 +1461,7 @@
       ['minchak', 'Mincha ketana (MGA 72)'], ['plag', 'Plag hamincha'], ['candles', 'Candle lighting'], ['sunset', 'Sunset (shkiah)'], ['tzeis', 'Nightfall (tzeis)'], ['tzeis60', 'Sunset + 60 min'], ['tzeis72', 'Rabbeinu Tam (72 min)']];
     var ZWORD = { sunrise: 'sunrise', alos: 'alos', shema: 'shema', tefilla: 'tefilla', chatzos: 'chatzos', minchag: 'minchag', minchak: 'minchak', plag: 'plag', candles: 'candles', sunset: 'sunset', tzeis: 'tzeis', tzeis60: 'tzeis60', tzeis72: 'rt' };
     function hhmm(min) { min = Math.round(min); return pad2(Math.floor(min / 60) % 24) + ':' + pad2(min % 60); }
-    function specToRow(spec) { return spec.kind === 'fixed' ? { kind: 'fixed', time: hhmm(spec.min), off: 0, round: false } : { kind: spec.zman, time: '', off: spec.offset || 0, round: !!spec.round }; }
+    function specToRow(spec) { return spec.kind === 'fixed' ? { kind: 'fixed', time: hhmm(spec.min), off: 0, round: false } : { kind: spec.zman, time: '', off: spec.offset || 0, round: spec.round || 0, roundUp: !!spec.roundUp }; }
     function lineToRow(line, tf) {
       var off = false, m0 = /^#\s*off\s+(\S.*)$/i.exec(line.trim());
       if (m0) { off = true; line = m0[1]; } /* a switched-off row: kept in the text, ignored by the board */
@@ -1483,7 +1483,7 @@
     /* the row's "show only" condition: {op: 'until'|'after', zman, off} or null */
     function condOf(p) { return p.cond ? { op: p.cond.op, zman: p.cond.spec.zman, off: p.cond.spec.offset || 0 } : null; }
     function condTok(r) { return r.cond && r.cond.op ? ' ' + r.cond.op + ' ' + (ZWORD[r.cond.zman] || r.cond.zman) + (r.cond.off ? (r.cond.off < 0 ? '-' : '+') + Math.abs(r.cond.off) : '') : ''; }
-    function tokOf(w) { return w.kind === 'fixed' ? (w.time || '07:00') : (ZWORD[w.kind] + (w.off ? (w.off < 0 ? '-' : '+') + Math.abs(w.off) : '') + (w.round ? '~5' : '')); }
+    function tokOf(w) { return w.kind === 'fixed' ? (w.time || '07:00') : (ZWORD[w.kind] + (w.off ? (w.off < 0 ? '-' : '+') + Math.abs(w.off) : '') + (w.round ? (w.roundUp ? '^' : '~') + (w.round === true ? 5 : w.round) : '')); }
     /* clean = without the "#off" marker (for previews and sorting) */
     function rowToLine(r, clean) {
       var pre = r.disabled && !clean ? '#off ' : '';
@@ -1556,14 +1556,20 @@
         var sign = el('select', { 'aria-label': 'Before or after' }, [el('option', { value: '-', text: 'min before' }), el('option', { value: '+', text: 'min after' })]);
         sign.value = w.off < 0 ? '-' : '+';
         var mins = el('input', { type: 'number', min: '0', step: '1', inputmode: 'numeric', class: 'mins', value: String(Math.abs(w.off || 0)), 'aria-label': 'Minutes' }), minsW = stepper(mins, 5);
-        var roundC = el('input', { type: 'checkbox' }); roundC.checked = !!w.round;
-        var roundL = el('label', { class: 'small' }, [roundC, ' ' + (roundLabel || 'round to 5')]);
+        /* rounding: none, or down / up to 5, 10, 15 or 30 minutes ("~5" / "^5" in the text form) */
+        var roundC = el('select', { 'aria-label': 'Rounding', class: 'roundsel' }, [el('option', { value: '', text: 'no rounding' })].concat(
+          [5, 10, 15, 30].map(function (n) { return el('option', { value: 'd' + n, text: 'round down to ' + n }); }),
+          [5, 10, 15, 30].map(function (n) { return el('option', { value: 'u' + n, text: 'round up to ' + n }); })));
+        var r0 = w.round === true ? 5 : +w.round || 0;
+        if (r0 && [5, 10, 15, 30].indexOf(r0) < 0) roundC.appendChild(el('option', { value: (w.roundUp ? 'u' : 'd') + r0, text: 'round ' + (w.roundUp ? 'up' : 'down') + ' to ' + r0 }));
+        roundC.value = r0 ? (w.roundUp ? 'u' : 'd') + r0 : '';
+        var roundL = el('span', { class: 'small roundw' }, [roundC]);
         function show() { var fixed = when.value === 'fixed'; time.hidden = !fixed; sign.hidden = fixed; minsW.hidden = fixed; roundL.hidden = fixed || roundLabel === ''; }
         when.addEventListener('change', function () { w.kind = when.value; if (w.kind === 'fixed' && !w.time) { w.time = '07:00'; time.value = w.time; } show(); onChange(); });
         time.addEventListener('input', function () { w.time = time.value; onChange(); });
         function offChange() { w.off = (+mins.value || 0) * (sign.value === '-' ? -1 : 1); onChange(); }
         sign.addEventListener('change', offChange); mins.addEventListener('input', offChange);
-        roundC.addEventListener('change', function () { w.round = roundC.checked; onChange(); });
+        roundC.addEventListener('change', function () { var v = roundC.value; w.round = v ? +v.slice(1) : 0; w.roundUp = v.charAt(0) === 'u'; onChange(); });
         show();
         return [when, time, sign, minsW, roundL];
       }
@@ -1654,7 +1660,7 @@
       function addRow(r) { rows.push(r); list.appendChild(renderRow(r)); sync(); }
       var addBtn = el('button', { type: 'button', class: 'btn small primary', text: '+ Add minyan', onclick: function () {
         var last = rows.length ? rows[rows.length - 1] : null, r = { kind: 'fixed', time: '07:00', off: 0, round: false, room: last ? last.room : '', note: '' };
-        if (last && last.raw == null) { r.kind = last.kind; r.off = last.off; r.round = last.round; if (last.kind === 'fixed') { var m = previewOf(last); r.time = hhmm((isNaN(m) ? 7 * 60 : m) + 15); } }
+        if (last && last.raw == null) { r.kind = last.kind; r.off = last.off; r.round = last.round; r.roundUp = last.roundUp; if (last.kind === 'fixed') { var m = previewOf(last); r.time = hhmm((isNaN(m) ? 7 * 60 : m) + 15); } }
         addRow(r);
         var inputs = list.lastChild.querySelectorAll('input, select'); if (inputs.length) inputs[0].focus();
       } });

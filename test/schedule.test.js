@@ -182,3 +182,10 @@ if (fails) { console.log(fails + ' FAILING'); process.exit(1); } else console.lo
   ok('a minyan in a run goes by no zman of its own', mon.byTefilla.maariv.filter(e => e.series).every(e => e.zman === ''), true);
 }
 ok('צאת (60) is 60 minutes after sunset', Math.round(Cal.zmanim(sunRd, cfg.location).tzeis60 - Cal.zmanim(sunRd, cfg.location).sunset), 60);
+/* rounding: "~10" rounds down to 10 minutes, "^10" rounds up */
+{
+  const eng = E(cfg), rd = Cal.rdFromGreg(2026, 11, 16), tf = { period: 'pm' }, base = Math.round(eng.zmanimFor(rd).sunset) - 20;
+  ok('~10 rounds down to 10 minutes', eng.resolveMin(E.parseSpec('sunset-20~10', tf), rd, 'weekday'), Math.floor(base / 10) * 10);
+  ok('^10 rounds up to 10 minutes', eng.resolveMin(E.parseSpec('sunset-20^10', tf), rd, 'weekday'), Math.ceil(base / 10) * 10);
+  ok('^ works with the Hebrew zman words too', eng.resolveMin(E.parseSpec('שקיעה-20^15', tf), rd, 'weekday'), Math.ceil(base / 15) * 15);
+}

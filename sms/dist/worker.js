@@ -402,11 +402,12 @@ var MinyanEngine = (function () {
       if (tefilla.period === 'pm' && h < (tefilla.nightUntil == null || tefilla.nightUntil === '' ? 4 : +tefilla.nightUntil)) h += 24;
       return { kind: 'fixed', min: h * 60 + mi };
     }
-    m = /^([^+\-~]+?)\s*(?:([+-])\s*(\d+))?\s*(?:~(\d+))?$/.exec(tok);
+    /* "sunset-20~5" rounds down to 5 minutes, "sunset-20^5" rounds up */
+    m = /^([^+\-~^]+?)\s*(?:([+-])\s*(\d+))?\s*(?:([~^])(\d+))?$/.exec(tok);
     if (!m) return null;
     var z = ZMAN_ALIAS[m[1].trim()];
     if (!z) return null;
-    return { kind: 'zman', zman: z, offset: m[2] ? (+m[3]) * (m[2] === '-' ? -1 : 1) : 0, round: m[4] ? +m[4] : 0 };
+    return { kind: 'zman', zman: z, offset: m[2] ? (+m[3]) * (m[2] === '-' ? -1 : 1) : 0, round: m[5] ? +m[5] : 0, roundUp: m[4] === '^' };
   }
   /* "6:20 ברך משה // הערה" -> {spec, room, note}. A trailing "until <zman>" / "after <zman>" (עד / אחרי) is a condition:
      the minyan is listed only while it starts before (or from) that zman on that day, so a late Shacharis drops away in summer by itself. */
@@ -448,7 +449,7 @@ var MinyanEngine = (function () {
       var base = (cfg.weeklyEarliest && WEEKLY_TYPES[type]) ? weeklyBase(rd, spec.zman) : zmanimFor(rd)[spec.zman];
       if (isNaN(base) || !isFinite(base)) return NaN;
       var v = Math.round(base) + spec.offset; /* start from the zman as the zmanim list shows it (to the minute), then add the offset */
-      return spec.round ? Math.floor(v / spec.round) * spec.round : v;
+      return spec.round ? (spec.roundUp ? Math.ceil(v / spec.round) : Math.floor(v / spec.round)) * spec.round : v;
     }
     /* the zman a line's "until"/"after" condition resolves to on day rd (NaN when the line has none) */
     function condLimit(p, rd, type) { return p && p.cond ? resolveMin(p.cond.spec, rd, type) : NaN; }
@@ -470,9 +471,9 @@ var MinyanEngine = (function () {
       /* "until 00:15" after a 22:15 start runs past midnight; but a run whose end has passed before it starts (summer: "from rt+14 to 20:00"
          when rt+14 is already 9:50 PM) simply does not take place that day, instead of running on for a day */
       if (p.spec.end && end < start) { if (end + 1440 - start <= 6 * 60) end += 1440; else return out; }
-      var n = 0, m = start, limit = p.spec.count || 500, rnd = p.spec.start.round || 0, t;
+      var n = 0, m = start, limit = p.spec.count || 500, rnd = p.spec.start.round || 0, rUp = !!p.spec.start.roundUp, t;
       while (n < limit && n < 500 && (!p.spec.end || m <= end)) {
-        t = rnd ? Math.floor(m / rnd) * rnd : m;
+        t = rnd ? (rUp ? Math.ceil(m / rnd) : Math.floor(m / rnd)) * rnd : m;
         if (!out.length || out[out.length - 1].start !== t) out.push({ start: t, room: p.rooms.length ? p.rooms[out.length % p.rooms.length] : '', note: p.note });
         m += p.spec.every; n++;
       }
