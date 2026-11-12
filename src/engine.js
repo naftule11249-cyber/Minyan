@@ -8,7 +8,7 @@ var MinyanEngine = (function () {
     { id: 'maariv', name: 'מעריב', milestone: 'שמונה עשרה', offset: 5, period: 'pm' }];
   var FALLBACK = {}, TYPE_NAME = {}, TYPE_NAME_EN = {};
   Cal.DAY_TYPES.forEach(function (t) { FALLBACK[t[0]] = t[2]; TYPE_NAME[t[0]] = t[1]; TYPE_NAME_EN[t[0]] = t[3]; });
-  var ZMAN_ALIAS = { 'שקיעה': 'sunset', 'sunset': 'sunset', 'נץ': 'sunrise', 'sunrise': 'sunrise', 'הדלקה': 'candles', 'candles': 'candles',
+  var ZMAN_ALIAS = { 'הדלקה־ערש״ק': 'fricandles', 'הדלקה_ערש"ק': 'fricandles', 'fricandles': 'fricandles', 'שקיעה': 'sunset', 'sunset': 'sunset', 'נץ': 'sunrise', 'sunrise': 'sunrise', 'הדלקה': 'candles', 'candles': 'candles',
     'צאת': 'tzeis', 'tzeis': 'tzeis', 'פלג': 'plag', 'plag': 'plag', 'חצות': 'chatzos', 'chatzos': 'chatzos', 'עלות': 'alos', 'alos': 'alos',
     'ר״ת': 'tzeis72', 'ר"ת': 'tzeis72', 'rt': 'tzeis72', 'tzeis60': 'tzeis60', 'צאת60': 'tzeis60', 'minchag': 'minchag', 'מנחה־גדולה': 'minchag', 'minchak': 'minchak', 'מנחה־קטנה': 'minchak', 'שמע': 'shema', 'shema': 'shema', 'tefilla': 'tefilla', 'תפילה': 'tefilla' };
   var WEEKLY_TYPES = { weekday: 1, sunday: 1, rosh_chodesh: 1, fast: 1, chanukah: 1, purim: 1, chol_hamoed: 1 };
@@ -71,7 +71,8 @@ var MinyanEngine = (function () {
     }
     function resolveMin(spec, rd, type) {
       if (spec.kind === 'fixed') return spec.min;
-      var base = (cfg.weeklyEarliest && WEEKLY_TYPES[type]) ? weeklyBase(rd, spec.zman) : zmanimFor(rd)[spec.zman];
+      /* fricandles: this week's Friday candle lighting, so a Shabbos Mincha written as fricandles+35 matches the weekly sheet */
+      var base = spec.zman === 'fricandles' ? zmanimFor(rd - Cal.mod(Cal.mod(rd, 7) - 5, 7)).candles : (cfg.weeklyEarliest && WEEKLY_TYPES[type]) ? weeklyBase(rd, spec.zman) : zmanimFor(rd)[spec.zman];
       if (isNaN(base) || !isFinite(base)) return NaN;
       var v = Math.round(base) + spec.offset; /* start from the zman as the zmanim list shows it (to the minute), then add the offset */
       return spec.round ? (spec.roundUp ? Math.ceil(v / spec.round) : Math.floor(v / spec.round)) * spec.round : v;

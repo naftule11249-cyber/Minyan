@@ -233,6 +233,7 @@
     var strip = sponsorsStrip(rd, n.min); /* a sponsor frame only when there is a sponsor at this hour of that day */
     if (strip && !lobby) root.appendChild(strip); /* on the lobby screen the sponsor box sits in the side column, under the zmanim */
     var up = upcoming(now, rd);
+    ui.shabbosWin = shabbosWin(now);
     var main = el('main'), colA = el('div', { class: 'col' }), colB = el('div', { class: 'col' });
     var next = el('section', { class: 'next', 'aria-live': 'polite' }, [el('h2', { text: S().nextMinyan })]);
     ui.countdown = null; ui.countdownMs = 0;
@@ -270,8 +271,14 @@
       if (heldLast) { next.classList.add('held'); next.firstChild.textContent = S().nowMinyan; ui.countdownMs = heldLast.until; nextPanelFromTemplate(next, heldLast.entry, { daysAhead: 0, sched: heldLast.sched }, now, null); }
       else next.appendChild(el('div', { class: 'empty', text: S().noMinyanim }));
     }
-    var canTap = canSetReminders();
-    if (up && canTap && up.entry.tefilla.kind !== 'event') makeTappable(next, up.entry); /* tap the next minyan to be reminded of it */
+    var canTap = canSetReminders(), sw = ui.shabbosWin;
+    if (sw && now >= sw.chatzosMs && now < sw.candlesMs) { /* Friday after chatzos: candle lighting, counting down, in place of the next minyan */
+      var p0 = Cal.parshaOfWeek(sw.sat, !!cfg.israel);
+      next = el('section', { class: 'next candles', 'aria-live': 'polite' }, [el('h2', { text: zmanName('candles') }),
+        el('div', { class: 'what', text: (S().today === 'Today' ? 'Erev Shabbos' : 'ערב שבת קודש') + (p0 ? (S().today === 'Today' ? ' ' : ' פרשת ') + p0 : '') }),
+        el('div', { class: 'time num', text: fmtTime(sw.candlesMin) })]);
+      ui.countdownMs = sw.candlesMs; ui.countdown = el('div', { class: 'count num', text: fmtCountdown(sw.candlesMs - now) }); next.appendChild(ui.countdown);
+    } else if (up && canTap && up.entry.tefilla.kind !== 'event') makeTappable(next, up.entry); /* tap the next minyan to be reminded of it */
     ui.zcount = null; ui.zcountMs = 0;
     var nz = nextZman(info, z, rd, now);
     if (lobby) {
@@ -287,6 +294,7 @@
         rest.forEach(function (it) { blocks.push(el('div', { class: 'sub', text: it.sub })); blocks = blocks.concat(it.nodes); });
         colL.appendChild(wallCard(S().minyanim(rest.map(function (it) { return it.t.name; }).join(' ')), blocks));
       }
+      if (ui.shabbosWin) colL.appendChild(wallCard(shabbosTitle(ui.shabbosWin), [shabbosList(ui.shabbosWin)]));
       colL.appendChild(wallZmanim(info, z, rd, now));
       colM.appendChild(analogClock(now, false)); /* the time with seconds is in the top bar */
       if (strip) colM.appendChild(strip);
@@ -376,6 +384,7 @@
   function tefillaLists(s, now, isToday) {
     var tomorrow = isToday ? scheduleFor(s.rd + 1) : null, out = [], allSwitched = true;
     tefillos().forEach(function (t) {
+      if (isToday && ui.shabbosWin && isPmMinyan(t)) return; /* Mincha and Maariv give their place to the Shabbos zmanim */
       var list = s.byTefilla[t.id] || [], fromTomorrow = false;
       if (tomorrow && t.kind !== 'event' && tefillaOver(t, list, s.rd, now) && (tomorrow.byTefilla[t.id] || []).length) { list = tomorrow.byTefilla[t.id]; fromTomorrow = true; }
       if (!fromTomorrow && t.kind !== 'event') allSwitched = false;
@@ -385,6 +394,34 @@
     if (isToday) ui.todayAllSwitched = allSwitched;
     return out;
   }
+  /* From chatzos on Thursday night until Motzei Shabbos the board is in "Shabbos" mode: the Shabbos zmanim take the place of Mincha and
+     Maariv, and on Friday after chatzos the next-minyan box counts down to candle lighting. */
+  function shabbosWin(now) {
+    var tz = loc().tz, rd = Cal.nowInTz(now, tz).rd, dow = Cal.mod(rd, 7), fri = dow === 4 ? rd + 1 : dow === 5 ? rd : dow === 6 ? rd - 1 : null;
+    if (fri == null) return null;
+    var zt = zmanimFor(fri - 1), zf = zmanimFor(fri), zs = zmanimFor(fri + 1);
+    if (!isFinite(zt.chatzosNight) || !isFinite(zf.candles) || !isFinite(zs.tzeis72)) return null;
+    var from = Cal.epochFromWall(fri - 1, Math.round(zt.chatzosNight), tz), until = Cal.epochFromWall(fri + 1, Math.round(zs.tzeis72), tz);
+    if (now < from || now >= until) return null;
+    return { fri: fri, sat: fri + 1, candlesMin: zf.candles, candlesMs: Cal.epochFromWall(fri, Math.round(zf.candles), tz), chatzosMs: Cal.epochFromWall(fri, Math.round(zf.chatzos), tz), motzash: zs.tzeis72 };
+  }
+  function isPmMinyan(t) { return t.kind !== 'event' && (t.period === 'pm' || t.id === 'mincha' || t.id === 'maariv'); }
+  function shabbosTitle(w) { var p = Cal.parshaOfWeek(w.sat, !!cfg.israel), en = S().today === 'Today'; return (en ? 'Shabbos zmanim' : 'זמני שבת קודש') + (p ? (en ? ' – ' : ' – פרשת ') + p : ''); }
+  /* the Shabbos zmanim: candle lighting, Friday's Mincha and Maariv, Shabbos's minyanim and Motzei Shabbos */
+  function shabbosList(w) {
+    var ul = el('ul', { class: 'zlist shabbos-z' }), L = S(), en = L.today === 'Today', fs = scheduleFor(w.fri), ss = scheduleFor(w.sat);
+    function li(label, value, hi) { ul.appendChild(el('li', hi ? { class: 'hi' } : null, [el('span', { text: label }), el('span', { class: 'z num', text: value })])); }
+    function times(s, t) {
+      return (s.byTefilla[t.id] || []).map(function (e) { var tt = (s.tefillos && s.tefillos[t.id]) || t; return fmtTime(e.start) + (tt.milestone && e.milestone != null ? ' (' + tt.milestone + ' ' + fmtTime(e.milestone) + ')' : '') + (e.room ? ' ' + e.room : ''); }).join(' · ');
+    }
+    function name(s, t, suffix) { var n = ((s.tefillos && s.tefillos[t.id]) || t).name; return n !== t.name ? n : n + suffix; } /* a tefilla with a name of its own that day (מנחה וקבלת שבת) needs no ערש״ק */
+    li(zmanName('candles'), fmtTime(w.candlesMin), true);
+    tefillos().forEach(function (t) { if (isPmMinyan(t)) { var v = times(fs, t); if (v) li(name(fs, t, en ? ' (Friday)' : ' ערש״ק'), v); } });
+    tefillos().forEach(function (t) { if (t.kind === 'event') return; var v = times(ss, t); if (v) li(name(ss, t, en ? ' (Shabbos)' : ' שב״ק'), v); });
+    li(L.motzaeiShabbos, fmtTime(w.motzash), true);
+    return ul;
+  }
+  function shabbosSection(w) { return el('section', { class: 'tefilla shabbos-box' }, [el('h3', { text: shabbosTitle(w) }), shabbosList(w)]); }
   /* a day by the name people call it: Shabbos, a Yom Tov by its own name (פסח, שבועות …), otherwise the day of the week */
   function dayName(info) { return info.shabbos ? S().days[6] : info.yomtov && info.labels && info.labels.length ? info.labels[0] : S().days[info.dow]; }
   function sectionTitle(x) { return x.t.kind === 'event' ? x.t.name : S().minyanim(x.t.name) + (x.fromTomorrow ? ' – ' + S().tomorrow + ', ' + dayName(x.tomorrow.info) : ''); }
@@ -430,6 +467,7 @@
       }
       wrap.appendChild(sec);
     });
+    if (isToday && ui.shabbosWin && !$("#app").classList.contains("display")) wrap.appendChild(shabbosSection(ui.shabbosWin));
     return wrap;
   }
   /* ---------- the hallway screen (?view=display): one card per tefilla, tiles in columns, nothing to scroll ---------- */
@@ -722,6 +760,7 @@
       sec.appendChild(rows);
     }
     wrap.appendChild(sec);
+    if (isToday && ui.shabbosWin) wrap.appendChild(shabbosSection(ui.shabbosWin));
     return wrap;
   }
   function zmanimPanel(info, z, title) {
@@ -1458,8 +1497,8 @@
     var lines = {};
     Cal.DAY_TYPES.forEach(function (t) { lines[t[0]] = {}; d.tefillos.forEach(function (tf) { lines[t[0]][tf.id] = { value: (d.schedules[t[0]] && d.schedules[t[0]][tf.id]) || '' }; }); });
     var ZMAN_OPTS = [['fixed', 'Fixed time'], ['sunrise', 'Sunrise (netz)'], ['alos', 'Dawn (alos)'], ['shema', 'Sof zman Shema'], ['tefilla', 'Sof zman tefilla'], ['chatzos', 'Chatzos'], ['minchag', 'Mincha gedola'],
-      ['minchak', 'Mincha ketana (MGA 72)'], ['plag', 'Plag hamincha'], ['candles', 'Candle lighting'], ['sunset', 'Sunset (shkiah)'], ['tzeis', 'Nightfall (tzeis)'], ['tzeis60', 'Sunset + 60 min'], ['tzeis72', 'Rabbeinu Tam (72 min)']];
-    var ZWORD = { sunrise: 'sunrise', alos: 'alos', shema: 'shema', tefilla: 'tefilla', chatzos: 'chatzos', minchag: 'minchag', minchak: 'minchak', plag: 'plag', candles: 'candles', sunset: 'sunset', tzeis: 'tzeis', tzeis60: 'tzeis60', tzeis72: 'rt' };
+      ['minchak', 'Mincha ketana (MGA 72)'], ['plag', 'Plag hamincha'], ['candles', 'Candle lighting'], ['fricandles', 'Friday\'s candle lighting (for Shabbos)'], ['sunset', 'Sunset (shkiah)'], ['tzeis', 'Nightfall (tzeis)'], ['tzeis60', 'Sunset + 60 min'], ['tzeis72', 'Rabbeinu Tam (72 min)']];
+    var ZWORD = { sunrise: 'sunrise', alos: 'alos', shema: 'shema', tefilla: 'tefilla', chatzos: 'chatzos', minchag: 'minchag', minchak: 'minchak', plag: 'plag', candles: 'candles', fricandles: 'fricandles', sunset: 'sunset', tzeis: 'tzeis', tzeis60: 'tzeis60', tzeis72: 'rt' };
     function hhmm(min) { min = Math.round(min); return pad2(Math.floor(min / 60) % 24) + ':' + pad2(min % 60); }
     function specToRow(spec) { return spec.kind === 'fixed' ? { kind: 'fixed', time: hhmm(spec.min), off: 0, round: false } : { kind: spec.zman, time: '', off: spec.offset || 0, round: spec.round || 0, roundUp: !!spec.roundUp }; }
     function lineToRow(line, tf) {

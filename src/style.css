@@ -1159,3 +1159,7 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
   .shcal-day .t + * { display: none; }
   .shday { padding: 14px; }
 }
+/* Shabbos zmanim box (Thursday night chatzos to Motzei Shabbos) */
+.shabbos-box .zlist { margin: 0; }
+html.lobby .shabbos-z { font-size: 1.55em; width: 100%; }
+html.lobby .shabbos-z li { padding: .45em 0; }
