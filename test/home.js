@@ -50,7 +50,7 @@ const NOTICES = [
   await page.evaluate(() => { document.querySelector('.home-tv').style.width = '60%'; }); await page.waitForTimeout(350);
   ok('when the frame itself changes size (no window resize), the picture is fitted to it again', await framed(page), [true, true, true]);
   await page.evaluate(() => { document.querySelector('.home-tv').style.width = ''; }); await page.waitForTimeout(350);
-  await page.click('#tab-general'); await page.evaluate(() => { const f = document.getElementById('home-tv'); f.style.transform = 'scale(1)'; }); /* as if it had been measured too early */
+  await page.click('#tab-settings').then(() => page.click('#tab-general')); await page.evaluate(() => { const f = document.getElementById('home-tv'); f.style.transform = 'scale(1)'; }); /* as if it had been measured too early */
   await page.setViewportSize({ width: 1100, height: 900 }); await page.click('#tab-home'); await page.waitForTimeout(500);
   ok('coming back to Home after the window changed while it was out of sight, the whole screen is in the frame again', await framed(page), [true, true, true]);
   await page.setViewportSize({ width: 1280, height: 900 }); await page.waitForTimeout(300);

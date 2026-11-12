@@ -47,7 +47,7 @@ const { chromium } = require('playwright');
   // save: the change is counted, listed on the Publish tab, and nothing is published by Save itself
   await page.click('.panel .bar button.primary'); await page.waitForTimeout(700);
   ok('the publish bar counts the change', await page.locator('.pubbar .pubmsg').textContent(), '1 change not yet published');
-  await page.click('#tab-publish'); await page.waitForTimeout(200);
+  await page.click('#tab-settings').then(() => page.click('#tab-publish')); await page.waitForTimeout(200);
   const listed = await page.locator('.changes li').allTextContents();
   ok('the Publish tab lists it', listed.filter(t => /^Weekdays/.test(t)), ['Weekdays · שחרית: added 10:45 ברך משה after tefilla-90']);
   ok('the saved copy is on the device, the website copy untouched', await page.evaluate(() => [/after tefilla-90/.test(localStorage.getItem('minyan-config') || ''), /after tefilla-90/.test(localStorage.getItem('minyan-remote') || '')]), [true, false]);

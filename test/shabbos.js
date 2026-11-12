@@ -151,7 +151,7 @@ const ny = (y, m, d, h, min) => Cal.epochFromWall(rd(y, m, d), h * 60 + (min || 
   ok('typing the name clears the complaint and the box says what is set, the Hebrew in one piece', [await page.locator('#dt-err-shabbos-shacharis').isVisible(), (await page.locator('#dt-box-shabbos-shacharis > summary').textContent()).replace(/[\u2068\u2069]/g, '')], [false, 'On Shabbos: second time נשמת, 30 min after the start']);
   await page.fill('#dt-off-shabbos-shacharis', '35'); await save();
   ok('saved', await saved(), { shabbos: { shacharis: { name: '', second: 'own', milestone: 'נשמת', offset: 35 } } });
-  await page.click('#tab-publish'); await page.waitForTimeout(300);
+  await page.click('#tab-settings').then(() => page.click('#tab-publish')); await page.waitForTimeout(300);
   ok('the list of what is waiting to be published says it in words, with nothing technical', (await page.locator('.changes li').allTextContents()).map(x => x.replace(/[\u2068\u2069]/g, '')).filter(x => /Shabbos|\{/.test(x)), ['Shabbos · שחרית: second time נשמת, 35 min after the start']);
   const tv = await ctx.newPage(); await tv.setViewportSize({ width: 1920, height: 1080 });
   await screen(tv, '&at=2026-11-21T09:00'); s = await read(tv);
@@ -179,7 +179,7 @@ const ny = (y, m, d, h, min) => Cal.epochFromWall(rd(y, m, d), h * 60 + (min || 
   await page.locator('#dt-box-friday-maariv > summary').click(); await page.fill('#dt-name-friday-maariv', '');
   await page.click('#dt-yomtov'); await page.locator('#dt-box-yomtov-shacharis > summary').click(); await page.selectOption('#dt-second-yomtov-shacharis', ''); await save();
   ok('emptied again, the two are gone from what is saved', await saved(), { shabbos: { shacharis: { name: '', second: 'own', milestone: 'נשמת', offset: 35 } } });
-  await page.click('#tab-screen'); await page.click('#w-pageBg-darker'); await save(); await page.click('#tab-publish'); await page.waitForTimeout(300);
+  await page.click('#tab-screen'); await page.click('#w-pageBg-darker'); await save(); await page.click('#tab-settings').then(() => page.click('#tab-publish')); await page.waitForTimeout(300);
   ok('(a setting made of several values, like the screen\'s colours, is listed as changed, not spilled out in brackets)', (await page.locator('.changes li').allTextContents()).filter(x => /colours|\{/.test(x)), ['Hallway screen colours changed']);
   /* from the Schedule page to the screen on that day */
   await page.click('#tab-schedule'); await page.click('#dt-shabbos'); await page.waitForTimeout(150);

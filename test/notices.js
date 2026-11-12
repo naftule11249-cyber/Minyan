@@ -18,11 +18,11 @@ const { chromium } = require('playwright');
   console.log('banner on board:', await page.locator('.banner-inner').textContent().catch(() => 'none'), '| sponsor boxes:', await page.locator('.sponsor').count());
   // undo: history has the previous version
   // the settings stay open after a save, on the same tab
-  await page.waitForSelector('#tab-data'); await page.click('#tab-data');
+  await page.waitForSelector('#tab-data'); await page.click('#tab-settings').then(() => page.click('#tab-data'));
   console.log('history entries:', await page.locator('button:has-text("Restore")').count());
   await page.locator('button:has-text("Restore")').first().click(); await page.waitForTimeout(300);
   console.log('after restore banner text field:', JSON.stringify(await page.inputValue('#banner-text')), '| toast:', await page.locator('#toast').textContent().catch(() => ''));
-  await page.click('#tab-general'); console.log('notify field:', await page.locator('#f-notify').count());
+  await page.click('#tab-settings').then(() => page.click('#tab-general')); console.log('notify field:', await page.locator('#f-notify').count());
   await ctx.close(); await browser.close();
   console.log(errors.length ? 'ERRORS:\n' + errors.join('\n') : 'no console errors');
 })();

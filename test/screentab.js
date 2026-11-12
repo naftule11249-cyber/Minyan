@@ -78,7 +78,7 @@ const NOTICES = [{ title: 'פרנס חודש כסלו', name: 'מו״ה יעקב
   /* every look: the back end starts from the colours the stylesheet gives the screen */
   for (const look of ['shul', 'classic', 'contrast', 'hallway']) {
     await admin();
-    await page.click('#tab-general'); await page.selectOption('#f-palette', look); await page.click('#tab-screen'); await page.waitForTimeout(150);
+    await page.click('#tab-settings').then(() => page.click('#tab-general')); await page.selectOption('#f-palette', look); await page.click('#tab-screen'); await page.waitForTimeout(150);
     const r = await rows();
     await save(); s = await screen();
     ok('the ' + look + ' look: the back end\'s starting colours are the ones the screen really has', [r[0][2], r[1][2], r[2][2], r.map(x => x[3])], [s.page, s.frame, s.line, [false, false, false]]);

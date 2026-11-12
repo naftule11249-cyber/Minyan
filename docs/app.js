@@ -1313,10 +1313,19 @@
     if (mode !== 'artifact') tabs.push(['send', 'Send', 'A notification, right now, to everyone who turned reminders on.']);
     tabs.push(['data', 'Backup', 'Previous versions and the settings as text.']);
     var pages = {}, tabBar = el('div', { class: 'tabs', role: 'tablist' }), pageTitle = el('h2', { text: '' }), pageDesc = el('div', { class: 'cdesc', text: '' });
-    tabs.forEach(function (t) { tabBar.appendChild(el('button', { type: 'button', role: 'tab', id: 'tab-' + t[0], 'aria-selected': 'false', onclick: function () { selectTab(t[0]); } }, [svgIcon(t[0]), el('span', { class: 'lbl', text: t[1] }), el('span', { class: 'lbl-s', text: t[3] || t[1] })])); });
+    /* The menu holds what is used every week; the rest is behind Settings, with a row of its own at the top of the page. */
+    var SUB = ['general', 'rolls', 'overrides', 'shere', 'publish', 'send', 'data'], subBar = el('div', { class: 'tabs subtabs', role: 'tablist', 'aria-label': 'Settings' });
+    function isSub(id) { return SUB.indexOf(id) >= 0 && tabs.some(function (t) { return t[0] === id; }); }
+    tabs.forEach(function (t) { if (isSub(t[0])) subBar.appendChild(el('button', { type: 'button', role: 'tab', id: 'tab-' + t[0], 'aria-selected': 'false', 'data-nodirty': '1', text: t[1], onclick: function () { selectTab(t[0]); } })); });
+    tabs.forEach(function (t, i) { if (isSub(t[0])) return;
+      tabBar.appendChild(el('button', { type: 'button', role: 'tab', id: 'tab-' + t[0], 'aria-selected': 'false', onclick: function () { selectTab(t[0]); } }, [svgIcon(t[0]), el('span', { class: 'lbl', text: t[1] }), el('span', { class: 'lbl-s', text: t[3] || t[1] })])); });
+    tabBar.appendChild(el('button', { type: 'button', role: 'tab', id: 'tab-settings', 'aria-selected': 'false', 'data-nodirty': '1', onclick: function () { selectTab(ui.adminSub || 'general'); } }, [svgIcon('general'), el('span', { class: 'lbl', text: 'Settings' }), el('span', { class: 'lbl-s', text: 'Settings' })])); /* last in the menu */
     function selectTab(id) {
       ui.adminTab = id; /* a rebuild (adding a category, restoring a backup) keeps the gabbai on the same tab */
-      tabs.forEach(function (t) { pages[t[0]].hidden = t[0] !== id; $('#tab-' + t[0], tabBar).setAttribute('aria-selected', String(t[0] === id)); if (t[0] === id) { pageTitle.textContent = t[1]; pageDesc.textContent = t[2]; } });
+      if (id === 'settings') id = ui.adminSub || 'general';
+      var sub = isSub(id); if (sub) ui.adminSub = id; ui.adminTab = id;
+      subBar.hidden = !sub; $('#tab-settings', tabBar) && $('#tab-settings', tabBar).setAttribute('aria-selected', String(sub));
+      tabs.forEach(function (t) { pages[t[0]].hidden = t[0] !== id; $('#tab-' + t[0], sub || !isSub(t[0]) ? (isSub(t[0]) ? subBar : tabBar) : subBar).setAttribute('aria-selected', String(t[0] === id)); if (t[0] === id) { pageTitle.textContent = t[1]; pageDesc.textContent = t[2]; } });
       try { $('#overlay').scrollTop = 0; } catch (e) {}
       if (id === 'data') dataArea.value = JSON.stringify(collect(), null, 2);
       if (id === 'home') paintHome();
@@ -3179,7 +3188,7 @@
       el('button', { type: 'button', class: 'btn ghost', 'data-nodirty': '1', onclick: function () { if (ui.adminDirty && !confirm('Lock without saving? The changes made here will be lost.')) return; pinOk = false; try { sessionStorage.removeItem('minyan-pin'); } catch (e) {} ui.adminDirty = false; closeOverlay(); showPin(); } }, [svgIcon('lock'), el('span', { text: 'Lock' })])]);
     var ghNow = mode === 'artifact' ? null : ghSettings();
     var footHint = mode === 'artifact' ? 'Save publishes a new version of this page for everyone who has the link.' : (ghConfigured(ghNow) ? 'Save keeps the changes on this device. Publish sends them to the website and the app.' : 'Save keeps the settings on this device only. Connect the website on the Publish tab to be able to publish.');
-    var main = el('div', { class: 'amain' }, [el('div', { class: 'ptitle' }, [pageTitle, pageDesc]), pages.home, pages.today, pages.general, pages.schedule, pages.donations, pages.rolls, pages.notices, pages.shere, pages.screen, pages.overrides, mode !== 'artifact' ? pages.publish : null, mode !== 'artifact' ? pages.send : null, pages.data,
+    var main = el('div', { class: 'amain' }, [subBar, el('div', { class: 'ptitle' }, [pageTitle, pageDesc]), pages.home, pages.today, pages.general, pages.schedule, pages.donations, pages.rolls, pages.notices, pages.shere, pages.screen, pages.overrides, mode !== 'artifact' ? pages.publish : null, mode !== 'artifact' ? pages.send : null, pages.data,
       el('div', { class: 'bar afoot' }, [el('span', { class: 'hint', text: footHint }), saveBtn.cloneNode(true)])]);
     var pubBar = el('div', { class: 'pubbar' }); pubBar.hidden = true;
     function refreshPubBar() {
