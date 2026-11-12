@@ -86,6 +86,12 @@ The admin page's **Shere** tab sets the barber's hours and prices, and anyone wh
 - **Prices**: a regular price and a kids' price, and a higher price before Yom Tov, from a number of days before it through Erev Yom Tov.
 - It is off until "Answer these texts" is ticked; every other text is answered as before. The logic is `src/shere.js`, used by the admin preview and the text responder alike.
 
+## Shabbos on the board, and the weekly sheet
+
+- From chatzos on Thursday night until Motzei Shabbos, a **זמני שבת קודש** box takes the place of Mincha and Maariv (board, phones, hallway screen): candle lighting, Friday's Mincha, Shabbos's minyanim and Motzei Shabbos (72 minutes, rounded up). On Friday after chatzos the next-minyan box counts down to candle lighting.
+- The Friday and Shabbos schedule follows the weekly sheet: Mincha erev Shabbos `candles+45^5`, Shabbos Mincha `fricandles+35^5` (`fricandles` is this week's Friday candle lighting; `^5` rounds up to 5, `~5` down).
+- `node tools/shabbos-week.js [--date YYYY-MM-DD] [--config URL] > week.json` prints the coming Shabbos's times from the board for the weekly sheet: parsha, hadlakah, szks (מג״א), motzash, minchaErev, shacharis/hodu, minchaShabbos, shiurShabbos (Mincha −45), and every Friday and Shabbos minyan.
+
 ## Quick changes for today
 
 The admin page is a full page of its own, styled like a phone app (navy header, gold for the one action that matters, big white cards and large controls; on a phone the sections are a bottom tab bar, the Schedule tab shows one tefilla at a time behind a switch, and minute boxes have − and + steppers). A sidebar lists its sections (Today, General, Schedule, Notices, Special dates, Publish, Backup), the header holds Save, Close and a "Saved …" / "Unsaved changes" marker, Ctrl+S (Cmd+S) saves, and the sidebar also offers "View the board" and "Lock". On a phone the sections become a scrolling strip under the header. Settings are grouped into cards (The board, Look and labels, Location and zmanim, Tefillos, Website and services, Security).

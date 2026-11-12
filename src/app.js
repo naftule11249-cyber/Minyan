@@ -403,7 +403,7 @@
     if (!isFinite(zt.chatzosNight) || !isFinite(zf.candles) || !isFinite(zs.tzeis72)) return null;
     var from = Cal.epochFromWall(fri - 1, Math.round(zt.chatzosNight), tz), until = Cal.epochFromWall(fri + 1, Math.round(zs.tzeis72), tz);
     if (now < from || now >= until) return null;
-    return { fri: fri, sat: fri + 1, candlesMin: zf.candles, candlesMs: Cal.epochFromWall(fri, Math.round(zf.candles), tz), chatzosMs: Cal.epochFromWall(fri, Math.round(zf.chatzos), tz), motzash: zs.tzeis72 };
+    return { fri: fri, sat: fri + 1, candlesMin: zf.candles, candlesMs: Cal.epochFromWall(fri, Math.round(zf.candles), tz), chatzosMs: Cal.epochFromWall(fri, Math.round(zf.chatzos), tz), motzash: Math.ceil(zs.tzeis72) }; /* Motzei Shabbos rounded up, as on the weekly sheet */
   }
   function isPmMinyan(t) { return t.kind !== 'event' && (t.period === 'pm' || t.id === 'mincha' || t.id === 'maariv'); }
   function shabbosTitle(w) { var p = Cal.parshaOfWeek(w.sat, !!cfg.israel), en = S().today === 'Today'; return (en ? 'Shabbos zmanim' : 'זמני שבת קודש') + (p ? (en ? ' – ' : ' – פרשת ') + p : ''); }
