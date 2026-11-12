@@ -11,8 +11,9 @@
 var MinyanShere = (function () {
   'use strict';
   function wk(from, until, kids) { return { open: true, ranges: [{ from: from, until: until, kids: kids }] }; }
-  var DEFAULT_WEEK = [wk('10:00', '20:00', true), wk('10:00', '20:00', true), wk('10:00', '20:00', true), wk('10:00', '20:00', true), wk('10:00', '21:00', true), wk('08:00', '', false)];
-  var DEFAULTS = { prices: { adult: '', kid: '', ytAdult: '', ytKid: '', ytDays: 0 }, on: false, words: 'שערן, שערען, שער, shere, sheren', week: DEFAULT_WEEK, zman: 'candles', before: 60, round: 5, days: {}, note: '' };
+  var DEFAULT_WEEK = [wk('10:00', '20:00', true), wk('10:00', '20:00', true), wk('10:00', '20:00', true), wk('10:00', '20:00', true), wk('10:00', '21:00', true),
+    { open: true, ranges: [{ from: '09:00', until: '10:00', kids: false }, { from: '12:30', until: '', kids: false }] }]; /* Friday as on the shere sheet: morning, and afternoon until 1:15 before candle lighting */
+  var DEFAULTS = { prices: { adult: '', kid: '', ytAdult: '', ytKid: '', ytDays: 0 }, on: false, words: 'שערן, שערען, שער, shere, sheren', week: DEFAULT_WEEK, zman: 'candles', before: 75, round: 1, days: {}, note: '' };
   var Y_DAYS = ['זונטאג', 'מאנטאג', 'דינסטאג', 'מיטוואך', 'דאנערשטאג', 'פרייטאג', 'שבת'];
   function copyRanges(list) { return list.map(function (r) { return { from: r.from || '', until: r.until == null ? '' : r.until, kids: !!r.kids }; }); }
   /* the sets of hours of a week day or a changed day; an older single { from, until, kids } is read as one set */
