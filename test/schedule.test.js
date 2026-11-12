@@ -145,7 +145,7 @@ if (fails) { console.log(fails + ' FAILING'); process.exit(1); } else console.lo
   base.schedules.friday = Object.assign({}, base.schedules.friday, { mincha: 'candles+10 ברך משה', maariv: 'candles+45~5 ברך משה' });
   base.schedules.shabbos = { shacharis: '08:30 לב אהרן\n09:30 דברי יואל', mincha: 'sunset-40~5 דברי יואל', maariv: 'sunset+50~5 דברי יואל' };
   delete base.schedules.yomtov; delete base.schedules.erev_yomtov;
-  const mk = dayTefilla => (E.MinyanEngine || E)(Object.assign({}, base, dayTefilla ? { dayTefilla } : {}));
+  const mk = dayTefilla => (E.MinyanEngine || E)(Object.assign({}, base, { dayTefilla: dayTefilla || {} })); /* the shul's own dayTefilla is left out: each check sets its own */
   const D = { fri: Cal.rdFromGreg(2026, 11, 13), shab: Cal.rdFromGreg(2026, 11, 14), mon: Cal.rdFromGreg(2026, 11, 16), erevPesach: Cal.rdFromGreg(2027, 4, 21), pesach1: Cal.rdFromGreg(2027, 4, 22), pesach2Fri: Cal.rdFromGreg(2027, 4, 23), shavuosFri: Cal.rdFromGreg(2027, 6, 11) };
   const second = (e, rd, id) => { const s = e.scheduleFor(rd).byTefilla[id][0]; return [s.tefilla.name, s.tefilla.milestone, e.fmtTime(s.start), e.fmtTime(s.milestone)]; };
   const plain = mk();
