@@ -1112,7 +1112,7 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 
 /* Shere tab */
 .shere-preview { white-space: pre-wrap; font: inherit; font-size: 1.02rem; line-height: 1.65; margin: 0; padding: 12px 16px; border-radius: 12px; background: var(--a-soft, #f2efe8); text-align: right; }
-.shwk { display: grid; grid-template-columns: 120px 90px 1fr 1fr 110px; gap: 12px; align-items: end; padding: 10px 0; border-top: 1px solid var(--a-line, #e3ded3); }
+.shwk { display: grid; grid-template-columns: 110px 80px 1fr 1fr 100px; gap: 12px; align-items: start; padding: 10px 0; border-top: 1px solid var(--a-line, #e3ded3); }
 .shwk:first-child { border-top: 0; }
 .shname { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
 .shname span { color: var(--a-muted); font-size: .9rem; }
@@ -1120,6 +1120,17 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 .shdayrow { padding: 12px 0; border-top: 1px solid var(--a-line, #e3ded3); }
 .shdayrow:first-child { border-top: 0; }
 .shdayrow.changed { background: #fff7e3; margin: 0 -16px; padding: 12px 16px; }
-.shfields { display: grid; grid-template-columns: 150px 150px 140px 1fr auto auto; gap: 10px; align-items: end; margin-top: 8px; }
+.shfields { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.2fr) 130px minmax(0, 1fr) auto auto; gap: 10px; align-items: start; margin-top: 8px; }
 .shtag { font-size: .75rem; font-weight: 600; color: #8a5a00; background: #ffe7a8; border-radius: 99px; padding: 1px 8px; }
 @media (max-width: 720px) { .shwk { grid-template-columns: 1fr 1fr; } .shwk .shname { grid-column: 1 / -1; } .shfields { grid-template-columns: 1fr 1fr; } }
+
+.shtime-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.shtime-row select { flex: 1 1 100%; min-width: 0; }
+.shtime-row input[type=time] { flex: 1 1 140px; min-width: 0; }
+.shoff { display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+.shoff input { width: 72px; }
+.shoff span { color: var(--a-muted); font-size: .85rem; }
+.shres { min-height: 1.1em; margin-top: 2px; }
+@media (max-width: 720px) { .shwk .field, .shfields .field:nth-child(-n+2) { grid-column: 1 / -1; } }
+.shwk .shname, .shwk .shchk, .shfields .shchk, .shfields > .btn { margin-top: 26px; }
+@media (max-width: 720px) { .shwk .shname { margin-top: 0; } }

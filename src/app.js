@@ -2572,36 +2572,63 @@
     cShText.body.appendChild(el('div', { class: 'checks' }, [fShOn]));
     cShText.body.appendChild(el('div', { class: 'fields' }, [field('Words that get the answer (separate with commas)', fShWords), field('Extra line', fShNote)]));
     cShText.body.appendChild(el('div', { class: 'field' }, [el('label', { text: 'Someone who texts now gets:' }), shPreview]));
-    var cShWeek = card('Regular weekly hours', 'Used every week, unless one day is changed below. Shabbos and Yom Tov are left out by themselves; Erev Yom Tov closes before the zman, like Friday.');
+    /* a shere time: a clock time, or a zman with minutes before (−) or after (+) it; "Automatic" = the Erev Shabbos rule below */
+    var SH_ZMAN_EN = { alos: 'Alos', sunrise: 'Sunrise (netz)', shema: 'Sof zman Shema', tefilla: 'Sof zman tefilla', chatzos: 'Chatzos', minchag: 'Mincha gedola', minchak: 'Mincha ketana', plag: 'Plag hamincha', candles: 'Candle lighting', sunset: 'Shkiah (sunset)', tzeis: 'Tzeis', tzeis72: 'Rabbeinu Tam (72)' };
+    function shTime(id, value, auto, label) {
+      var kind = el('select', { id: id, 'aria-label': label + ': clock time or zman' }), t = el('input', { type: 'time', id: id + '-t', 'aria-label': label + ' time' }),
+        off = el('input', { type: 'number', id: id + '-o', step: '5', inputmode: 'numeric', 'aria-label': label + ': minutes before (−) or after (+) the zman', placeholder: '0' }),
+        offWrap = el('span', { class: 'shoff' }, [off, el('span', { text: 'min' })]), hint = el('div', { class: 'hint shres' });
+      if (auto) kind.appendChild(el('option', { value: 'auto', text: 'Automatic (before Shabbos)' }));
+      kind.appendChild(el('option', { value: 'clock', text: 'Clock time' }));
+      MinyanShere.ZMANIM.forEach(function (k) { kind.appendChild(el('option', { value: k, text: SH_ZMAN_EN[k] || k })); });
+      function show() { t.hidden = kind.value !== 'clock'; offWrap.hidden = kind.value === 'clock' || kind.value === 'auto'; }
+      function set(v) {
+        var p = MinyanShere.parse(v);
+        if (!p) { kind.value = auto ? 'auto' : 'clock'; t.value = ''; off.value = ''; }
+        else if (p.min != null) { kind.value = 'clock'; t.value = hhmm(p.min); off.value = ''; }
+        else { kind.value = p.zman; off.value = p.off ? String(p.off) : ''; }
+        show();
+      }
+      function get() {
+        if (kind.value === 'auto') return '';
+        if (kind.value === 'clock') return t.value;
+        var o = Math.round(+off.value) || 0;
+        return kind.value + (o ? (o > 0 ? '+' : '') + o : '');
+      }
+      kind.addEventListener('change', function () { if (kind.value === 'clock' && !t.value) t.value = '10:00'; show(); });
+      set(value);
+      return { wrap: el('div', { class: 'shtime' }, [el('div', { class: 'shtime-row' }, [kind, t, offWrap]), hint]), get: get, set: set, hint: hint, id: id };
+    }
+    function shField(label, w) { return el('div', { class: 'field' }, [el('label', { for: w.id, text: label }), w.wrap]); }
+    var cShWeek = card('Regular weekly hours', 'Used every week, unless one day is changed below. Each time is a clock time or a zman with minutes before (−30) or after (+30) it. Shabbos and Yom Tov are left out by themselves; Erev Yom Tov closes before the zman, like Friday.');
     var shWeek = sh.week.map(function (w, i) {
-      var r = { open: el('input', { type: 'checkbox', id: 'sh-open-' + i }), from: inp('sh-from-' + i, w.from, { type: 'time' }), until: inp('sh-until-' + i, w.until, { type: 'time' }), kids: el('input', { type: 'checkbox', id: 'sh-kids-' + i }) };
+      var r = { open: el('input', { type: 'checkbox', id: 'sh-open-' + i }), from: shTime('sh-from-' + i, w.from, false, 'From'), until: shTime('sh-until-' + i, w.until, i === 5, 'Until'), kids: el('input', { type: 'checkbox', id: 'sh-kids-' + i }) };
       r.open.checked = !!w.open; r.kids.checked = !!w.kids;
       cShWeek.body.appendChild(el('div', { class: 'shwk' }, [el('div', { class: 'shname' }, [el('b', { text: EN_DOW[i] })]),
-        el('label', { for: r.open.id, class: 'shchk' }, [r.open, ' Open']), field('From', r.from),
-        field('Until', r.until, i === 5 ? el('div', { class: 'hint', text: 'Empty = automatic, before the zman' }) : null),
+        el('label', { for: r.open.id, class: 'shchk' }, [r.open, ' Open']), shField('From', r.from), shField('Until', r.until),
         el('label', { for: r.kids.id, class: 'shchk' }, [r.kids, ' Kids too'])]));
       return r;
     });
-    var cShZman = card('Erev Shabbos and Erev Yom Tov', 'When the shere closes on its own before Shabbos and Yom Tov.');
+    var cShZman = card('Erev Shabbos and Erev Yom Tov', 'When "Automatic" closes: this many minutes before the zman, every Friday and Erev Yom Tov. Zman times are rounded to the minutes below (a start up, an end down).');
     var fShZman = el('select', { id: 'sh-zman' }, [el('option', { value: 'candles', text: 'Candle lighting' }), el('option', { value: 'sunset', text: 'Sunset (shkiah)' })]); fShZman.value = sh.zman === 'sunset' ? 'sunset' : 'candles';
     var fShBefore = inp('sh-before', sh.before, { type: 'number', min: '0', max: '600', inputmode: 'numeric' }), fShRound = inp('sh-round', sh.round, { type: 'number', min: '1', max: '30', inputmode: 'numeric' });
-    cShZman.body.appendChild(el('div', { class: 'fields' }, [field('Minutes before', stepper(fShBefore, 5)), field('Counted from', fShZman), field('Round down to (minutes)', fShRound)]));
+    cShZman.body.appendChild(el('div', { class: 'fields' }, [field('Minutes before', stepper(fShBefore, 5)), field('Counted from', fShZman), field('Round to (minutes)', fShRound)]));
     function shereNoDays() {
       return { on: $('#sh-on', shp).checked, words: fShWords.value.trim(), note: fShNote.value.trim(), zman: fShZman.value,
         before: Math.max(0, Math.min(600, Math.round(+fShBefore.value) || 0)), round: Math.max(1, Math.min(30, Math.round(+fShRound.value) || 1)),
-        week: shWeek.map(function (r) { return { open: r.open.checked, from: r.from.value || '10:00', until: r.until.value, kids: r.kids.checked }; }), days: {} };
+        week: shWeek.map(function (r) { return { open: r.open.checked, from: r.from.get() || '10:00', until: r.until.get(), kids: r.kids.checked }; }), days: {} };
     }
     var cShDays = card('One day different', 'Change the hours, kids or a note for one day, or close it. Only that day changes; "Back to regular" undoes it.');
     var shDays = [], shToday = Cal.nowInTz(Date.now(), loc().tz).rd;
     for (var shi = 0; shi < 15; shi++) (function (rd) {
       var x = MinyanShere.day(d, rd); if (!x) return;
-      var r = { rd: rd, date: x.date, touched: false, reset: false, from: inp('sh-d-from-' + rd, hhmm(x.from), { type: 'time' }), until: inp('sh-d-until-' + rd, hhmm(x.until), { type: 'time' }),
+      var r = { rd: rd, date: x.date, erev: x.erev, touched: false, reset: false, from: shTime('sh-d-from-' + rd, x.fromSpec, false, 'From'), until: shTime('sh-d-until-' + rd, x.untilSpec, x.erev, 'Until'),
         kids: el('select', { id: 'sh-d-kids-' + rd }, [el('option', { value: 'yes', text: 'Kids too' }), el('option', { value: 'no', text: 'No kids' })]),
         closed: el('input', { type: 'checkbox', id: 'sh-d-closed-' + rd }), note: inp('sh-d-note-' + rd, x.note, { placeholder: 'optional' }) };
       r.kids.value = x.kids ? 'yes' : 'no'; r.closed.checked = !x.open;
       var tag = el('span', { class: 'shtag', text: 'changed' }), back = el('button', { type: 'button', class: 'btn small', text: 'Back to regular' });
       var row = el('div', { class: 'shdayrow' }, [el('div', { class: 'shname' }, [el('b', { text: EN_DOW[x.dow] + ', ' + engine.fmtDate(rd) }), el('span', { dir: 'rtl', text: x.label + ' · ' + x.heb }), tag]),
-        el('div', { class: 'shfields' }, [field('From', r.from), field('Until', r.until), field('Kids', r.kids), field('Note', r.note), el('label', { for: r.closed.id, class: 'shchk' }, [r.closed, ' Closed']), back])]);
+        el('div', { class: 'shfields' }, [shField('From', r.from), shField('Until', r.until), field('Kids', r.kids), field('Note', r.note), el('label', { for: r.closed.id, class: 'shchk' }, [r.closed, ' Closed']), back])]);
       function mark(on) { row.classList.toggle('changed', on); tag.hidden = !on; back.hidden = !on; }
       mark(x.changed);
       row.addEventListener('input', function () { r.touched = true; r.reset = false; mark(true); });
@@ -2609,7 +2636,7 @@
       back.addEventListener('click', function () {
         r.touched = false; r.reset = true; mark(false);
         var b = MinyanShere.day(Object.assign({}, d, { shere: shereNoDays() }), rd, false);
-        if (b) { r.from.value = hhmm(b.from); r.until.value = hhmm(b.until); r.kids.value = b.kids ? 'yes' : 'no'; r.closed.checked = !b.open; r.note.value = ''; }
+        if (b) { r.from.set(b.fromSpec); r.until.set(b.untilSpec); r.kids.value = b.kids ? 'yes' : 'no'; r.closed.checked = !b.open; r.note.value = ''; }
         paintShere();
       });
       shDays.push(r); cShDays.body.appendChild(row);
@@ -2622,17 +2649,32 @@
         if (r.reset) return;
         if (!r.touched) { if (sh.days[r.date]) s.days[r.date] = sh.days[r.date]; return; }
         var b = MinyanShere.day(probe, r.rd, false); if (!b) return;
-        var o = { closed: r.closed.checked, note: r.note.value.trim(), from: '', until: '', kids: '' };
-        if (r.from.value && r.from.value !== hhmm(b.from)) o.from = r.from.value;
-        if (r.until.value && r.until.value !== hhmm(b.until)) o.until = r.until.value;
+        var o = { closed: r.closed.checked, note: r.note.value.trim(), from: '', until: '', kids: '' }, f = r.from.get(), u = r.until.get();
+        if (f && f !== b.fromSpec) o.from = f;
+        if (u !== b.untilSpec && (u || !b.erev)) o.until = u; /* "Automatic" only means something on an Erev */
         if ((r.kids.value === 'yes') !== b.kids) o.kids = r.kids.value;
-        if (!b.open && !o.closed && !o.from && !o.until) o.from = hhmm(b.from); /* opening a day that is normally closed */
+        if (!b.open && !o.closed && !o.from && !o.until) o.from = b.fromSpec; /* opening a day that is normally closed */
         if (o.closed || o.note || o.from || o.until || o.kids) s.days[r.date] = o;
       });
       return s;
     }
+    /* under each time, what it comes to: for a day row that date, for a weekly row the coming one */
+    function paintTimes(s) {
+      var probe = Object.assign({}, d, { shere: s });
+      function res(w, rd, up) { var v = w.get(); if (!v) return 'automatic'; var m = MinyanShere.resolve(probe, rd, v, up); return m == null ? '' : engine.fmtTime(m); }
+      shWeek.forEach(function (r, i) {
+        var rd = shToday + Cal.mod(i - Cal.mod(shToday, 7), 7), x = MinyanShere.day(probe, rd, false);
+        r.from.hint.textContent = MinyanShere.parse(r.from.get()) && MinyanShere.parse(r.from.get()).zman ? 'This ' + EN_DOW[i] + ': ' + res(r.from, rd, true) : '';
+        r.until.hint.textContent = (!r.until.get() && x ? 'This ' + EN_DOW[i] + ': ' + engine.fmtTime(x.until) : MinyanShere.parse(r.until.get()) && MinyanShere.parse(r.until.get()).zman ? 'This ' + EN_DOW[i] + ': ' + res(r.until, rd, false) : '');
+      });
+      shDays.forEach(function (r) {
+        var x = MinyanShere.day(probe, r.rd, false);
+        r.from.hint.textContent = MinyanShere.parse(r.from.get()) && MinyanShere.parse(r.from.get()).zman ? '= ' + res(r.from, r.rd, true) : '';
+        r.until.hint.textContent = !r.until.get() ? (x ? '= ' + engine.fmtTime(x.auto) : '') : MinyanShere.parse(r.until.get()) && MinyanShere.parse(r.until.get()).zman ? '= ' + res(r.until, r.rd, false) : '';
+      });
+    }
     function paintShere() {
-      try { shPreview.textContent = MinyanShere.text(Object.assign({}, d, { shere: collectShere() }), Date.now()); } catch (e) { shPreview.textContent = '—'; }
+      try { var cs = collectShere(); shPreview.textContent = MinyanShere.text(Object.assign({}, d, { shere: cs }), Date.now()); paintTimes(cs); } catch (e) { shPreview.textContent = '—'; }
     }
     shp.addEventListener('input', paintShere); shp.addEventListener('change', paintShere);
     [cShText, cShWeek, cShZman, cShDays].forEach(function (c) { shp.appendChild(c); });

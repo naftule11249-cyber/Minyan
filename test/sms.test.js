@@ -70,6 +70,10 @@ check('keyword punctuation', MinyanSms.keyword('Mincha?'), /^mincha$/);
   check('Erev Pesach on a Wednesday closes before candle lighting; Yom Tov is left out', S('שערן', on(2027, 4, 18, 10, 0)), /\nמיטוואך, ערב פסח \(י״ד ניסן\): פון 10:00 ביז \d:\d\d, אויך קינדער$/);
   check('Erev Shvi\'i shel Pesach', S('שערן', on(2027, 4, 25, 10, 0)), /דינסטאג, ערב שביעי של פסח \(כ׳ ניסן\)/);
   check('Hoshana Rabbah on a Friday', S('שערן', on(2026, 9, 27, 10, 0)), /ערב שבת, הושענא רבה/);
+  { const z = JSON.parse(JSON.stringify(sc)); z.shere = { on: true, week: [{ from: 'sunrise+20', until: 'sunset-30' }], days: { '2026-11-17': { from: 'plag', until: '21:00' } } };
+    const t = MinyanSms.buildReply(z, 'שערן', on(2026, 11, 15, 10, 0)).text;
+    check('times by the zman: Sunday from sunrise+20 until shkiah-30, rounded to 5 (a start up, an end down)', t, /היינט, זונטאג: פון 7:05 ביז 4:05/);
+    check('one day from plag until 9:00', t, /דינסטאג: פון 3:3\d ביז 9:00/); }
   sc.shere.days = { '2026-11-17': { closed: true, note: 'אויף א חתונה' }, '2026-11-19': { until: '18:00', kids: 'no' } };
   check('one day closed, one day changed', S('שערן', on(2026, 11, 15, 10, 0)), /מאנטאג: .*\nדינסטאג: נישטא קיין שערן\. אויף א חתונה\nמיטוואך: .*\nדאנערשטאג: פון 10:00 ביז 6:00, נישט פאר קינדער/);
 }

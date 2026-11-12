@@ -80,7 +80,7 @@ The admin page's **Shere** tab sets the barber's hours, and anyone who texts **�
 ערב שבת פרשת ויצא (י׳ כסלו): פון 8:00 ביז 3:15, נישט פאר קינדער
 ```
 
-- **Regular weekly hours**: Sunday to Friday, open or not, from, until, and whether kids come too. Friday's "until" left empty closes a set number of minutes before candle lighting (or sunset), rounded down.
+- **Regular weekly hours**: Sunday to Friday, open or not, from, until, and whether kids come too. Every from and until is a clock time or a zman with minutes before or after it (`sunset-30`, `sunrise+20`, `plag`), rounded to the tab's minutes. Friday's "until" set to Automatic closes a set number of minutes before candle lighting (or sunset).
 - **Erev Yom Tov** is found by itself and closes before the zman like Friday; Shabbos and Yom Tov are left out.
 - **One day different**: the next two weeks, each day with its own hours, kids, a note, or Closed; "Back to regular" undoes it.
 - It is off until "Answer these texts" is ticked; every other text is answered as before. The logic is `src/shere.js`, used by the admin preview and the text responder alike.

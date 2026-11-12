@@ -661,7 +661,7 @@ var MinyanEngine = (function () {
 /* shere.js — the barber's (שערן) hours for the week, answered in Yiddish to anyone who texts "שערן". Needs cal.js and engine.js.
    Settings live in cfg.shere (edited on the admin page's Shere tab):
      on: answer the words below          words: 'שערן, שערען, ...' (comma separated)
-     week: [Sunday .. Friday] of { open, from:'HH:MM', until:'HH:MM' ('' = automatic, before the zman), kids }
+     week: [Sunday .. Friday] of { open, from, until ('' = automatic, before the zman), kids }; a time is 'HH:MM' or a zman like 'sunset-30'
      zman: 'candles' | 'sunset'           before: minutes before the zman Erev Shabbos / Erev Yom Tov closes      round: round down to N minutes
      days: { 'YYYY-MM-DD': { closed, from, until, kids:'yes'|'no', note } }  one day different from the regular hours
      note: a line added at the end of every answer
@@ -682,8 +682,27 @@ var MinyanShere = (function () {
     return out;
   }
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
-  function valid(t) { return /^\d{1,2}:\d{2}$/.test(t || ''); }
-  function toMin(t) { var p = String(t).split(':'); return +p[0] * 60 + +p[1]; }
+  /* a time is a clock time ('10:00') or a zman with minutes before or after it ('sunset-30', 'chatzos', 'tzeis+10') */
+  var ZMANIM = ['alos', 'sunrise', 'shema', 'tefilla', 'chatzos', 'minchag', 'minchak', 'plag', 'candles', 'sunset', 'tzeis', 'tzeis72'];
+  function parse(t) {
+    t = String(t || '').trim();
+    var m = /^(\d{1,2}):(\d{2})$/.exec(t);
+    if (m) return { min: +m[1] * 60 + +m[2] };
+    m = /^([a-z0-9]+)\s*(?:([+-])\s*(\d+))?$/i.exec(t);
+    if (m && ZMANIM.indexOf(m[1]) >= 0) return { zman: m[1], off: m[2] ? (m[2] === '-' ? -1 : 1) * +m[3] : 0 };
+    return null;
+  }
+  function valid(t) { return !!parse(t); }
+  /* minutes after midnight on that day; a zman time is rounded to the shere's rounding (a start up, an end down) */
+  function resolve(cfg, rd, t, up) {
+    var p = parse(t), r = Math.max(1, +settings(cfg).round || 1);
+    if (!p) return null;
+    if (p.min != null) return p.min;
+    var z = MinyanEngine(cfg).zmanimFor(rd)[p.zman];
+    if (!isFinite(z)) return null;
+    var v = Math.round(z) + p.off;
+    return up ? Math.ceil(v / r) * r : Math.floor(v / r) * r;
+  }
   function iso(rd) { var g = Cal.gregFromRD(rd); return g.y + '-' + pad2(g.m) + '-' + pad2(g.d); }
   function hebDate(rd) { var h = Cal.hebFromRD(rd); return Cal.gematria(h.d) + ' ' + Cal.monthName(h.y, h.m); }
   /* what the evening brings in, for a day whose candles are lit before sunset */
@@ -706,14 +725,15 @@ var MinyanShere = (function () {
     var engine = MinyanEngine(cfg), z = engine.zmanimFor(rd), zm = s.zman === 'sunset' ? z.sunset : z.candles, r = Math.max(1, +s.round || 1);
     var auto = isFinite(zm) ? Math.floor((Math.floor(zm) - (+s.before || 0)) / r) * r : null;
     var w = s.week[dow], base = w.open ? w : s.week[5]; /* an Erev Yom Tov on a day that is normally closed opens with Friday's hours */
+    var fromSpec = valid(base.from) ? base.from : '10:00', untilSpec = (erev && !(dow === 5 && valid(w.until))) || !valid(w.until) ? '' : w.until;
     var o = { rd: rd, date: iso(rd), dow: dow, label: label, heb: hebDate(rd), erev: erev, open: w.open || erev, auto: auto,
-      from: toMin(valid(base.from) ? base.from : '10:00'), until: (erev && !(dow === 5 && valid(w.until))) || !valid(w.until) ? auto : toMin(w.until),
+      fromSpec: fromSpec, untilSpec: untilSpec, from: resolve(cfg, rd, fromSpec, true), until: untilSpec ? resolve(cfg, rd, untilSpec, false) : auto,
       kids: !!base.kids, note: '', changed: false };
     var c = useDay === false ? null : s.days[o.date];
     if (c) {
       o.changed = true;
-      if (valid(c.from)) o.from = toMin(c.from);
-      if (valid(c.until)) o.until = toMin(c.until);
+      if (valid(c.from)) { o.fromSpec = c.from; o.from = resolve(cfg, rd, c.from, true); }
+      if (valid(c.until)) { o.untilSpec = c.until; o.until = resolve(cfg, rd, c.until, false); }
       if (c.kids === 'yes') o.kids = true; else if (c.kids === 'no') o.kids = false;
       if (c.closed) o.open = false; else if (c.from || c.until) o.open = true;
       o.note = c.note || '';
@@ -738,7 +758,7 @@ var MinyanShere = (function () {
     for (i = 0; i < w.days.length; i++) {
       var x = w.days[i];
       if (!x.open) { lines.push(name(x) + ': נישטא קיין שערן' + (x.note ? '. ' + x.note : '')); continue; }
-      if (x.until == null || x.from >= x.until) continue;
+      if (x.from == null || x.until == null || x.from >= x.until) continue;
       j = i; /* plain weekdays in a row with the same hours: "זונטאג ביז מיטוואך" */
       if (!x.erev && !x.note) while (w.days[j + 1] && !w.days[j + 1].erev && !w.days[j + 1].note && w.days[j + 1].open && w.days[j + 1].rd === w.days[j].rd + 1 && hours(w.days[j + 1]) === hours(x)) j++;
       lines.push((j > i ? name(x) + ' ביז ' + w.days[j].label : name(x)) + ': ' + hours(x) + (x.note ? '. ' + x.note : ''));
@@ -756,7 +776,7 @@ var MinyanShere = (function () {
     return !!b && String(s.words || '').split(',').map(norm).filter(Boolean).indexOf(b) >= 0;
   }
   function reply(cfg, body, nowMs) { return wants(cfg, body) ? text(cfg, nowMs) : null; }
-  return { DEFAULTS: DEFAULTS, settings: settings, day: day, week: week, text: text, wants: wants, reply: reply, iso: iso };
+  return { DEFAULTS: DEFAULTS, ZMANIM: ZMANIM, parse: parse, valid: valid, resolve: resolve, settings: settings, day: day, week: week, text: text, wants: wants, reply: reply, iso: iso };
 })();
 
 
