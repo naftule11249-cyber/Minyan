@@ -3,7 +3,7 @@
    POST (Twilio webhook, form-encoded) -> TwiML; GET /?q=text -> plain text.
    Env: CONFIG_URL (your site's config.json) or CONFIG_FILE (local file), PORT (default 8788). */
 const http = require('http'), fs = require('fs'), path = require('path'), qs = require('querystring');
-global.Cal = require('../src/cal.js'); global.MinyanEngine = require('../src/engine.js');
+global.Cal = require('../src/cal.js'); global.MinyanEngine = require('../src/engine.js'); global.MinyanShere = require('../src/shere.js');
 const MinyanSms = require('../src/sms.js'); global.MinyanSms = MinyanSms; const MinyanNotify = require('../src/notify.js');
 async function loadCfg() {
   if (process.env.CONFIG_URL) return (await fetch(process.env.CONFIG_URL, { cache: 'no-store' })).json();

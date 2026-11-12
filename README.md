@@ -69,6 +69,22 @@ The Schedule tab has a page for every kind of day. **Erev Shabbos (Friday)**, **
 - The evening is told by what the next day is: candle lighting before sunset on Erev Shabbos and Erev Yom Tov, and on a Yom Tov that runs into Shabbos; candle lighting **after nightfall** on a Shabbos or Yom Tov that runs into Yom Tov (the second night, Motzaei Shabbos that is Yom Tov); and מוצאי שבת or מוצאי יום טוב only on the day whose nightfall really ends it. On the hallway screen that line stands in a band of its own above the three zmanim.
 - The marks "last minyan for סוף זמן תפילה" and "last before חצות" are a weekday matter (they are reckoned at the weekday pace of davening) and are not shown on Shabbos or Yom Tov.
 
+## Shere (the barber's hours)
+
+The admin page's **Shere** tab sets the barber's hours, and anyone who texts **שערן** (or another word listed there) to the shul's number gets the rest of this week's hours back, in Yiddish:
+
+```
+שערן די וואך:
+היינט, זונטאג ביז מיטוואך: פון 10:00 ביז 8:00, אויך קינדער
+דאנערשטאג: פון 10:00 ביז 9:00, אויך קינדער
+ערב שבת פרשת ויצא (י׳ כסלו): פון 8:00 ביז 3:15, נישט פאר קינדער
+```
+
+- **Regular weekly hours**: Sunday to Friday, open or not, from, until, and whether kids come too. Friday's "until" left empty closes a set number of minutes before candle lighting (or sunset), rounded down.
+- **Erev Yom Tov** is found by itself and closes before the zman like Friday; Shabbos and Yom Tov are left out.
+- **One day different**: the next two weeks, each day with its own hours, kids, a note, or Closed; "Back to regular" undoes it.
+- It is off until "Answer these texts" is ticked; every other text is answered as before. The logic is `src/shere.js`, used by the admin preview and the text responder alike.
+
 ## Quick changes for today
 
 The admin page is a full page of its own, styled like a phone app (navy header, gold for the one action that matters, big white cards and large controls; on a phone the sections are a bottom tab bar, the Schedule tab shows one tefilla at a time behind a switch, and minute boxes have − and + steppers). A sidebar lists its sections (Today, General, Schedule, Notices, Special dates, Publish, Backup), the header holds Save, Close and a "Saved …" / "Unsaved changes" marker, Ctrl+S (Cmd+S) saves, and the sidebar also offers "View the board" and "Lock". On a phone the sections become a scrolling strip under the header. Settings are grouped into cards (The board, Look and labels, Location and zmanim, Tefillos, Website and services, Security).

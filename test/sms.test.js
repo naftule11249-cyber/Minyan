@@ -55,4 +55,22 @@ check('keyword punctuation', MinyanSms.keyword('Mincha?'), /^mincha$/);
   check('zmanim on the first day of Pesach: no "candle lighting before sunset" line, since tonight\'s is after nightfall', A('זמנים', on(2027, 4, 22, 10, 0)), /^(?!.*הדלקת נרות)/s);
   check('zmanim on the second day, a Friday: candle lighting is there', A('זמנים', on(2027, 4, 23, 10, 0)), /הדלקת נרות/);
 }
+/* שערן: the barber's hours for the week, in Yiddish, from the Shere tab's settings */
+{
+  global.MinyanShere = require('../src/shere.js');
+  const sc = JSON.parse(JSON.stringify(cfg)); sc.smsLang = 'he';
+  const on = (y, mo, d, h, mi) => Cal.epochFromWall(Cal.rdFromGreg(y, mo, d), h * 60 + mi, 'America/New_York');
+  check('shere is off until the tab turns it on: שערן is an ordinary text', MinyanSms.buildReply(sc, 'שערן', on(2026, 11, 15, 10, 0)).keyword, /^next$/);
+  sc.shere = { on: true };
+  const S = (t, now) => MinyanSms.buildReply(sc, t, now).text;
+  check('שערן on a Sunday: the whole week, weekdays with the same hours together', S('שערן', on(2026, 11, 15, 10, 0)), /^שערן די וואך:\nהיינט, זונטאג ביז מיטוואך: פון 10:00 ביז 8:00, אויך קינדער\nדאנערשטאג: פון 10:00 ביז 9:00, אויך קינדער\nערב שבת פרשת ויצא \(י׳ כסלו\): פון 8:00 ביז \d:\d\d, נישט פאר קינדער$/);
+  check('with spaces and a "!" too, and in English letters', S(' שערן! ', on(2026, 11, 15, 10, 0)) + S('Shere', on(2026, 11, 15, 10, 0)), /^שערן די וואך.*שערן די וואך/s);
+  check('other texts still get the minyan', S('מנין', on(2026, 11, 15, 10, 0)), /מנין הבא: שחרית/);
+  check('after Friday closes: next week', S('שערן', on(2026, 11, 13, 17, 0)), /^שערן די וואך:\nזונטאג ביז/);
+  check('Erev Pesach on a Wednesday closes before candle lighting; Yom Tov is left out', S('שערן', on(2027, 4, 18, 10, 0)), /\nמיטוואך, ערב פסח \(י״ד ניסן\): פון 10:00 ביז \d:\d\d, אויך קינדער$/);
+  check('Erev Shvi\'i shel Pesach', S('שערן', on(2027, 4, 25, 10, 0)), /דינסטאג, ערב שביעי של פסח \(כ׳ ניסן\)/);
+  check('Hoshana Rabbah on a Friday', S('שערן', on(2026, 9, 27, 10, 0)), /ערב שבת, הושענא רבה/);
+  sc.shere.days = { '2026-11-17': { closed: true, note: 'אויף א חתונה' }, '2026-11-19': { until: '18:00', kids: 'no' } };
+  check('one day closed, one day changed', S('שערן', on(2026, 11, 15, 10, 0)), /מאנטאג: .*\nדינסטאג: נישטא קיין שערן\. אויף א חתונה\nמיטוואך: .*\nדאנערשטאג: פון 10:00 ביז 6:00, נישט פאר קינדער/);
+}
 console.log(fails ? fails + ' FAILURES' : 'ALL PASS');

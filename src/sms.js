@@ -82,6 +82,9 @@ var MinyanSms = (function () {
     }
     var out = '', list, first, second, i, last;
     if (k === 'carrier') return { text: '', lang: lang, keyword: k };
+    /* "שערן" and the other words set on the admin page's Shere tab: the barber's hours this week, in Yiddish */
+    var shere = typeof MinyanShere !== 'undefined' ? MinyanShere.reply(cfg, text, nowMs) : null;
+    if (shere) return { text: shere, lang: 'yi', keyword: 'shere' };
     if (k === 'help') out = T[senderLang].help;
     else if (k === 'zmanim') {
       var z = engine.zmanimFor(rd), info = Cal.dayInfo(rd, !!cfg.israel), keys = ['sunrise', 'shema', 'chatzos', 'minchak', 'candles', 'sunset', 'tzeis'], parts = [];

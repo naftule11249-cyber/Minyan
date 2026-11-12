@@ -1276,7 +1276,8 @@
     chev: '<path d="M6 9l6 6 6-6"/>',
     lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
     open: '<path d="M14 4h6v6M20 4l-9 9M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/>',
-    logout: '<path d="M10 17l5-5-5-5M15 12H3M13 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/>'
+    logout: '<path d="M10 17l5-5-5-5M15 12H3M13 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/>',
+    shere: '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/>'
   };
   function svgIcon(name) {
     var sp = el('span', { class: 'ico', 'aria-hidden': 'true' });
@@ -1307,7 +1308,7 @@
     d.location = d.location || {}; d.schedules = d.schedules || {}; d.overrides = d.overrides || []; d.notices = d.notices || [];
     d.tefillos = (d.tefillos && d.tefillos.length) ? d.tefillos : clone(TEFILLA_DEFAULTS);
     var todayRd = Cal.nowInTz(Date.now(), loc().tz).rd, todayInfo = Cal.dayInfo(todayRd, !!cfg.israel);
-    var tabs = [['home', 'Home', 'The hallway screen as it is now, and as it will be on any day you choose.'], ['today', 'This week', 'Move, cancel or add a minyan for today or for one of the next days; that day only.', 'Week'], ['general', 'General', 'Name, rooms, location, looks and the tefillos.'], ['schedule', 'Schedule', 'The regular minyanim for each kind of day.'], ['donations', 'Donations', 'Who sponsors what on the board, and from when to when.', 'Donors'], ['notices', 'Banner', 'One line across the top of the board, for as long as you say.'], ['rolls', 'Extra schedules', 'A named list that takes over for the days it covers: a season, a week, or one kind of day.', 'Extra'], ['screen', 'Hallway screen', 'The TV in the hallway: its colours, and which minyanim it shows.', 'Screen'], ['overrides', 'Special dates', 'A different schedule for one date or for a day every year.', 'Special']];
+    var tabs = [['home', 'Home', 'The hallway screen as it is now, and as it will be on any day you choose.'], ['today', 'This week', 'Move, cancel or add a minyan for today or for one of the next days; that day only.', 'Week'], ['general', 'General', 'Name, rooms, location, looks and the tefillos.'], ['schedule', 'Schedule', 'The regular minyanim for each kind of day.'], ['donations', 'Donations', 'Who sponsors what on the board, and from when to when.', 'Donors'], ['notices', 'Banner', 'One line across the top of the board, for as long as you say.'], ['shere', 'Shere', 'The barber\'s hours: what people get when they text שערן.'], ['rolls', 'Extra schedules', 'A named list that takes over for the days it covers: a season, a week, or one kind of day.', 'Extra'], ['screen', 'Hallway screen', 'The TV in the hallway: its colours, and which minyanim it shows.', 'Screen'], ['overrides', 'Special dates', 'A different schedule for one date or for a day every year.', 'Special']];
     if (mode !== 'artifact') tabs.push(['publish', 'Publish', 'What is waiting to go out, and the connection to the website.']);
     if (mode !== 'artifact') tabs.push(['send', 'Send', 'A notification, right now, to everyone who turned reminders on.']);
     tabs.push(['data', 'Backup', 'Previous versions and the settings as text.']);
@@ -2561,6 +2562,83 @@
 
     pages.notices = np;
 
+    /* shere: the barber's hours, answered in Yiddish to anyone who texts שערן (src/shere.js) */
+    var shp = el('div', { class: 'col' }), sh = MinyanShere.settings(d), EN_DOW = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    function hhmm(min) { return min == null || !isFinite(min) ? '' : pad2(Math.floor(min / 60)) + ':' + pad2(Math.round(min) % 60); }
+    var cShText = card('Texts', 'Anyone who texts one of these words to the shul\'s number gets this week\'s shere hours, in Yiddish. Every other text is answered as before.');
+    var fShOn = chk('sh-on', sh.on, 'Answer these texts with the shere hours');
+    var fShWords = inp('sh-words', sh.words), fShNote = inp('sh-note', sh.note, { placeholder: 'optional: a line at the end of every answer' });
+    var shPreview = el('pre', { class: 'shere-preview', dir: 'rtl', lang: 'yi' });
+    cShText.body.appendChild(el('div', { class: 'checks' }, [fShOn]));
+    cShText.body.appendChild(el('div', { class: 'fields' }, [field('Words that get the answer (separate with commas)', fShWords), field('Extra line', fShNote)]));
+    cShText.body.appendChild(el('div', { class: 'field' }, [el('label', { text: 'Someone who texts now gets:' }), shPreview]));
+    var cShWeek = card('Regular weekly hours', 'Used every week, unless one day is changed below. Shabbos and Yom Tov are left out by themselves; Erev Yom Tov closes before the zman, like Friday.');
+    var shWeek = sh.week.map(function (w, i) {
+      var r = { open: el('input', { type: 'checkbox', id: 'sh-open-' + i }), from: inp('sh-from-' + i, w.from, { type: 'time' }), until: inp('sh-until-' + i, w.until, { type: 'time' }), kids: el('input', { type: 'checkbox', id: 'sh-kids-' + i }) };
+      r.open.checked = !!w.open; r.kids.checked = !!w.kids;
+      cShWeek.body.appendChild(el('div', { class: 'shwk' }, [el('div', { class: 'shname' }, [el('b', { text: EN_DOW[i] })]),
+        el('label', { for: r.open.id, class: 'shchk' }, [r.open, ' Open']), field('From', r.from),
+        field('Until', r.until, i === 5 ? el('div', { class: 'hint', text: 'Empty = automatic, before the zman' }) : null),
+        el('label', { for: r.kids.id, class: 'shchk' }, [r.kids, ' Kids too'])]));
+      return r;
+    });
+    var cShZman = card('Erev Shabbos and Erev Yom Tov', 'When the shere closes on its own before Shabbos and Yom Tov.');
+    var fShZman = el('select', { id: 'sh-zman' }, [el('option', { value: 'candles', text: 'Candle lighting' }), el('option', { value: 'sunset', text: 'Sunset (shkiah)' })]); fShZman.value = sh.zman === 'sunset' ? 'sunset' : 'candles';
+    var fShBefore = inp('sh-before', sh.before, { type: 'number', min: '0', max: '600', inputmode: 'numeric' }), fShRound = inp('sh-round', sh.round, { type: 'number', min: '1', max: '30', inputmode: 'numeric' });
+    cShZman.body.appendChild(el('div', { class: 'fields' }, [field('Minutes before', stepper(fShBefore, 5)), field('Counted from', fShZman), field('Round down to (minutes)', fShRound)]));
+    function shereNoDays() {
+      return { on: $('#sh-on', shp).checked, words: fShWords.value.trim(), note: fShNote.value.trim(), zman: fShZman.value,
+        before: Math.max(0, Math.min(600, Math.round(+fShBefore.value) || 0)), round: Math.max(1, Math.min(30, Math.round(+fShRound.value) || 1)),
+        week: shWeek.map(function (r) { return { open: r.open.checked, from: r.from.value || '10:00', until: r.until.value, kids: r.kids.checked }; }), days: {} };
+    }
+    var cShDays = card('One day different', 'Change the hours, kids or a note for one day, or close it. Only that day changes; "Back to regular" undoes it.');
+    var shDays = [], shToday = Cal.nowInTz(Date.now(), loc().tz).rd;
+    for (var shi = 0; shi < 15; shi++) (function (rd) {
+      var x = MinyanShere.day(d, rd); if (!x) return;
+      var r = { rd: rd, date: x.date, touched: false, reset: false, from: inp('sh-d-from-' + rd, hhmm(x.from), { type: 'time' }), until: inp('sh-d-until-' + rd, hhmm(x.until), { type: 'time' }),
+        kids: el('select', { id: 'sh-d-kids-' + rd }, [el('option', { value: 'yes', text: 'Kids too' }), el('option', { value: 'no', text: 'No kids' })]),
+        closed: el('input', { type: 'checkbox', id: 'sh-d-closed-' + rd }), note: inp('sh-d-note-' + rd, x.note, { placeholder: 'optional' }) };
+      r.kids.value = x.kids ? 'yes' : 'no'; r.closed.checked = !x.open;
+      var tag = el('span', { class: 'shtag', text: 'changed' }), back = el('button', { type: 'button', class: 'btn small', text: 'Back to regular' });
+      var row = el('div', { class: 'shdayrow' }, [el('div', { class: 'shname' }, [el('b', { text: EN_DOW[x.dow] + ', ' + engine.fmtDate(rd) }), el('span', { dir: 'rtl', text: x.label + ' · ' + x.heb }), tag]),
+        el('div', { class: 'shfields' }, [field('From', r.from), field('Until', r.until), field('Kids', r.kids), field('Note', r.note), el('label', { for: r.closed.id, class: 'shchk' }, [r.closed, ' Closed']), back])]);
+      function mark(on) { row.classList.toggle('changed', on); tag.hidden = !on; back.hidden = !on; }
+      mark(x.changed);
+      row.addEventListener('input', function () { r.touched = true; r.reset = false; mark(true); });
+      row.addEventListener('change', function () { r.touched = true; r.reset = false; mark(true); });
+      back.addEventListener('click', function () {
+        r.touched = false; r.reset = true; mark(false);
+        var b = MinyanShere.day(Object.assign({}, d, { shere: shereNoDays() }), rd, false);
+        if (b) { r.from.value = hhmm(b.from); r.until.value = hhmm(b.until); r.kids.value = b.kids ? 'yes' : 'no'; r.closed.checked = !b.open; r.note.value = ''; }
+        paintShere();
+      });
+      shDays.push(r); cShDays.body.appendChild(row);
+    })(shToday + shi);
+    function collectShere() {
+      var s = shereNoDays(), probe = Object.assign({}, d, { shere: s }), byDate = {};
+      shDays.forEach(function (r) { byDate[r.date] = r; });
+      Object.keys(sh.days || {}).forEach(function (k) { if (!byDate[k] && k >= MinyanShere.iso(shToday)) s.days[k] = sh.days[k]; }); /* changes further ahead stay; past ones are dropped */
+      shDays.forEach(function (r) {
+        if (r.reset) return;
+        if (!r.touched) { if (sh.days[r.date]) s.days[r.date] = sh.days[r.date]; return; }
+        var b = MinyanShere.day(probe, r.rd, false); if (!b) return;
+        var o = { closed: r.closed.checked, note: r.note.value.trim(), from: '', until: '', kids: '' };
+        if (r.from.value && r.from.value !== hhmm(b.from)) o.from = r.from.value;
+        if (r.until.value && r.until.value !== hhmm(b.until)) o.until = r.until.value;
+        if ((r.kids.value === 'yes') !== b.kids) o.kids = r.kids.value;
+        if (!b.open && !o.closed && !o.from && !o.until) o.from = hhmm(b.from); /* opening a day that is normally closed */
+        if (o.closed || o.note || o.from || o.until || o.kids) s.days[r.date] = o;
+      });
+      return s;
+    }
+    function paintShere() {
+      try { shPreview.textContent = MinyanShere.text(Object.assign({}, d, { shere: collectShere() }), Date.now()); } catch (e) { shPreview.textContent = '—'; }
+    }
+    shp.addEventListener('input', paintShere); shp.addEventListener('change', paintShere);
+    [cShText, cShWeek, cShZman, cShDays].forEach(function (c) { shp.appendChild(c); });
+    paintShere();
+    pages.shere = shp;
+
     /* the hallway screen: its colours, and which minyanim it shows */
     var sp = el('div', { class: 'col', id: 'page-screen' }), wall = clone(d.wallLook || {}), win = clone(d.wallWindow || {});
     var cWallLook = card('Colours', 'Each kind of tile on the hallway screen. Leave one empty and it keeps the colour of the look chosen in General.'),
@@ -3004,6 +3082,7 @@
       out.remoteConfigUrl = fRemote.value.trim();
       out.smsNumber = fSms.value.trim();
       out.smsLang = fSmsLang.value;
+      out.shere = collectShere();
       /* A save is always newer than anything this page has seen, whatever this device's clock says: boards take the settings
          with the later stamp, so a change saved on a phone whose clock runs behind another's must still come out later. */
       out.savedAt = Math.max(Date.now(), (cfg.savedAt || 0) + 1, (ui.inc || 0) + 1);
@@ -3058,7 +3137,7 @@
       el('button', { type: 'button', class: 'btn ghost', 'data-nodirty': '1', onclick: function () { if (ui.adminDirty && !confirm('Lock without saving? The changes made here will be lost.')) return; pinOk = false; try { sessionStorage.removeItem('minyan-pin'); } catch (e) {} ui.adminDirty = false; closeOverlay(); showPin(); } }, [svgIcon('lock'), el('span', { text: 'Lock' })])]);
     var ghNow = mode === 'artifact' ? null : ghSettings();
     var footHint = mode === 'artifact' ? 'Save publishes a new version of this page for everyone who has the link.' : (ghConfigured(ghNow) ? 'Save keeps the changes on this device. Publish sends them to the website and the app.' : 'Save keeps the settings on this device only. Connect the website on the Publish tab to be able to publish.');
-    var main = el('div', { class: 'amain' }, [el('div', { class: 'ptitle' }, [pageTitle, pageDesc]), pages.home, pages.today, pages.general, pages.schedule, pages.donations, pages.rolls, pages.notices, pages.screen, pages.overrides, mode !== 'artifact' ? pages.publish : null, mode !== 'artifact' ? pages.send : null, pages.data,
+    var main = el('div', { class: 'amain' }, [el('div', { class: 'ptitle' }, [pageTitle, pageDesc]), pages.home, pages.today, pages.general, pages.schedule, pages.donations, pages.rolls, pages.notices, pages.shere, pages.screen, pages.overrides, mode !== 'artifact' ? pages.publish : null, mode !== 'artifact' ? pages.send : null, pages.data,
       el('div', { class: 'bar afoot' }, [el('span', { class: 'hint', text: footHint }), saveBtn.cloneNode(true)])]);
     var pubBar = el('div', { class: 'pubbar' }); pubBar.hidden = true;
     function refreshPubBar() {

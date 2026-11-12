@@ -1109,3 +1109,17 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 .fs-btn:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
 .fs-btn svg { width: 1.3rem; height: 1.3rem; flex: none; }
 @media (prefers-reduced-motion: reduce) { .fs-btn, .fs-btn.show { transition: none; } }
+
+/* Shere tab */
+.shere-preview { white-space: pre-wrap; font: inherit; font-size: 1.02rem; line-height: 1.65; margin: 0; padding: 12px 16px; border-radius: 12px; background: var(--a-soft, #f2efe8); text-align: right; }
+.shwk { display: grid; grid-template-columns: 120px 90px 1fr 1fr 110px; gap: 12px; align-items: end; padding: 10px 0; border-top: 1px solid var(--a-line, #e3ded3); }
+.shwk:first-child { border-top: 0; }
+.shname { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.shname span { color: var(--a-muted); font-size: .9rem; }
+.shchk { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.shdayrow { padding: 12px 0; border-top: 1px solid var(--a-line, #e3ded3); }
+.shdayrow:first-child { border-top: 0; }
+.shdayrow.changed { background: #fff7e3; margin: 0 -16px; padding: 12px 16px; }
+.shfields { display: grid; grid-template-columns: 150px 150px 140px 1fr auto auto; gap: 10px; align-items: end; margin-top: 8px; }
+.shtag { font-size: .75rem; font-weight: 600; color: #8a5a00; background: #ffe7a8; border-radius: 99px; padding: 1px 8px; }
+@media (max-width: 720px) { .shwk { grid-template-columns: 1fr 1fr; } .shwk .shname { grid-column: 1 / -1; } .shfields { grid-template-columns: 1fr 1fr; } }

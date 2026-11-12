@@ -8,6 +8,6 @@ var MinyanTemplate = function (configJson) {
     '<div id="app" dir="rtl" lang="he"><header class="top"><div class="inner"><div class="shul">לוח המנינים</div><h1 class="dayline">טוען את הלוח…</h1></div></header>' +
     '<main><div class="col"><section class="next"><h2>מנין הבא</h2><div class="empty">מחשב את המנין הקרוב…</div></section></div></main></div>\n' +
     '<script id="config" type="application/json">' + configJson.replace(/<\//g, '<\\/') + '</script>\n' +
-    '<script src="cal.js"></script>\n<script src="engine.js"></script>\n<script src="template.js"></script>\n<script src="app.js"></script>\n';
+    '<script src="cal.js"></script>\n<script src="engine.js"></script>\n<script src="shere.js"></script>\n<script src="template.js"></script>\n<script src="app.js"></script>\n';
 };
 if (typeof module !== 'undefined') module.exports = MinyanTemplate;

@@ -76,11 +76,11 @@ if (site) {
     SITE: JSON.stringify(site).replace(/</g, '\\u003c'), STRINGS: JSON.stringify({ waiting: o.waiting, checking: o.checking, found: o.found }).replace(/</g, '\\u003c') };
   fs.writeFileSync(path.join(dist, 'offline.html'), fs.readFileSync(path.join(__dirname, 'src/offline.html'), 'utf8').replace(/\{\{(\w+)\}\}/g, (m, k) => fill[k]));
 }
-for (const f of ['style.css', 'cal.js', 'engine.js', 'template.js', 'app.js', 'manifest.webmanifest', 'admin.webmanifest']) fs.copyFileSync(path.join(__dirname, 'src', f), path.join(dist, f));
+for (const f of ['style.css', 'cal.js', 'engine.js', 'shere.js', 'template.js', 'app.js', 'manifest.webmanifest', 'admin.webmanifest']) fs.copyFileSync(path.join(__dirname, 'src', f), path.join(dist, f));
 fs.writeFileSync(path.join(dist, 'config.json'), json);
 fs.writeFileSync(path.join(dist, '.nojekyll'), '');
 const hash = crypto.createHash('sha256');
-for (const f of ['index.html', 'admin.html', 'style.css', 'cal.js', 'engine.js', 'template.js', 'app.js', 'manifest.webmanifest', 'admin.webmanifest']) hash.update(fs.readFileSync(path.join(dist, f)));
+for (const f of ['index.html', 'admin.html', 'style.css', 'cal.js', 'engine.js', 'shere.js', 'template.js', 'app.js', 'manifest.webmanifest', 'admin.webmanifest']) hash.update(fs.readFileSync(path.join(dist, f)));
 const sw = fs.readFileSync(path.join(__dirname, 'src/sw.js'), 'utf8').replace("var VERSION = 'minyan-shell-dev';", "var VERSION = 'minyan-shell-" + hash.digest('hex').slice(0, 12) + "';");
 fs.writeFileSync(path.join(dist, 'sw.js'), sw);
 for (const f of ['icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png', 'favicon.png', 'og-image.png']) {
@@ -91,7 +91,7 @@ for (const f of ['admin-192.png', 'admin-512.png', 'admin-maskable-512.png', 'ad
 }
 // SMS responder bundles: one file to paste into Twilio Functions, one to deploy as a Cloudflare Worker
 const strip = t => t.replace(/^if \(typeof module !== 'undefined'\) module\.exports = .*;$/mg, '');
-const core = ['src/cal.js', 'src/engine.js', 'src/sms.js', 'src/notify.js'].map(f => strip(fs.readFileSync(path.join(__dirname, f), 'utf8'))).join('\n');
+const core = ['src/cal.js', 'src/engine.js', 'src/shere.js', 'src/sms.js', 'src/notify.js'].map(f => strip(fs.readFileSync(path.join(__dirname, f), 'utf8'))).join('\n');
 fs.mkdirSync(path.join(__dirname, 'sms/dist'), { recursive: true });
 fs.writeFileSync(path.join(__dirname, 'sms/dist/twilio-function.js'), core + '\n' + fs.readFileSync(path.join(__dirname, 'sms/twilio.js'), 'utf8'));
 fs.writeFileSync(path.join(__dirname, 'sms/dist/worker.js'), core + '\n' + strip(fs.readFileSync(path.join(__dirname, 'sms/webpush.js'), 'utf8')) + '\n' + fs.readFileSync(path.join(__dirname, 'sms/worker.js'), 'utf8'));
