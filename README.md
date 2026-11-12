@@ -90,7 +90,7 @@ The admin page's **Shere** tab sets the barber's hours and prices, and anyone wh
 
 - From chatzos on Thursday night until Motzei Shabbos, a **זמני שבת קודש** box takes the place of Mincha and Maariv (board, phones, hallway screen): candle lighting, Friday's Mincha, Shabbos's minyanim and Motzei Shabbos (72 minutes, rounded up). On Friday after chatzos the next-minyan box counts down to candle lighting.
 - The Friday and Shabbos schedule follows the weekly sheet: Mincha erev Shabbos `candles+45^5`, Shabbos Mincha `fricandles+35^5` (`fricandles` is this week's Friday candle lighting; `^5` rounds up to 5, `~5` down).
-- `node tools/shabbos-week.js [--date YYYY-MM-DD] [--config URL] > week.json` prints the coming Shabbos's times from the board for the weekly sheet: parsha, hadlakah, szks (מג״א), motzash, minchaErev, shacharis/hodu, minchaShabbos, shiurShabbos (Mincha −45), and every Friday and Shabbos minyan.
+- `node tools/shabbos-week.js [--date YYYY-MM-DD] [--config URL] > week.json` prints the coming Shabbos's times from the board for the weekly sheet: parsha, hadlakah, szks (מג״א), motzash, minchaErev, shacharis/hodu, minchaShabbos, and every Friday and Shabbos minyan.
 
 ## Quick changes for today
 

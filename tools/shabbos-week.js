@@ -8,7 +8,7 @@
      node tools/shabbos-week.js --config https://minyan.cascadeshul.org/config.json
      node tools/shabbos-week.js > week.json
 
-   Prints: parsha, hadlakah, szks (מג״א), motzash (72), minchaErev, minchaShabbos, shiurShabbos (Mincha −45),
+   Prints: parsha, hadlakah, szks (מג״א), motzash (72), minchaErev, minchaShabbos,
    shacharis / hodu, and every Friday and Shabbos minyan as the board lists them. */
 const fs = require('fs'), path = require('path');
 global.Cal = require('../src/cal.js');
@@ -38,7 +38,6 @@ const args = process.argv.slice(2), arg = k => { const i = args.indexOf(k); retu
     shacharis: sh ? t(sh.start) : '',
     hodu: sh && sh.milestone != null ? t(sh.milestone) : '',
     minchaShabbos: mS ? t(mS.start) : '',
-    shiurShabbos: mS ? t(mS.start - 45) : '',
     friday: { mincha: list(fs_, 'mincha'), maariv: list(fs_, 'maariv') },
     shabbosDay: { shacharis: list(ss, 'shacharis'), mincha: list(ss, 'mincha'), maariv: list(ss, 'maariv') }
   };
