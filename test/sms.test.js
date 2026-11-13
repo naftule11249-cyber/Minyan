@@ -52,8 +52,8 @@ check('keyword punctuation', MinyanSms.keyword('Mincha?'), /^mincha$/);
   check('a weekday\'s list keeps the everyday name', A('היום', on(2026, 11, 16, 12, 0)), /\nמעריב: /);
   check('Shabbos morning: the next minyan with Shabbos\'s own second time', A('מנין', on(2026, 11, 14, 8, 40)), /^מנין הבא: שחרית – דברי יואל 9:00 \(נשמת 9:30\)/);
   check('and the one that has begun still leads, because נשמת is half an hour on', A('מנין', on(2026, 11, 14, 8, 10)), /^מנין העבר: שחרית – ברך משה 8:00 \(נשמת 8:30\)/);
-  check('zmanim on the first day of Pesach: no "candle lighting before sunset" line, since tonight\'s is after nightfall', A('זמנים', on(2027, 4, 22, 10, 0)), /^(?!.*הדלקת נרות)/s);
-  check('zmanim on the second day, a Friday: candle lighting is there', A('זמנים', on(2027, 4, 23, 10, 0)), /הדלקת נרות/);
+  check('zmanim on the first day of Pesach: no "candle lighting before sunset" line, since tonight\'s is after nightfall', A('זמנים', on(2027, 4, 22, 10, 0)), /^(?!.*הדלקת הנרות)/s);
+  check('zmanim on the second day, a Friday: candle lighting is there', A('זמנים', on(2027, 4, 23, 10, 0)), /הדלקת הנרות/);
 }
 /* שערן: the barber's hours for the week, in Yiddish, from the Shere tab's settings */
 {

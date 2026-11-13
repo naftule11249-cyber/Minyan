@@ -331,7 +331,7 @@ var Cal = (function () {
     };
   }
   var ZMAN_NAMES = { alos: 'עלות השחר', sunrise: 'הנץ החמה', shemaMGA: 'סוזק״ש (מג״א)', shema: 'סוזק״ש (גר״א)', tefillaMGA: 'סוז״ת (מג״א)', tefilla: 'סוז״ת (גר״א)', chatzos: 'חצות היום',
-    minchag: 'מנחה גדולה', minchak: 'מנחה קטנה', plag: 'פלג המנחה', candles: 'הדלקת נרות', sunset: 'שקיעה', tzeis: 'צאת הכוכבים', tzeis60: '60 מינוט אחר השקיעה', tzeis72: 'ר״ת (72)', chatzosNight: 'חצות לילה' };
+    minchag: 'מנחה גדולה', minchak: 'מנחה קטנה', plag: 'פלג המנחה', candles: 'הדלקת הנרות', sunset: 'שקיעה', tzeis: 'צאת הכוכבים', tzeis60: '60 מינוט אחר השקיעה', tzeis72: 'ר״ת (72)', chatzosNight: 'חצות לילה' };
 
   /* ---------- Time zone helpers ---------- */
   var fmtCache = {};

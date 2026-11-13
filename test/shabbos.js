@@ -48,7 +48,7 @@ const ny = (y, m, d, h, min) => Cal.epochFromWall(rd(y, m, d), h * 60 + (min || 
   /* ---- an ordinary Friday and Shabbos ---- */
   let { ctx, page } = await context(ny(2026, 11, 13, 15, 0));
   await screen(page); let s = await read(page);
-  ok('Friday afternoon: מנחה goes by candle lighting, and candle lighting is one of the zmanim', [card(s, /מנחה/).tiles.slice(0, 2).map(t => t[1]), s.three.indexOf('הדלקת נרות') >= 0, s.band, s.fits], [[zt(FRI, 'candles', 10), zt(FRI, 'candles', 15)], true, [], true]);
+  ok('Friday afternoon: מנחה goes by candle lighting, and candle lighting is one of the zmanim', [card(s, /מנחה/).tiles.slice(0, 2).map(t => t[1]), s.three.indexOf('הדלקת הנרות') >= 0, s.band, s.fits], [[zt(FRI, 'candles', 10), zt(FRI, 'candles', 15)], true, [], true]);
   ok('the morning frame has gone over to tomorrow and names it: Shabbos', card(s, /שחרית/).head, 'מניני שחרית – מחר, שבת קודש');
   await ctx.close();
   ({ ctx, page } = await context(ny(2026, 11, 14, 9, 0)));
@@ -79,7 +79,7 @@ const ny = (y, m, d, h, min) => Cal.epochFromWall(rd(y, m, d), h * 60 + (min || 
   await ctx.close();
   ({ ctx, page } = await context(ny(2027, 4, 22, 10, 0)));
   await screen(page); s = await read(page);
-  ok('the first day of Pesach: candles for the second night after nightfall, and no "מוצאי יום טוב" yet', [s.band, s.three.indexOf('הדלקת נרות'), s.three.length, s.fits], [[['הדלקת נרות', zt(P1, 'tzeis')]], -1, 3, true]);
+  ok('the first day of Pesach: candles for the second night after nightfall, and no "מוצאי יום טוב" yet', [s.band, s.three.indexOf('הדלקת הנרות'), s.three.length, s.fits], [[['הדלקת הנרות', zt(P1, 'tzeis')]], -1, 3, true]);
   ok('Yom Tov with no list of its own uses Shabbos\'s', card(s, /שחרית/).tiles.map(t => t[1]), ['8:30', '9:00', '9:30', '10:00']);
   await page.screenshot({ path: 'test/shot-yomtov.png' });
   await ctx.close();
@@ -112,13 +112,13 @@ const ny = (y, m, d, h, min) => Cal.epochFromWall(rd(y, m, d), h * 60 + (min || 
   ({ ctx, page } = await context(ny(2027, 4, 22, 10, 0), null, { width: 390, height: 844 }));
   await page.goto(BASE + 'index.html', { waitUntil: 'networkidle' }); await page.waitForSelector('.zlist li'); await page.waitForTimeout(400);
   const zl = await page.evaluate(() => Array.from(document.querySelectorAll('.zlist li')).map(li => [li.children[0].textContent, li.querySelector('.z') ? li.querySelector('.z').textContent : '', li.classList.contains('hi')]));
-  ok('the board\'s zmanim on the first day of Pesach: candles after nightfall at the head, written once, and no "מוצאי"', [zl.filter(x => x[2]).map(x => x.slice(0, 2)), zl.filter(x => /מוצאי/.test(x[0])).length, zl.filter(x => x[0] === 'הדלקת נרות').length], [[['הדלקת נרות', zt(P1, 'tzeis')]], 0, 1]);
+  ok('the board\'s zmanim on the first day of Pesach: candles after nightfall at the head, written once, and no "מוצאי"', [zl.filter(x => x[2]).map(x => x.slice(0, 2)), zl.filter(x => /מוצאי/.test(x[0])).length, zl.filter(x => x[0] === 'הדלקת הנרות').length], [[['הדלקת הנרות', zt(P1, 'tzeis')]], 0, 1]);
   ok('nothing runs off the side of the phone', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
   await page.goto(BASE + 'index.html?view=week', { waitUntil: 'networkidle' }); await page.waitForSelector('.wday'); await page.waitForTimeout(300);
   const wk = await page.evaluate(() => Array.from(document.querySelectorAll('.wday')).map(d => [d.querySelector('.whead strong').textContent, d.querySelector('.wz').textContent]));
   const dayLine = (name, nth) => (wk.filter(w => w[0] === name)[nth || 0] || ['', ''])[1];
   ok('the week on paper: Wednesday lights before sunset, Thursday after nightfall, Friday before sunset again, and Shabbos ends it',
-    [dayLine('יום רביעי').indexOf('הדלקת נרות ' + zt(EREV, 'candles')) >= 0, dayLine('יום חמישי').indexOf('הדלקת נרות ' + zt(P1, 'tzeis')) >= 0, /מוצאי/.test(dayLine('יום חמישי')), dayLine('יום שישי').indexOf('הדלקת נרות ' + zt(P2, 'candles')) >= 0, /מוצאי/.test(dayLine('יום שישי')), /מוצאי שבת/.test(dayLine('שבת קודש'))],
+    [dayLine('יום רביעי').indexOf('הדלקת הנרות ' + zt(EREV, 'candles')) >= 0, dayLine('יום חמישי').indexOf('הדלקת הנרות ' + zt(P1, 'tzeis')) >= 0, /מוצאי/.test(dayLine('יום חמישי')), dayLine('יום שישי').indexOf('הדלקת הנרות ' + zt(P2, 'candles')) >= 0, /מוצאי/.test(dayLine('יום שישי')), /מוצאי שבת/.test(dayLine('שבת קודש'))],
     [true, true, false, true, false, true]);
   await ctx.close();
 

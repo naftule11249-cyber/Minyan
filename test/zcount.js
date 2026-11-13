@@ -23,7 +23,7 @@ const { chromium } = require('playwright');
   r = await at(2026, 10, 25, 13, 0, '', DEF);
   ok('13:00 Sunday: shkia (no candle lighting today)', [r.what, r.time], ['שקיעה', '6:01']);
   r = await at(2026, 10, 30, 13, 0, '', DEF);
-  ok('Friday 13:00: candle lighting comes first', r.what, 'הדלקת נרות');
+  ok('Friday 13:00: candle lighting comes first', r.what, 'הדלקת הנרות');
   r = await at(2026, 10, 25, 19, 0, '', DEF);
   ok('after shkia: no box', r.n, 0);
   {

@@ -276,7 +276,7 @@
     var friFrom = sw ? (function () { var fs = scheduleFor(sw.fri), last = 0; tefillos().forEach(function (t) { if (t.kind !== 'event' && !isPmMinyan(t)) (fs.byTefilla[t.id] || []).forEach(function (e) { if (e.ms > last) last = e.ms; }); }); return last || sw.chatzosMs; })() : 0;
     if (sw && now >= friFrom && now < sw.candlesMs) {
       var p0 = Cal.parshaOfWeek(sw.sat, !!cfg.israel);
-      next = el('section', { class: 'next candles', 'aria-live': 'polite' }, [el('h2', { text: zmanName('candles') }),
+      next = el('section', { class: 'next candles', 'aria-live': 'polite' }, [el('h2', { text: (S().today === 'Today' ? '' : 'זמן ') + zmanName('candles') }),
         el('div', { class: 'what', text: (S().today === 'Today' ? 'Erev Shabbos' : 'ערב שבת קודש') + (p0 ? (S().today === 'Today' ? ' ' : ' פרשת ') + p0 : '') }),
         el('div', { class: 'time num', text: fmtTime(sw.candlesMin) })]);
       ui.countdownMs = sw.candlesMs; ui.countdown = el('div', { class: 'count num', text: fmtCountdown(sw.candlesMs - now) }); next.appendChild(ui.countdown);
@@ -351,7 +351,7 @@
       for (var d = 0; d < 7; d++) {
         var rd = first + d, info = Cal.dayInfo(rd, !!cfg.israel), sched = scheduleFor(rd), z = zmanimFor(rd), day = el('div', { class: 'wday' + (rd === rd0 ? ' today' : '') });
         var zs = [];
-        if (info.candles) zs.push('הדלקת נרות ' + fmtTime(info.candles === 'night' ? z.tzeis : z.candles)); /* before sunset, or after nightfall when Shabbos or Yom Tov is already in */
+        if (info.candles) zs.push('הדלקת הנרות ' + fmtTime(info.candles === 'night' ? z.tzeis : z.candles)); /* before sunset, or after nightfall when Shabbos or Yom Tov is already in */
         if (info.fast && !((info.heb.m === 7 && info.heb.d === 10) || info.heb.m === 5)) zs.push('תחילת הצום ' + fmtTime(z.alos));
         zs.push('שקיעה ' + fmtTime(z.sunset));
         if (info.fast || info.yomKippur) zs.push('צאת הצום ' + fmtTime(z.tzeis)); /* Yom Kippur too: the screen says the same */
