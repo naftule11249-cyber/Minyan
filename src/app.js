@@ -841,7 +841,7 @@
     var nameEl = nm ? el('div', { class: 'n' }, nameRuns(nm).map(function (r) {
       return el('span', { class: r.small ? 'hon' : 'nm', text: r.text });
     })) : null;
-    return el('section', { class: 'sponsor' + (n.size === 'big' ? ' sp-big' : n.size === 'small' ? ' sp-sm' : n.size === 'tiny' ? ' sp-xs' : '') }, [
+    return el('section', { class: 'sponsor' + (n.size === 'big' ? ' sp-big' : n.size === 'small' ? ' sp-sm' : n.size === 'tiny' ? ' sp-xs' : '') + (n.kind === 'day' || /פרנס היום/.test(n.title || '') ? ' sp-day' : '') }, [ /* פרנס היום stands out in gold */
       el('div', { class: 'frame' }),
       el('h2', { class: 't', text: n.title || '' }),
       (n.lead || '').trim() ? el('div', { class: 'lead', text: n.lead.trim() }) : null, /* the line that leads into the name: נתנדב לעילוי נשמת and its like */
