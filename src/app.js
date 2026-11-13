@@ -432,8 +432,7 @@
     small('fri');
     /* סוף זמן ק״ש of Shabbos morning, in gold like candle lighting */
     var zsat = zmanimFor(w.sat);
-    li(zmanName('shemaMGA'), fmtTime(zsat.shemaMGA), true);
-    li(zmanName('shema'), fmtTime(zsat.shema), true);
+    li(zmanName('shemaMGA'), fmtTime(zsat.shemaMGA), true); /* the Magen Avraham's only, as the gabbai asked */
     small('morning');
     tefillos().forEach(function (t) { if (t.kind === 'event') return; var v = times(ss, t, t.id === 'shacharis' || t.period === 'am'); if (v) li(name(ss, t, en ? ' (Shabbos)' : ' שב״ק'), v); if (t.id === 'shacharis' || t.period === 'am') small('day'); });
     li(L.motzaeiShabbos, fmtTime(w.motzash), true);
