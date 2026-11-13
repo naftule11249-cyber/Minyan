@@ -29,7 +29,7 @@ const ogHead = '<meta property="og:type" content="website"><meta property="og:ti
   '<meta property="og:image" content="' + (site ? site : '') + 'og-image.png' + ogVer + '"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:locale" content="he_IL">' +
   (site ? '<meta property="og:url" content="' + esc(site) + '">' : '') + '<meta name="twitter:card" content="summary_large_image"><meta name="description" content="' + desc + '">';
 if (!site) console.warn('siteUrl is empty: share previews need the full site address (set it under Edit → General once the site is online, or in config.default.json).');
-const full = '<!doctype html><html lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>' + reset + '</style>' + pwaHead + ogHead + '</head><body>' + body + '</body></html>';
+const full = '<!doctype html><html lang="he" translate="no"><head><meta charset="utf-8"><meta name="google" content="notranslate"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>' + reset + '</style>' + pwaHead + ogHead + '</head><body>' + body + '</body></html>';
 fs.writeFileSync(path.join(dist, 'index.html'), full);
 // The back end is an app of its own to the browser: its own manifest (name, icon, the address it starts at), so "Install",
 // "Create shortcut" or "Add to Home Screen" from the back end makes a shortcut that opens the back end, not the board.
