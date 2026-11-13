@@ -58,13 +58,13 @@ button { cursor: pointer; }
    panel's width, times --fit) keep the title, the lead and the name each on one line on a phone, where the full size would break
    "מו״ה / the name / הי״ו" over three. */
 .sponsor { --sp: 1; --fit: 1; container-type: inline-size; position: relative; background: linear-gradient(180deg, var(--panel), var(--panel-2)); border: 3px double var(--gold); border-radius: 8px; padding: 16px 22px 18px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,.06); min-width: 0; }
-/* פרנס היום: a full gold panel, so the day's sponsor stands out from the month's */
-.sponsor.sp-day, #app.display .wall .sponsor.sp-day { background: linear-gradient(180deg, #c9a449, #a9832f); color: #fff; border-color: #8a6a22; }
-.sponsor.sp-day .frame { border-color: rgba(255,255,255,.75); }
-.sponsor.sp-day .frame::before, .sponsor.sp-day .frame::after { background: #fff; }
-.sponsor.sp-day .t, .sponsor.sp-day .lead, .sponsor.sp-day .b, .sponsor.sp-day .n { color: #fff; }
-.sponsor.sp-day .t::before { background: linear-gradient(90deg, transparent, #fff); }
-.sponsor.sp-day .t::after { background: linear-gradient(90deg, #fff, transparent); }
+/* פרנס החודש: a full gold panel, so the month's sponsor stands out */
+.sponsor.sp-gold, #app.display .wall .sponsor.sp-gold { background: linear-gradient(180deg, #c9a449, #a9832f); color: #fff; border-color: #8a6a22; }
+.sponsor.sp-gold .frame { border-color: rgba(255,255,255,.75); }
+.sponsor.sp-gold .frame::before, .sponsor.sp-gold .frame::after { background: #fff; }
+.sponsor.sp-gold .t, .sponsor.sp-gold .lead, .sponsor.sp-gold .b, .sponsor.sp-gold .n { color: #fff; }
+.sponsor.sp-gold .t::before { background: linear-gradient(90deg, transparent, #fff); }
+.sponsor.sp-gold .t::after { background: linear-gradient(90deg, #fff, transparent); }
 .sponsor .frame { position: absolute; inset: 6px; border: 1px solid var(--gold); border-radius: 4px; opacity: .75; pointer-events: none; }
 .sponsor .frame::before, .sponsor .frame::after { content: ""; position: absolute; width: 10px; height: 10px; background: var(--gold); transform: rotate(45deg); }
 .sponsor .frame::before { top: -6px; inset-inline-start: -6px; }
