@@ -297,7 +297,7 @@
         colL.appendChild(wallCard(S().minyanim(rest.map(function (it) { return it.t.name; }).join(' ')), blocks));
       }
       if (ui.shabbosWin) colL.appendChild(wallCard(shabbosTitle(ui.shabbosWin), [shabbosList(ui.shabbosWin)]));
-      colL.appendChild(wallZmanim(info, z, rd, now));
+      if (!(ui.shabbosWin && holyNow)) colL.appendChild(wallZmanim(info, z, rd, now)); else ui.zcount = null; /* on Shabbos the Shabbos box has the column; its סוף זמן ק״ש stands in it */
       colM.appendChild(analogClock(now, false)); /* the time with seconds is in the top bar */
       if (strip) colM.appendChild(strip);
       main.appendChild(colR); main.appendChild(colM); main.appendChild(colL);
@@ -430,6 +430,10 @@
     li(zmanName('candles'), fmtTime(w.candlesMin), true);
     tefillos().forEach(function (t) { if (isPmMinyan(t)) { var v = times(fs, t); if (v) li(name(fs, t, en ? ' (Friday)' : ' ערש״ק'), v); } });
     small('fri');
+    /* סוף זמן ק״ש of Shabbos morning, in gold like candle lighting */
+    var zsat = zmanimFor(w.sat);
+    li(zmanName('shemaMGA'), fmtTime(zsat.shemaMGA), true);
+    li(zmanName('shema'), fmtTime(zsat.shema), true);
     small('morning');
     tefillos().forEach(function (t) { if (t.kind === 'event') return; var v = times(ss, t, t.id === 'shacharis' || t.period === 'am'); if (v) li(name(ss, t, en ? ' (Shabbos)' : ' שב״ק'), v); if (t.id === 'shacharis' || t.period === 'am') small('day'); });
     li(L.motzaeiShabbos, fmtTime(w.motzash), true);
