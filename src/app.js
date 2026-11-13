@@ -319,7 +319,7 @@
     if (ui.lastRenderDay !== rd) ui.dayOffset = 0;
     var off = view.kind === 'board' ? Math.max(0, Math.min(6, ui.dayOffset || 0)) : 0, showRd = rd + off, showSched = off ? scheduleFor(showRd) : sched;
     if (view.kind === 'board') colA.appendChild(dayChips(rd, off));
-    var secToday = sections(showSched, now, up, off === 0), secTomo = !off && up && up.daysAhead > 0 && !(up.daysAhead === 1 && ui.todayAllSwitched) ? sections(up.sched, now, up, false) : null; /* tomorrow is already shown section by section once today is over */
+    var secToday = sections(showSched, now, up, off === 0), secTomo = !off && up && up.daysAhead > 0 && !(up.daysAhead === 1 && ui.todayAllSwitched) && Cal.mod(rd, 7) !== 4 ? sections(up.sched, now, up, false) : null; /* not on Thursday night: Friday comes up at chatzos, with the Shabbos box */ /* tomorrow is already shown section by section once today is over */
     colA.appendChild(secToday); if (secTomo) colA.appendChild(secTomo);
     colB.appendChild(off ? zmanimPanel(Cal.dayInfo(showRd, !!cfg.israel), zmanimFor(showRd), S().zmanimOf + (off === 1 ? S().tomorrow : S().days[Cal.dayInfo(showRd, !!cfg.israel).dow])) : zmanimPanel(info, z));
     if (view.kind === 'board') {
@@ -386,7 +386,8 @@
     tefillos().forEach(function (t) {
       if (isToday && ui.shabbosWin && isPmMinyan(t)) return; /* Mincha and Maariv give their place to the Shabbos zmanim */
       var next = tomorrow;
-      if (next && ui.shabbosWin && next.info.shabbos && t.kind !== 'event') next = scheduleFor(s.rd + 2); /* Shabbos's Shacharis is in the Shabbos box: after chatzos on Friday, Sunday's minyanim */
+      if (next && ui.shabbosWin && next.info.shabbos && t.kind !== 'event') next = scheduleFor(s.rd + 2);
+      if (next && isPmMinyan(t) && Cal.mod(s.rd, 7) === 4) next = null; /* Thursday night: Mincha and Maariv stay (Friday's do not take their place) until chatzos, when the Shabbos box comes up */ /* Shabbos's Shacharis is in the Shabbos box: after chatzos on Friday, Sunday's minyanim */
       var list = s.byTefilla[t.id] || [], fromTomorrow = false;
       if (next && t.kind !== 'event' && tefillaOver(t, list, s.rd, now) && (next.byTefilla[t.id] || []).length) { list = next.byTefilla[t.id]; fromTomorrow = true; }
       if (!fromTomorrow && t.kind !== 'event') allSwitched = false;
@@ -457,7 +458,7 @@
     wrap.appendChild(dayHead(s, isToday));
     tefillaLists(s, now, isToday).forEach(function (x) {
       var t = x.t, list = x.list, sec = el('section', { class: 'tefilla' + (x.fromTomorrow || !isToday ? ' tomo' : '') });
-      if ($('#app').classList.contains('display') && !x.fromTomorrow && list.every(function (e) { return e.ms <= now; }) && tefillaOver(t, list, s.rd, now)) return;
+      if ($('#app').classList.contains('display') && !x.fromTomorrow && list.every(function (e) { return e.ms <= now; }) && tefillaOver(t, list, s.rd, now) && !(isToday && isPmMinyan(t) && Cal.mod(s.rd, 7) === 4)) return;
       sec.appendChild(el('h3', null, [sectionTitle(x)]));
       if (!list.length) { sec.appendChild(el('div', { class: 'none', text: S().none })); }
       else {
