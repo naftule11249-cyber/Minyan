@@ -272,7 +272,9 @@
       else next.appendChild(el('div', { class: 'empty', text: S().noMinyanim }));
     }
     var canTap = canSetReminders(), sw = ui.shabbosWin;
-    if (sw && now >= sw.chatzosMs && now < sw.candlesMs) { /* Friday after chatzos: candle lighting, counting down, in place of the next minyan */
+    /* Friday, from the start of the last שחרית minyan (or חצות, if there is none): candle lighting, counting down, in place of the next minyan */
+    var friFrom = sw ? (function () { var fs = scheduleFor(sw.fri), last = 0; tefillos().forEach(function (t) { if (t.kind !== 'event' && !isPmMinyan(t)) (fs.byTefilla[t.id] || []).forEach(function (e) { if (e.ms > last) last = e.ms; }); }); return last || sw.chatzosMs; })() : 0;
+    if (sw && now >= friFrom && now < sw.candlesMs) {
       var p0 = Cal.parshaOfWeek(sw.sat, !!cfg.israel);
       next = el('section', { class: 'next candles', 'aria-live': 'polite' }, [el('h2', { text: zmanName('candles') }),
         el('div', { class: 'what', text: (S().today === 'Today' ? 'Erev Shabbos' : 'ערב שבת קודש') + (p0 ? (S().today === 'Today' ? ' ' : ' פרשת ') + p0 : '') }),
