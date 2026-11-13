@@ -440,7 +440,10 @@
   /* "מחר, יום ראשון" — or just the day's name when it is further on (Sunday's minyanim shown on Friday afternoon) */
   function whenLabel(x, short) { var t1 = x.tomorrow && x.tomorrow.rd === x.todayRd + 1; return short ? (t1 ? S().tomorrow : dayName(x.tomorrow.info)) : (t1 ? S().tomorrow + ', ' : '') + dayName(x.tomorrow.info); }
   function sectionTitle(x) { return x.t.kind === 'event' ? x.t.name : S().minyanim(x.t.name) + (x.fromTomorrow ? ' – ' + whenLabel(x) : ''); }
-  function entryState(e, now, up) { if (up && sameEntry(e, up.entry)) return 'next'; if (e.ms <= now) return now - e.ms < nowWindowMs() ? 'now' : 'past'; return ''; }
+  /* how long a minyan that has started says עכשיו: a tefilla with a second time (שחרית's הודו) until that time; מנחה and מעריב five minutes.
+     After that, the minyan that went last says עבר. */
+  function nowLasts(e) { var t = e.tefilla || {}; return t.milestone && +t.offset > 0 ? +t.offset * 60000 : 5 * 60000; }
+  function entryState(e, now, up) { if (up && sameEntry(e, up.entry)) return 'next'; if (e.ms <= now) return now - e.ms < nowLasts(e) ? 'now' : 'past'; return ''; }
   function dayHead(s, isToday) { return el('div', { class: 'day-head' }, [el('h2', { text: isToday ? S().today : S().days[s.info.dow] + ' – ' + Cal.formatHeb(s.info.heb) }), el('span', { class: 'sub', text: typeLabel(s) })]); }
   /* the board's day chips: today, tomorrow and the five days after, each with its Hebrew date; a tap shows that day's minyanim and zmanim */
   function dayChips(rd, off) {
@@ -541,7 +544,7 @@
       var started = list.filter(function (e) { return e.ms <= now; }), lastStarted = started[started.length - 1];
       function st(e) {
         var s0 = entryState(e, now, up);
-        if (e === lastStarted) return 'prev' + (s0 === 'now' && e.ms >= latestMs ? ' now' : ''); /* עכשיו belongs to the minyan that started last on the whole screen: Mincha's last one gives it up the moment a Maariv starts */ /* the one before the next: light green, with עכשיו while it is fresh */
+        if (e === lastStarted) return 'prev' + (s0 === 'now' && e.ms >= latestMs ? ' now' : ' gone'); /* עכשיו belongs to the minyan that started last on the whole screen: Mincha's last one gives it up the moment a Maariv starts */ /* the one before the next: light green, with עכשיו while it is fresh */
         if (s0 === 'next' && !nextMarkedNow(e, now)) return 'next-quiet'; /* still the next one (it keeps a tile of its own), not yet marked as such */
         return s0 === 'now' ? 'past' : s0;
       }
@@ -1187,9 +1190,8 @@
     var p = Cal.tzParts(now, loc().tz), h = cfg.clock24 ? pad2(p.hh) : String(p.hh % 12 || 12);
     if (ui.clock) { ui.clock.firstChild.textContent = h + ':' + pad2(p.mm); ui.clock.lastChild.textContent = pad2(p.ss); }
     if (ui.aclock) {
-      ui.aclock.h.setAttribute('transform', 'rotate(' + ((p.hh % 12) * 30 + p.mm * 0.5) + ' 100 100)');
-      ui.aclock.m.setAttribute('transform', 'rotate(' + (p.mm * 6 + p.ss * 0.1) + ' 100 100)');
-      ui.aclock.s.setAttribute('transform', 'rotate(' + (p.ss * 6) + ' 100 100)');
+      function turn(list, deg) { Array.prototype.forEach.call(list, function (x) { x.setAttribute('transform', 'rotate(' + deg + ' 100 100)'); }); }
+      turn(ui.aclock.h, (p.hh % 12) * 30 + p.mm * 0.5); turn(ui.aclock.m, p.mm * 6 + p.ss * 0.1); turn(ui.aclock.s, p.ss * 6);
       if (ui.aclock.t) ui.aclock.t.textContent = h + ':' + pad2(p.mm) + ':' + pad2(p.ss);
       if (ui.aclock.d) ui.aclock.d.textContent = h + ':' + pad2(p.mm) + ':' + pad2(p.ss);
     }
@@ -1200,8 +1202,15 @@
     for (i = 0; i < 60; i++) svg += '<line class="tick' + (i % 5 ? '' : ' major') + '" x1="100" y1="' + (i % 5 ? 9 : 6) + '" x2="100" y2="' + (i % 5 ? 13 : 16) + '" transform="rotate(' + (i * 6) + ' 100 100)"/>';
     for (i = 1; i <= 12; i++) { a = i * Math.PI / 6; svg += '<text x="' + (100 + 73 * Math.sin(a)).toFixed(1) + '" y="' + (100 - 73 * Math.cos(a)).toFixed(1) + '">' + i + '</text>'; }
     wrap.innerHTML = '<svg viewBox="0 0 200 200"><circle class="face" cx="100" cy="100" r="97"/><circle class="rim" cx="100" cy="100" r="91"/>' + svg +
-      '<rect class="digbox" x="60" y="128" width="80" height="25" rx="8"/><text class="dig" x="100" y="141"></text>' + /* before the hands, so the hands sweep over the readout */
-      '<line class="hand hour" x1="100" y1="112" x2="100" y2="52"/><line class="hand minute" x1="100" y1="114" x2="100" y2="30"/><line class="hand second" x1="100" y1="118" x2="100" y2="24"/><circle class="cap" cx="100" cy="100" r="5"/></svg>';
+      '<rect class="digbox" x="60" y="128" width="80" height="25" rx="8"/>' +
+      /* Over the digital time a hand is drawn as an outline only, so the time can be read through it: the solid hands leave out the
+         readout's box (mask), and inside the box the same hands are drawn hollow, with the time on top of them. */
+      '<defs><mask id="ac-mask"><rect x="0" y="0" width="200" height="200" fill="#fff"/><rect x="60" y="128" width="80" height="25" rx="8" fill="#000"/></mask>' +
+      '<clipPath id="ac-clip"><rect x="60" y="128" width="80" height="25" rx="8"/></clipPath></defs>' +
+      '<g mask="url(#ac-mask)"><line class="hand hour" x1="100" y1="112" x2="100" y2="52"/><line class="hand minute" x1="100" y1="114" x2="100" y2="30"/><line class="hand second" x1="100" y1="118" x2="100" y2="24"/></g>' +
+      '<g clip-path="url(#ac-clip)" class="ol"><line class="hand hour" x1="100" y1="112" x2="100" y2="52"/><line class="hand minute" x1="100" y1="114" x2="100" y2="30"/>' +
+      '<line class="hand hour in" x1="100" y1="112" x2="100" y2="52"/><line class="hand minute in" x1="100" y1="114" x2="100" y2="30"/><line class="hand second" x1="100" y1="118" x2="100" y2="24"/></g>' +
+      '<text class="dig" x="100" y="141"></text><circle class="cap" cx="100" cy="100" r="5"/></svg>';
     if (cfg.wallLogo) { /* a logo on the dial, between the 12 and the hands, the way a watch carries its name */
       var svgEl = wrap.querySelector('svg'), lg = document.createElementNS('http://www.w3.org/2000/svg', 'image');
       lg.setAttribute('class', 'dial-logo'); lg.setAttribute('x', '61'); lg.setAttribute('y', '45'); lg.setAttribute('width', '78'); lg.setAttribute('height', '36');
@@ -1211,7 +1220,7 @@
     }
     var digital = withDigital === false ? null : el('div', { class: 'atime num' });
     if (digital) wrap.appendChild(digital);
-    ui.aclock = { h: wrap.querySelector('.hour'), m: wrap.querySelector('.minute'), s: wrap.querySelector('.second'), t: digital, d: wrap.querySelector('.dig') };
+    ui.aclock = { h: wrap.querySelectorAll('.hour'), m: wrap.querySelectorAll('.minute'), s: wrap.querySelectorAll('.second'), t: digital, d: wrap.querySelector('.dig') };
     updateClock(now);
     return wrap;
   }

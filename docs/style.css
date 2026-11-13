@@ -913,7 +913,7 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 #app.display .wall .wcol:not(.mid){ padding-top: .95rem; } /* the name plaque sits on the first frame's top edge and a column clips what leaves it: this is the plaque's room, so it shows whole */
 #app.display .wall .wcol > *{ flex: none; } /* a card keeps its height, so a column that does not fit says so and the screen shrinks */
 #app.display .wall > .wcol > section.tefilla:first-child { flex: 1 0 auto; } /* the first frame of a column fills what is left, so the column reads as one board */
-#app.display .wall .wcol.mid{ align-items: center; justify-content: flex-start; } /* the clock sits at the top of the column, the frames under it */
+#app.display .wall .wcol.mid{ align-items: center; justify-content: center; justify-content: safe center; } /* the clock with the frames under it, together in the middle of the column; with no room to spare they start at the top */
 #app.display .wall .wcol.mid > *{ width: 100%; }
 #app.display .wall .wcol.mid .aclock{ margin-top: 0; }
 /* The clock is what gives up room first. On a day with a donation more than usual (a פרנס היום) it gets smaller, down to a floor,
@@ -946,6 +946,7 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 #app.display .wall .tile.last::after { content: var(--badge-last, "עבר"); position: absolute; top: -.6rem; inset-inline-start: .5rem; background: var(--muted); color: #fff; font-size: .8rem; padding: .05rem .5rem; border-radius: 999px; }
 #app.display .wall .tile.prev { background: var(--w-nowBg, var(--live-soft)); color: var(--w-nowInk, var(--live-soft-ink)); opacity: 1; filter: none; display: block; }
 #app.display .wall .tile.prev::after { background: var(--live-2); }
+#app.display .wall .tile.prev.gone::after { content: var(--badge-last, "עבר"); position: absolute; top: -.6rem; inset-inline-start: .5rem; background: var(--muted); color: #fff; font-size: .8rem; padding: .05rem .5rem; border-radius: 999px; } /* the minyan that went last, once its עכשיו is over */
 #app.display .wall .tile.prev .ms, #app.display .wall .tile.prev .note { color: inherit; } /* the הודו line follows the light-green tile's own ink, not the near-white one the dark tiles use */
 #app.display .wall .tile.now::after { background: var(--live-2); }
 #app.display .wall .runline.past { opacity: .42; filter: saturate(.3); } /* a run that is over fades the way a past tile does */
@@ -1023,6 +1024,10 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 #app.display .aclock .hour{ stroke-width: 7; }
 #app.display .aclock .minute{ stroke-width: 5; }
 #app.display .aclock .second{ stroke: var(--count); stroke-width: 2; }
+#app.display .aclock .ol .hand.in{ stroke: var(--panel-2); } /* the hollow of a hand over the digital time: the box's own colour, a line of ink left on either side */
+#app.display .aclock .ol .hour.in{ stroke-width: 3.6; }
+#app.display .aclock .ol .minute.in{ stroke-width: 2.2; }
+#app.display .aclock .ol .second{ opacity: .45; }
 #app.display .aclock .cap{ fill: var(--gold); stroke: var(--ink); stroke-width: 1.5; }
 #app.display .aclock .dial-logo { opacity: .92; }
 #app.display .aclock .digbox { fill: var(--panel-2); stroke: var(--line); stroke-width: 1; }
