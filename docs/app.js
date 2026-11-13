@@ -288,7 +288,9 @@
       var items = wallSections(sched, now, up);
       if (!items.length && up) items = wallSections(up.sched, now, up, true); /* nothing left today: tomorrow's lists */
       if (items.length) colR.appendChild(wallCard(items[0].title, items[0].nodes)); /* the first tefilla of the day keeps a frame to itself */
-      if (cfg.nextPanel !== false) colR.appendChild(next); else ui.countdown = null; /* Hallway screen → "The next-minyan panel" can take it off; the minyanim then have the whole column */
+      /* Shabbos and Yom Tov have no מנין הבא panel: from candle lighting until nightfall at the end, the minyanim have the whole column */
+      var dI = Cal.dayInfo(n.rd, !!cfg.israel), zN = zmanimFor(n.rd), holyNow = ((dI.shabbos || dI.yomtov) && !(dI.motzaei && n.min >= zN.tzeis)) || (dI.candles === 'day' && n.min >= zN.candles);
+      if (cfg.nextPanel !== false && !holyNow) colR.appendChild(next); else ui.countdown = null; /* Hallway screen → "The next-minyan panel" can take it off; the minyanim then have the whole column */
       if (items.length > 1) { /* the rest of the day shares one frame, each tefilla named above its own tiles */
         var rest = items.slice(1), blocks = [];
         rest.forEach(function (it) { blocks.push(el('div', { class: 'sub', text: it.sub })); blocks = blocks.concat(it.nodes); });
