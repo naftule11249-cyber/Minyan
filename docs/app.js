@@ -722,6 +722,9 @@
       Array.prototype.forEach.call(main.children, function (c) { worst = Math.max(worst, c.scrollHeight - c.clientHeight); });
       return worst;
     }
+    /* The Shabbos list is long and must not shrink the whole screen (the clock, the minyanim): the size is found without it, then the
+       list alone sets its lettering small enough to fit what room its column has left. */
+    var sbl = main.querySelector('.shabbos-z'); if (sbl) { sbl.style.fontSize = ''; sbl.style.display = 'none'; }
     set(want); over = overflow();
     if (over > 1) { /* the largest size that still fits, to about half a percent */
       for (pass = 0; pass < 7; pass++) {
@@ -729,6 +732,11 @@
         if (overflow() <= 1) { best = mid; lo = mid; } else hi = mid;
       }
       set(best || lo); over = overflow();
+    }
+    if (sbl) {
+      sbl.style.display = '';
+      if (overflow() > 1) { var a = 0.5, z = 1, k2; for (k2 = 0; k2 < 8; k2++) { var m2 = (a + z) / 2; sbl.style.fontSize = m2 + 'em'; if (overflow() <= 1) a = m2; else z = m2; } sbl.style.fontSize = a + 'em'; }
+      over = overflow();
     }
     if (over <= 1) return;
     /* still too tall: the tallest card pages through its tiles, whole rows at a time */
