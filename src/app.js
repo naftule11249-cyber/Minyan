@@ -399,14 +399,14 @@
     if (isToday) ui.todayAllSwitched = allSwitched;
     return out;
   }
-  /* From chatzos on Thursday night until Motzei Shabbos the board is in "Shabbos" mode: the Shabbos zmanim take the place of Mincha and
+  /* From חצות on Friday until Motzei Shabbos the board is in "Shabbos" mode: the Shabbos zmanim take the place of Mincha and
      Maariv, and on Friday after chatzos the next-minyan box counts down to candle lighting. */
   function shabbosWin(now) {
     var tz = loc().tz, rd = Cal.nowInTz(now, tz).rd, dow = Cal.mod(rd, 7), fri = dow === 4 ? rd + 1 : dow === 5 ? rd : dow === 6 ? rd - 1 : null;
     if (fri == null) return null;
     var zt = zmanimFor(fri - 1), zf = zmanimFor(fri), zs = zmanimFor(fri + 1);
     if (!isFinite(zt.chatzosNight) || !isFinite(zf.candles) || !isFinite(zs.tzeis72)) return null;
-    var from = Cal.epochFromWall(fri - 1, Math.round(zt.chatzosNight), tz), until = Cal.epochFromWall(fri + 1, Math.round(zs.tzeis72), tz);
+    var from = Cal.epochFromWall(fri, Math.round(zf.chatzos), tz), until = Cal.epochFromWall(fri + 1, Math.round(zs.tzeis72), tz);
     if (now < from || now >= until) return null;
     return { fri: fri, sat: fri + 1, candlesMin: zf.candles, candlesMs: Cal.epochFromWall(fri, Math.round(zf.candles), tz), chatzosMs: Cal.epochFromWall(fri, Math.round(zf.chatzos), tz), motzash: Math.ceil(zs.tzeis72) }; /* Motzei Shabbos rounded up, as on the weekly sheet */
   }
