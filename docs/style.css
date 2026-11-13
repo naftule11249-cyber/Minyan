@@ -1003,6 +1003,9 @@ html.lobby, html.lobby body { height: 100%; overflow: hidden; }
 #app.display .wall > .wcol > section.next > .ms { font-size: 1.05rem; }
 #app.display .wall > .wcol > section.next > .count { font-size: 2.3rem; margin-top: .2rem; }
 #app.display .wall > .wcol > section.next > .when { font-size: 1.15rem; }
+/* Friday afternoon: the panel counts down to candle lighting; its words as large as a minyan's name */
+#app.display .wall > .wcol > section.next.candles > h2 { font-size: 2.6rem; line-height: 1.15; font-family: var(--font-display); color: var(--accent); }
+#app.display .wall > .wcol > section.next.candles > .what { font-size: 1.9rem; font-weight: 700; color: var(--ink); line-height: 1.2; margin-top: .25rem; }
 /* a minyan that has just started holds the panel for a few minutes: headed "now" in the screen's green, the one after it named small underneath */
 #app.display .wall > .wcol > section.next.held { border-color: var(--live); }
 #app.display .wall > .wcol > section.next.held > h2 { color: var(--live); }

@@ -735,7 +735,7 @@
     }
     if (sbl) {
       sbl.style.display = '';
-      if (overflow() > 1) { var a = 0.5, z = 1, k2; for (k2 = 0; k2 < 8; k2++) { var m2 = (a + z) / 2; sbl.style.fontSize = m2 + 'em'; if (overflow() <= 1) a = m2; else z = m2; } sbl.style.fontSize = a + 'em'; }
+      var a = 0.75, z = 2.8, k2; for (k2 = 0; k2 < 10; k2++) { var m2 = (a + z) / 2; sbl.style.fontSize = m2 + 'em'; if (overflow() <= 1) a = m2; else z = m2; } sbl.style.fontSize = a + 'em'; /* as large as its column lets it be: smaller when room is short, larger when there is room to spare */
       over = overflow();
     }
     if (over <= 1) return;
