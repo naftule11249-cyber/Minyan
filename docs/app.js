@@ -299,7 +299,7 @@
         colL.appendChild(wallCard(S().minyanim(rest.map(function (it) { return it.t.name; }).join(' ')), blocks));
       }
       if (ui.shabbosWin) colL.appendChild(wallCard(shabbosTitle(ui.shabbosWin), [shabbosList(ui.shabbosWin)]));
-      if (!(ui.shabbosWin && now >= ui.shabbosWin.chatzosMs && now < ui.shabbosWin.outMs)) colL.appendChild(wallZmanim(info, z, rd, now)); else ui.zcount = null; /* from חצות on Friday the Shabbos box has the column (its סוף זמן ק״ש stands in it); until then people still look for Friday's חצות */
+      if (!(ui.shabbosWin && now >= ui.shabbosWin.chatzosMs)) colL.appendChild(wallZmanim(info, z, rd, now)); else ui.zcount = null; /* from חצות on Friday the Shabbos box has the column (its סוף זמן ק״ש stands in it); until then people still look for Friday's חצות */
       colM.appendChild(analogClock(now, false)); /* the time with seconds is in the top bar */
       if (strip) colM.appendChild(strip);
       main.appendChild(colR); main.appendChild(colM); main.appendChild(colL);
@@ -388,7 +388,7 @@
   function tefillaLists(s, now, isToday) {
     var tomorrow = isToday ? scheduleFor(s.rd + 1) : null, out = [], allSwitched = true;
     tefillos().forEach(function (t) {
-      if (isToday && ui.shabbosWin && isPmMinyan(t)) return; /* Mincha and Maariv give their place to the Shabbos zmanim */
+      if (isToday && ui.shabbosWin && now < ui.shabbosWin.outMs && isPmMinyan(t)) return; /* Mincha and Maariv give their place to the Shabbos zmanim; once Shabbos is out they come back beside it */
       var next = tomorrow;
       if (next && ui.shabbosWin && next.info.shabbos && t.kind !== 'event') next = scheduleFor(s.rd + 2);
       if (next && isPmMinyan(t) && Cal.mod(s.rd, 7) === 4) next = null; /* Thursday night: Mincha and Maariv stay (Friday's do not take their place) until chatzos, when the Shabbos box comes up */ /* Shabbos's Shacharis is in the Shabbos box: after chatzos on Friday, Sunday's minyanim */
@@ -428,6 +428,11 @@
       extras.filter(function (x) { return x.when === when; }).forEach(function (x) {
         ul.appendChild(el('li', { class: 'sm' }, [el('span', null, [el('span', { class: 'sm-n', text: x.name }), x.detail ? el('span', { class: 'sm-d', text: x.detail }) : null]), el('span', { class: 'z num', text: x.time || '' })]));
       });
+    }
+    if (w.outMs && Date.now() >= w.outMs) { /* Shabbos is out: only what is still ahead tonight */
+      li(L.motzaeiShabbos, fmtTime(w.motzash), true);
+      small('motzash');
+      return ul;
     }
     li(zmanName('candles'), fmtTime(w.candlesMin), true);
     tefillos().forEach(function (t) { if (isPmMinyan(t)) { var v = times(fs, t); if (v) li(name(fs, t, en ? ' (Friday)' : ' ערש״ק'), v); } });
@@ -577,7 +582,7 @@
       var nodes = [], grid = el('div', { class: 'grid' }), late = el('div', { class: 'grid after-runs' }), opened = {}, runs = [], tiles = [];
       list.forEach(function (e) {
         var s0 = st(e), sid = e.series && e.series.id, keep = s0.indexOf('next') === 0 || s0.indexOf('prev') === 0; /* the next one and the one before it always get a tile of their own */
-        if (sid && counts[sid] >= 3 && !keep && !x.fromTomorrow) {
+        if (sid && counts[sid] >= 3 && !keep && !(x.fromTomorrow && !isPmMinyan(t))) { /* the next day's Shacharis is every minyan a tile; Mincha and Maariv keep their runs as lines */
           if (!opened[sid]) { opened[sid] = { s: e.series, items: [] }; runs.push(opened[sid]); }
           opened[sid].items.push(e); return; /* a run is its box; only its next minyan and the one before it (above) get tiles of their own. A tile for a run's first minyan, hours ahead, read as an extra minyan beside the box. */
         }
