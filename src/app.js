@@ -393,7 +393,8 @@
       if (next && ui.shabbosWin && next.info.shabbos && t.kind !== 'event') next = scheduleFor(s.rd + 2);
       if (next && isPmMinyan(t) && Cal.mod(s.rd, 7) === 4) next = null; /* Thursday night: Mincha and Maariv stay (Friday's do not take their place) until chatzos, when the Shabbos box comes up */ /* Shabbos's Shacharis is in the Shabbos box: after chatzos on Friday, Sunday's minyanim */
       var list = s.byTefilla[t.id] || [], fromTomorrow = false;
-      if (next && t.kind !== 'event' && tefillaOver(t, list, s.rd, now) && (next.byTefilla[t.id] || []).length) { list = next.byTefilla[t.id]; fromTomorrow = true; }
+      var shabbosDay = isToday && ui.shabbosWin && s.info.shabbos && !isPmMinyan(t); /* all Shabbos the שחרית frame shows Sunday's: Shabbos's own is in the Shabbos box */
+      if (next && t.kind !== 'event' && (shabbosDay || tefillaOver(t, list, s.rd, now)) && (next.byTefilla[t.id] || []).length) { list = next.byTefilla[t.id]; fromTomorrow = true; }
       if (!fromTomorrow && t.kind !== 'event') allSwitched = false;
       var day = fromTomorrow ? next : s;
       out.push({ t: (day.tefillos && day.tefillos[t.id]) || t, list: list, fromTomorrow: fromTomorrow, tomorrow: next, todayRd: s.rd }); /* the tefilla as that day has it: its name and second time can differ by the kind of day */
