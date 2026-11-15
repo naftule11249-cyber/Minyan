@@ -77,6 +77,7 @@ export default {
       var ip = request.headers.get('cf-connecting-ip') || 'unknown', failKey = 'bcfail:' + ip, fails = +(await env.SUBS.get(failKey)) || 0;
       if (fails >= 10) return json(env, { error: 'too many wrong tries; try again in an hour' }, 429);
       var bcfg = await loadConfig(env), hasPin = !!(bcfg.pinHash || bcfg.pin);
+      if (MinyanNotify.holyNow(bcfg, Date.now())) return json(env, { error: 'Nothing is sent on Shabbos or Yom Tov.' }, 409); /* no notifications on Shabbos and Yom Tov */
       var okKey = !!env.BROADCAST_KEY && bb.key === env.BROADCAST_KEY;
       var okPin = hasPin && typeof bb.pin === 'string' && bb.pin !== '' && (bcfg.pinHash ? (await sha256Hex(bb.pin)) === bcfg.pinHash : bb.pin === String(bcfg.pin));
       if (!okKey && !okPin) { await env.SUBS.put(failKey, String(fails + 1), { expirationTtl: 3600 }); return json(env, { error: hasPin ? 'wrong PIN' : 'set an admin PIN first' }, 403); }

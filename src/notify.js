@@ -140,7 +140,14 @@ var MinyanNotify = (function () {
     return sub.reminders.length !== before;
   }
   /* Which messages are due in [nowMs, nowMs + windowMin). Each: {key, text, title, minyan} — the caller sends and remembers `key`. */
+  /* Shabbos or Yom Tov in effect at nowMs: from candle lighting until nightfall at its end. Nothing is sent then. */
+  function holyNow(cfg, nowMs) {
+    var engine = MinyanEngine(cfg), now = Cal.nowInTz(nowMs, engine.loc().tz), info = Cal.dayInfo(now.rd, !!cfg.israel), z = engine.zmanimFor(now.rd);
+    if ((info.shabbos || info.yomtov) && !(info.motzaei && now.min >= z.tzeis)) return true;
+    return info.candles === 'day' && now.min >= z.candles;
+  }
   function due(cfg, sub, nowMs, windowMin) {
+    if (holyNow(cfg, nowMs)) return []; /* no reminders on Shabbos and Yom Tov */
     var engine = MinyanEngine(cfg), tz = engine.loc().tz, now = Cal.nowInTz(nowMs, tz), rd = now.rd, sched = engine.scheduleFor(rd), zmanim = engine.zmanimFor(rd), out = [];
     var win = (windowMin || 5) * 60000, lang = sub.lang || 'he', L = T[lang], iso = MinyanEngine.isoDate(rd);
     (sub.reminders || []).forEach(function (r) {
@@ -175,6 +182,6 @@ var MinyanNotify = (function () {
     }
     return out;
   }
-  return { isCommand: isCommand, parseCommand: parseCommand, apply: apply, due: due, prune: prune, targetFor: targetFor, describe: describe, T: T, ZMAN_LABEL: ZMAN_LABEL, ZMAN_KEYS: ZMAN_KEYS, ZMAN_EN: ZMAN_EN };
+  return { isCommand: isCommand, parseCommand: parseCommand, apply: apply, due: due, holyNow: holyNow, prune: prune, targetFor: targetFor, describe: describe, T: T, ZMAN_LABEL: ZMAN_LABEL, ZMAN_KEYS: ZMAN_KEYS, ZMAN_EN: ZMAN_EN };
 })();
 if (typeof module !== 'undefined') module.exports = MinyanNotify;

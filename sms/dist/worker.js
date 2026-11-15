@@ -1099,7 +1099,14 @@ var MinyanNotify = (function () {
     return sub.reminders.length !== before;
   }
   /* Which messages are due in [nowMs, nowMs + windowMin). Each: {key, text, title, minyan} — the caller sends and remembers `key`. */
+  /* Shabbos or Yom Tov in effect at nowMs: from candle lighting until nightfall at its end. Nothing is sent then. */
+  function holyNow(cfg, nowMs) {
+    var engine = MinyanEngine(cfg), now = Cal.nowInTz(nowMs, engine.loc().tz), info = Cal.dayInfo(now.rd, !!cfg.israel), z = engine.zmanimFor(now.rd);
+    if ((info.shabbos || info.yomtov) && !(info.motzaei && now.min >= z.tzeis)) return true;
+    return info.candles === 'day' && now.min >= z.candles;
+  }
   function due(cfg, sub, nowMs, windowMin) {
+    if (holyNow(cfg, nowMs)) return []; /* no reminders on Shabbos and Yom Tov */
     var engine = MinyanEngine(cfg), tz = engine.loc().tz, now = Cal.nowInTz(nowMs, tz), rd = now.rd, sched = engine.scheduleFor(rd), zmanim = engine.zmanimFor(rd), out = [];
     var win = (windowMin || 5) * 60000, lang = sub.lang || 'he', L = T[lang], iso = MinyanEngine.isoDate(rd);
     (sub.reminders || []).forEach(function (r) {
@@ -1134,7 +1141,7 @@ var MinyanNotify = (function () {
     }
     return out;
   }
-  return { isCommand: isCommand, parseCommand: parseCommand, apply: apply, due: due, prune: prune, targetFor: targetFor, describe: describe, T: T, ZMAN_LABEL: ZMAN_LABEL, ZMAN_KEYS: ZMAN_KEYS, ZMAN_EN: ZMAN_EN };
+  return { isCommand: isCommand, parseCommand: parseCommand, apply: apply, due: due, holyNow: holyNow, prune: prune, targetFor: targetFor, describe: describe, T: T, ZMAN_LABEL: ZMAN_LABEL, ZMAN_KEYS: ZMAN_KEYS, ZMAN_EN: ZMAN_EN };
 })();
 
 
@@ -1266,6 +1273,7 @@ export default {
       var ip = request.headers.get('cf-connecting-ip') || 'unknown', failKey = 'bcfail:' + ip, fails = +(await env.SUBS.get(failKey)) || 0;
       if (fails >= 10) return json(env, { error: 'too many wrong tries; try again in an hour' }, 429);
       var bcfg = await loadConfig(env), hasPin = !!(bcfg.pinHash || bcfg.pin);
+      if (MinyanNotify.holyNow(bcfg, Date.now())) return json(env, { error: 'Nothing is sent on Shabbos or Yom Tov.' }, 409); /* no notifications on Shabbos and Yom Tov */
       var okKey = !!env.BROADCAST_KEY && bb.key === env.BROADCAST_KEY;
       var okPin = hasPin && typeof bb.pin === 'string' && bb.pin !== '' && (bcfg.pinHash ? (await sha256Hex(bb.pin)) === bcfg.pinHash : bb.pin === String(bcfg.pin));
       if (!okKey && !okPin) { await env.SUBS.put(failKey, String(fails + 1), { expirationTtl: 3600 }); return json(env, { error: hasPin ? 'wrong PIN' : 'set an admin PIN first' }, 403); }

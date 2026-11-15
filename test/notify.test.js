@@ -96,4 +96,15 @@ ok('to הודו: silent at 9:05', N.due(cfg, s6, at(9, 5), 5).length, 0);
 ok('to the start: fires at 9:05', N.due(cfg, s7, at(9, 5), 5).map(x => x.key), ['r:2026-10-21:shacharis:555']);
 console.log('text:', N.due(cfg, s6, at(9, 15), 5)[0].text);
 ok('text leads with הודו', /הודו 9:25 \(ברכות 9:15\), in 10 min/.test(N.due(cfg, s6, at(9, 15), 5)[0].text), true);
+/* nothing is sent on Shabbos or Yom Tov: from candle lighting until nightfall at the end */
+{
+  const ny = (y, m, d, h, mi) => Cal.epochFromWall(Cal.rdFromGreg(y, m, d), h * 60 + mi, 'America/New_York');
+  ok('Friday 3 PM is not Shabbos yet', N.holyNow(cfg, ny(2026, 11, 13, 15, 0)), false);
+  ok('Friday after candle lighting is Shabbos', N.holyNow(cfg, ny(2026, 11, 13, 16, 40)), true);
+  ok('Shabbos morning is Shabbos', N.holyNow(cfg, ny(2026, 11, 14, 9, 0)), true);
+  ok('Motzaei Shabbos after nightfall is not', N.holyNow(cfg, ny(2026, 11, 14, 19, 0)), false);
+  ok('the first day of Pesach is Yom Tov', N.holyNow(cfg, ny(2027, 4, 22, 12, 0)), true);
+  ok('a Monday is not', N.holyNow(cfg, ny(2026, 11, 16, 12, 0)), false);
+  ok('no reminder falls due on Shabbos, whatever was asked for', N.due(cfg, { lang: 'he', reminders: [{ zman: 'shema', lead: 5 }] }, ny(2026, 11, 14, 8, 29), 5).length, 0);
+}
 console.log(fails ? fails + ' FAILURES' : 'ALL PASS (4)');
