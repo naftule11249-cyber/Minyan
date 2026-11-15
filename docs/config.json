@@ -53,7 +53,7 @@
    "maariv": "sunset+60 היכל אדל\nrt דברי יואל\n#off rt לב אהרן\nrt+5 ברך משה\n18:15 ברך משה after rt+10\n18:30 דברי יואל after rt+10\n18:45 ברך משה after rt+10\nevery 10 from 20:00 to 22:30 rooms ברך משה, דברי יואל, לב אהרן\n#off every 10 from 20:45 to 22:15 rooms ברך משה, דברי יואל, לב אהרן, שלמה יודא, היכל אדל, היכל ביהמ״ד\nevery 15 from 22:30 to 23:30 rooms ברך משה, דברי יואל\n00:00 היכל ביהמ״ד"
   },
   "sunday": {
-   "shacharis": "07:30 לב אהרן\nevery 15 from 08:00 to 11:15 rooms דברי יואל, ברך משה, שלמה יודא, לב אהרן\n11:30 היכל אדל until chatzos-30\n11:45 לב אהרן until chatzos-28\n12:00 דברי יואל until chatzos-30\nchatzos-30 ברך משה"
+   "shacharis": "07:30 לב אהרן\nevery 15 from 08:00 to 11:15 rooms דברי יואל, ברך משה, שלמה יודא, לב אהרן\nchatzos-30 היכל אדל\n11:30 היכל אדל until chatzos-30\n11:45 לב אהרן until chatzos-28\n12:00 דברי יואל until chatzos-30"
   },
   "friday": {
    "mincha": "candles+45^5",
@@ -148,7 +148,7 @@
  "overrides": [],
  "smsNumber": "+1 929 828 7677",
  "remoteConfigUrl": "",
- "savedAt": 1794701276716,
+ "savedAt": 1794756017677,
  "siteUrl": "https://minyan.cascadeshul.org/",
  "logo": "",
  "wallLogo": "logo-name.png",
