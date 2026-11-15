@@ -578,7 +578,7 @@
       var nodes = [], grid = el('div', { class: 'grid' }), late = el('div', { class: 'grid after-runs' }), opened = {}, runs = [], tiles = [];
       list.forEach(function (e) {
         var s0 = st(e), sid = e.series && e.series.id, keep = s0.indexOf('next') === 0 || s0.indexOf('prev') === 0; /* the next one and the one before it always get a tile of their own */
-        if (sid && counts[sid] >= 3 && !keep && !(x.fromTomorrow && !isPmMinyan(t))) { /* the next day's Shacharis is every minyan a tile; Mincha and Maariv keep their runs as lines */
+        if (sid && counts[sid] >= 3 && !keep && isPmMinyan(t)) { /* שחרית always shows every minyan as a tile; מנחה and מעריב fold a run into a line */
           if (!opened[sid]) { opened[sid] = { s: e.series, items: [] }; runs.push(opened[sid]); }
           opened[sid].items.push(e); return; /* a run is its box; only its next minyan and the one before it (above) get tiles of their own. A tile for a run's first minyan, hours ahead, read as an extra minyan beside the box. */
         }
