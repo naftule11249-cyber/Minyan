@@ -783,7 +783,10 @@ var MinyanShere = (function () {
   /* "פון 8:00 ביז 12:00 און פון 1:30 ביז 3:15, נישט פאר קינדער" — or each set with its own kids when they differ; open to kids says nothing */
   function hoursText(cfg, x) {
     var e = MinyanEngine(cfg), rs = x.ranges;
-    function one(r) { return 'פון ' + e.fmtTime(r.from) + ' ביז ' + e.fmtTime(r.until); }
+    /* the time of day after each time: אינדערפרי before noon, נאכמיטאג until 6, ביינאכט from 6 */
+    function part(m) { m = ((m % 1440) + 1440) % 1440; return m < 720 ? ' אינדערפרי' : m < 1080 ? ' נאכמיטאג' : ' ביינאכט'; }
+    function at(m) { return e.fmtTime(m) + (cfg.clock24 ? '' : part(m)); }
+    function one(r) { return 'פון ' + at(r.from) + ' ביז ' + at(r.until); }
     function kids(k) { return k ? '' : ', נישט פאר קינדער'; } /* kids are said only when they are not taken */
     if (rs.every(function (r) { return r.kids === rs[0].kids; })) return rs.map(one).join(' און ') + kids(rs[0].kids);
     return rs.map(function (r) { return one(r) + kids(r.kids); }).join('; ');
