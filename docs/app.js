@@ -830,9 +830,13 @@
       if (ex) return el('td', { class: 'exam' }, [el('b', { text: 'בחינה' }), el('div', { class: 'ex-t', text: ex.text })]);
       return el('td', { text: d ? (d === 'חזרה' ? 'חזרה' : 'דף ' + d) : '—' });
     }
+    /* a week by its parsha; a week whose Shabbos is a Yom Tov by the Yom Tov's name or the Shabbos's date */
+    function weekName(w) {
+      var wp = Cal.parshaOfWeek(w + 6, !!cfg.israel), sh = Cal.hebFromRD(w + 6), di = Cal.dayInfo(w + 6, !!cfg.israel);
+      return wp ? 'פרשת ' + wp : ((di.yomtov && di.labels[0]) || ('שבת ' + Cal.gematria(sh.d) + ' ' + Cal.monthName(sh.y, sh.m)));
+    }
     function draw() {
-      var pr = Cal.parshaOfWeek(sun + 6, !!cfg.israel);
-      title.textContent = 'שיעורים' + (pr ? ' – פרשת ' + pr : '');
+      title.textContent = 'שיעורים – ' + weekName(sun);
       var head = el('tr', null, [el('th', { text: '' })].concat(progs.map(function (p) { return el('th', null, [el('div', { text: p.name }), p.sub ? el('div', { class: 'sub', text: p.sub }) : null]); })));
       var trs = [head];
       for (var i = 0; i < 7; i++) {
@@ -840,10 +844,21 @@
         trs.push(el('tr', { class: iso === todayIso ? 'today' : '' }, [el('th', { class: 'day' }, [el('div', { text: 'יום ' + 'אבגדהוש'.charAt(i) + (i === 6 ? 'ב״ק' : '׳') }), el('div', { class: 'sub', text: Cal.gematria(h.d) + ' ' + Cal.monthName(h.y, h.m) })])].concat(progs.map(function (p) { return cell(p, iso); }))));
       }
       body.textContent = ''; body.appendChild(el('table', null, trs));
+      if (pick) { pick.value = String(sun); prev.disabled = sun <= firstSun; next.disabled = sun >= lastSun; }
     }
+    /* any week of the calendars, by its parsha: from the first week with a shiur to the last */
+    var dates = []; progs.forEach(function (p) { dates = dates.concat(Object.keys(p.days || {}), (p.exams || []).map(function (e) { return e.date; })); }); dates.sort();
+    var rdOfIso = function (iso) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso); return m ? Cal.rdFromGreg(+m[1], +m[2], +m[3]) : null; };
+    var thisSun = sun, firstSun = dates.length ? rdOfIso(dates[0]) : sun, lastSun = dates.length ? rdOfIso(dates[dates.length - 1]) : sun;
+    firstSun = Math.min(sun, firstSun - Cal.dayInfo(firstSun, !!cfg.israel).dow); lastSun = Math.max(sun, lastSun - Cal.dayInfo(lastSun, !!cfg.israel).dow);
+    var pick = el('select', { id: 'learn-pick', 'aria-label': 'בחירת שבוע' });
+    for (var w = firstSun; w <= lastSun; w += 7) {
+      pick.appendChild(el('option', { value: String(w), text: weekName(w) + (w === thisSun ? ' (השבוע)' : '') }));
+    }
+    pick.addEventListener('change', function () { sun = +pick.value; draw(); });
     var prev = el('button', { type: 'button', class: 'btn small', id: 'learn-prev', text: '› שבוע הקודם', onclick: function () { sun -= 7; draw(); } });
     var next = el('button', { type: 'button', class: 'btn small', id: 'learn-next', text: 'שבוע הבא ‹', onclick: function () { sun += 7; draw(); } });
-    ov.appendChild(el('div', { class: 'panel small' }, [title, body, el('div', { class: 'bar' }, [prev, next, el('button', { type: 'button', class: 'btn primary', id: 'learn-close', text: 'סגירה', onclick: close })])]));
+    ov.appendChild(el('div', { class: 'panel small' }, [title, el('label', { class: 'learn-pick' }, [el('span', { text: 'שבוע: ' }), pick]), body, el('div', { class: 'bar' }, [prev, next, el('button', { type: 'button', class: 'btn primary', id: 'learn-close', text: 'סגירה', onclick: close })])]));
     ov.addEventListener('click', function (ev) { if (ev.target === ov) close(); });
     document.addEventListener('keydown', onKey);
     draw(); document.body.appendChild(ov); $('#learn-close').focus();

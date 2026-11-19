@@ -1206,3 +1206,5 @@ html.lobby .shabbos-z li { padding: .45em 0; }
 .learn-week tr.today { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .learn-week td.exam b { color: var(--accent); }
 .learn-week td.exam .ex-t { font-size: .8rem; color: var(--muted); }
+.learn-pick { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.learn-pick select { flex: 1; min-height: 40px; font: inherit; }
