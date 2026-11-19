@@ -810,7 +810,7 @@
       rows.push(el('li', null, [lead, el('span', { class: 'z', text: d ? (d === 'חזרה' ? 'חזרה' : 'דף ' + d) : '' })]));
       if (ex) {
         var er = (function (m) { return Cal.rdFromGreg(+m[1], +m[2], +m[3]); })(/^(\d{4})-(\d{2})-(\d{2})$/.exec(ex.date)), ei = Cal.dayInfo(er, !!cfg.israel), pr = Cal.parshaOfWeek(er, !!cfg.israel);
-        rows.push(el('li', { class: 'ex-t' }, [el('span', { text: 'הבחינה הבאה: ' + S().days[ei.dow] + (pr ? ' פרשת ' + pr : '') + ', ' + Cal.formatHeb(ei.heb).replace(/ תש.*$/, '') + ' · ' + ex.text })]));
+        rows.push(el('li', { class: 'ex-t' }, [el('span', { text: 'בחינה הבאה: ' + 'אבגדהוז'.charAt(ei.dow) + '׳' + (pr ? ' ' + pr : '') + ' · ' + ex.text })])); /* "בחינה הבאה: א׳ ויחי · דף צ״ד-ק״ה" */
       }
     });
     if (!rows.length) return null;
