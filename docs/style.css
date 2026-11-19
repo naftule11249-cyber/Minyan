@@ -1190,10 +1190,6 @@ html.lobby .shabbos-z li { padding: .45em 0; }
 @media (max-width: 900px) { .sxrow { grid-template-columns: 1fr 1fr; } .sxrow input:nth-of-type(1), .sxrow input:nth-of-type(3) { grid-column: 1 / -1; } }
 
 /* the learning programs box under the zmanim on the board */
-.side.learning .learn + .learn { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--line); }
-.side.learning .learn-h { font-size: 1.05rem; margin-bottom: 4px; }
-.side.learning .learn-h span { color: var(--muted); }
-.side.learning li.exam { display: block; }
-.side.learning li.exam .ex-h { display: block; font-weight: 700; color: var(--accent); }
-.side.learning li.exam .ex-t { display: block; }
-.side.learning .learn-ph { margin-top: 6px; font-size: .85rem; color: var(--muted); direction: rtl; }
+.side.learning li .sub { color: var(--muted); font-weight: 400; }
+.side.learning li.ex-t { font-size: .85rem; color: var(--muted); border-top: 0; padding-top: 0; margin-top: -4px; }
+.side.learning li.exam .z { color: var(--accent); }

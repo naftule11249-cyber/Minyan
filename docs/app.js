@@ -799,23 +799,22 @@
     return wrap;
   }
   /* Learning programs under the zmanim on the board: for the day shown, its daf and חזרת החודש, and the next בחינה with its day */
+  /* Learning programs under the zmanim on the board: each program's shiur for the day shown, and its next בחינה */
   function learningPanel(rd) {
-    var progs = (cfg.learning || []).filter(function (p) { return p && p.name; }), iso = MinyanEngine.isoDate(rd), items = [];
+    var progs = (cfg.learning || []).filter(function (p) { return p && p.name; }), iso = MinyanEngine.isoDate(rd), rows = [];
     progs.forEach(function (p) {
-      var d = (p.days || {})[iso] || ['', ''], ex = (p.exams || []).filter(function (e) { return e.date >= iso; }).sort(function (a, b) { return a.date < b.date ? -1 : 1; })[0];
-      var rows = [];
-      if (d[0]) rows.push(el('li', null, [el('span', { text: d[0] === 'חזרה' ? 'היום' : 'הדף היום' }), el('span', { class: 'z', text: d[0] === 'חזרה' ? 'חזרה' : 'דף ' + d[0] })]));
-      if (d[1]) rows.push(el('li', null, [el('span', { text: 'חזרת החודש' }), el('span', { class: 'z', text: d[1] === 'סיום' ? 'סיום' : 'דף ' + d[1] })]));
+      var d = ((p.days || {})[iso] || [''])[0], ex = (p.exams || []).filter(function (e) { return e.date >= iso; }).sort(function (a, b) { return a.date < b.date ? -1 : 1; })[0];
+      if (!d && !ex) return;
+      var lead = el('span', null, [el('b', { text: p.name }), p.sub ? el('span', { class: 'sub', text: ' · ' + p.sub }) : null]);
+      if (ex && ex.date === iso) { rows.push(el('li', { class: 'hi exam' }, [lead, el('span', { class: 'z', text: 'בחינה היום' })])); rows.push(el('li', { class: 'ex-t' }, [el('span', { text: ex.text })])); return; }
+      rows.push(el('li', null, [lead, el('span', { class: 'z', text: d ? (d === 'חזרה' ? 'חזרה' : 'דף ' + d) : '' })]));
       if (ex) {
         var er = (function (m) { return Cal.rdFromGreg(+m[1], +m[2], +m[3]); })(/^(\d{4})-(\d{2})-(\d{2})$/.exec(ex.date)), ei = Cal.dayInfo(er, !!cfg.israel), pr = Cal.parshaOfWeek(er, !!cfg.israel);
-        var when = er === rd ? 'היום' : S().days[ei.dow] + (pr ? ' פרשת ' + pr : '') + ', ' + Cal.formatHeb(ei.heb).replace(/ תש.*$/, '');
-        rows.push(el('li', { class: 'hi exam' }, [el('span', null, [el('span', { class: 'ex-h', text: 'הבחינה הבאה · ' + when }), el('span', { class: 'ex-t', text: ex.text + (ex.chazara ? ' · חזרת החודש: ' + ex.chazara : '') })])]));
+        rows.push(el('li', { class: 'ex-t' }, [el('span', { text: 'הבחינה הבאה: ' + S().days[ei.dow] + (pr ? ' פרשת ' + pr : '') + ', ' + Cal.formatHeb(ei.heb).replace(/ תש.*$/, '') + ' · ' + ex.text })]));
       }
-      if (!rows.length) return;
-      items.push(el('div', { class: 'learn' }, [el('div', { class: 'learn-h' }, [el('b', { text: p.name }), p.sub ? el('span', { text: ' · ' + p.sub }) : null]), el('ul', { class: 'zlist' }, rows), p.phone ? el('div', { class: 'learn-ph', text: p.phone }) : null]));
     });
-    if (!items.length) return null;
-    return el('section', { class: 'side learning', dir: 'rtl' }, [el('h3', { text: 'שיעורים' })].concat(items));
+    if (!rows.length) return null;
+    return el('section', { class: 'side learning', dir: 'rtl' }, [el('h3', { text: 'שיעורים' }), el('ul', { class: 'zlist' }, rows)]);
   }
   function zmanimPanel(info, z, title) {
     var keys = ['alos', 'sunrise', 'shemaMGA', 'shema', 'tefillaMGA', 'tefilla', 'chatzos', 'minchag', 'minchak', 'candles', 'sunset', 'tzeis60', 'tzeis', 'tzeis72', 'chatzosNight'];
