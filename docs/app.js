@@ -425,10 +425,11 @@
     }
     function name(s, t, suffix) { var n = ((s.tefillos && s.tefillos[t.id]) || t).name; return n !== t.name ? n : n + suffix; } /* a tefilla with a name of its own that day (מנחה וקבלת שבת) needs no ערש״ק */
     /* the week's shiurim and the like (This week tab → "Shabbos box"), in small type under the tefilla they follow */
-    var satIso = MinyanEngine.isoDate(w.sat), extras = (cfg.shabbosExtras || []).filter(function (x) { return x && x.name && (!x.week || x.week === 'every' || x.week === satIso); });
+    var satIso = MinyanEngine.isoDate(w.sat), extras = (cfg.shabbosExtras || []).filter(function (x) { return x && x.name && (!x.week || x.week === 'every' || x.week === satIso) && (x.skip || {})[satIso] !== 'hide'; });
     function small(when) {
       extras.filter(function (x) { return x.when === when; }).forEach(function (x) {
-        ul.appendChild(el('li', { class: 'sm' }, [el('span', null, [el('span', { class: 'sm-n', text: x.name }), x.detail ? el('span', { class: 'sm-d', text: x.detail }) : null]), el('span', { class: 'z num', text: x.time || '' })]));
+        var off = (x.skip || {})[satIso] === 'cancel'; /* this Shabbos it is not held: shown so, instead of its time */
+        ul.appendChild(el('li', { class: 'sm' + (off ? ' sm-off' : '') }, [el('span', null, [el('span', { class: 'sm-n', text: x.name }), x.detail && !off ? el('span', { class: 'sm-d', text: x.detail }) : null]), el('span', { class: off ? 'z sm-x' : 'z num', text: off ? 'לא יתקיים' : (x.time || '') })]));
       });
     }
     li(zmanName('candles'), fmtTime(w.candlesMin), true);
@@ -3135,8 +3136,31 @@
     var SX_WHEN = [['fri', 'Friday night'], ['morning', 'Shabbos morning'], ['day', 'After Shacharis'], ['motzash', 'Motzei Shabbos']];
     function shabbosExtrasCard() {
       d.shabbosExtras = d.shabbosExtras || [];
-      var c = card('Shabbos box: shiurim and more', 'Small lines in the Shabbos zmanim box on the board (from Thursday night). A line can be for every week or only for this Shabbos. Saved with Save.');
+      var c = card('Shabbos box: shiurim and more', 'Small lines in the Shabbos zmanim box on the board (from Thursday night). A line can be for every week or for one Shabbos only; an every-week line can skip chosen Shabbosim, either off the screen or showing לא יתקיים. Saved with Save.');
       var list = el('div', { class: 'col sxlist' }), nextSat = todayRd + Cal.mod(6 - Cal.mod(todayRd, 7), 7), satIso = MinyanEngine.isoDate(nextSat);
+      /* the coming Shabbosim, by parsha (or the Yom Tov), for "Only …" and for skipping a week */
+      function satName(iso) {
+        var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso), r = m ? Cal.rdFromGreg(+m[1], +m[2], +m[3]) : nextSat, pr = Cal.parshaOfWeek(r, !!d.israel), di = Cal.dayInfo(r, !!d.israel);
+        return (pr ? 'פרשת ' + pr : (di.yomtov && di.labels[0]) || 'שבת') + ' (' + engine.fmtDate(r) + ')';
+      }
+      var sats = []; for (var si = 0; si < 26; si++) { var sIso = MinyanEngine.isoDate(nextSat + 7 * si); sats.push({ iso: sIso, name: satName(sIso) }); }
+      /* an every-week line: Shabbosim it is skipped, each either taken off the screen or shown as לא יתקיים */
+      function skipRow(x) {
+        x.skip = x.skip || {};
+        Object.keys(x.skip).forEach(function (k) { if (k < satIso) delete x.skip[k]; }); /* past weeks are dropped */
+        var row = el('div', { class: 'sxskip' }, [el('span', { class: 'sxskip-l', text: 'Skip:' })]);
+        Object.keys(x.skip).sort().forEach(function (k) {
+          row.appendChild(el('span', { class: 'chip' }, [satName(k) + ' – ' + (x.skip[k] === 'cancel' ? 'shows לא יתקיים' : 'off the screen') + ' ',
+            el('button', { type: 'button', class: 'chip-x', text: '×', title: 'Undo: back on that Shabbos', 'aria-label': 'Undo skipping ' + satName(k), onclick: function () { delete x.skip[k]; paint(); } })]));
+        });
+        var pickS = el('select', { 'aria-label': 'Shabbos to skip' }, sats.filter(function (o) { return !x.skip[o.iso]; }).map(function (o) { return el('option', { value: o.iso, text: o.name }); }));
+        var how = el('select', { 'aria-label': 'How' }, [el('option', { value: 'cancel', text: 'Show לא יתקיים' }), el('option', { value: 'hide', text: 'Take it off the screen' })]);
+        var add = el('button', { type: 'button', class: 'btn small', text: '+ Skip a Shabbos', onclick: function () { add.hidden = true; pickS.hidden = how.hidden = ok.hidden = false; pickS.focus(); } });
+        var ok = el('button', { type: 'button', class: 'btn small primary', text: 'Skip it', onclick: function () { if (pickS.value) { x.skip[pickS.value] = how.value; paint(); } } });
+        pickS.hidden = how.hidden = ok.hidden = true;
+        row.appendChild(add); row.appendChild(pickS); row.appendChild(how); row.appendChild(ok);
+        return row;
+      }
       function paint() {
         list.textContent = '';
         d.shabbosExtras.forEach(function (x, i) {
@@ -3144,13 +3168,14 @@
           var nm = el('input', { type: 'text', dir: 'auto', value: x.name || '', placeholder: 'שיעור בפרשת השבוע', 'aria-label': 'Name' });
           var tm = el('input', { type: 'text', dir: 'auto', value: x.time || '', placeholder: '8:45 / אחר התפילה', 'aria-label': 'Time', class: 'sxtime' });
           var dt = el('input', { type: 'text', dir: 'auto', value: x.detail || '', placeholder: 'ע״י … • בחדר …', 'aria-label': 'Details' });
-          var wk = el('select', { 'aria-label': 'Which weeks' }, [el('option', { value: 'every', text: 'Every week' }), el('option', { value: satIso, text: 'Only this Shabbos' })]);
-          wk.value = x.week && x.week !== 'every' ? (x.week === satIso ? satIso : 'every') : 'every';
-          if (x.week && x.week !== 'every' && x.week !== satIso) { wk.appendChild(el('option', { value: x.week, text: 'Only ' + x.week })); wk.value = x.week; }
+          var wk = el('select', { 'aria-label': 'Which weeks' }, [el('option', { value: 'every', text: 'Every week' })].concat(sats.map(function (o, j) { return el('option', { value: o.iso, text: 'Only ' + (j === 0 ? 'this Shabbos, ' : '') + o.name }); })));
+          if (x.week && x.week !== 'every' && !sats.some(function (o) { return o.iso === x.week; })) wk.appendChild(el('option', { value: x.week, text: 'Only ' + satName(x.week) }));
+          wk.value = x.week || 'every';
           when.addEventListener('change', function () { x.when = when.value; });
           nm.addEventListener('input', function () { x.name = nm.value; }); tm.addEventListener('input', function () { x.time = tm.value; }); dt.addEventListener('input', function () { x.detail = dt.value; });
-          wk.addEventListener('change', function () { x.week = wk.value; });
+          wk.addEventListener('change', function () { x.week = wk.value; paint(); });
           list.appendChild(el('div', { class: 'sxrow' }, [when, nm, tm, dt, wk, el('button', { type: 'button', class: 'btn small danger', text: 'Remove', onclick: function () { d.shabbosExtras.splice(i, 1); paint(); } })]));
+          if (!x.week || x.week === 'every') list.appendChild(skipRow(x));
         });
         if (!d.shabbosExtras.length) list.appendChild(el('div', { class: 'hint', text: 'No lines yet.' }));
       }

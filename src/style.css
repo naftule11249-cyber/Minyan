@@ -1208,3 +1208,11 @@ html.lobby .shabbos-z li { padding: .45em 0; }
 .learn-week td.exam .ex-t { font-size: .8rem; color: var(--muted); }
 .learn-pick { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
 .learn-pick select { flex: 1; min-height: 40px; font: inherit; }
+.sxskip { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0 0 10px; }
+.sxskip-l { color: var(--a-muted, #667); font-size: .9rem; }
+.sxskip .chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 6px 4px 10px; border-radius: 999px; background: var(--a-soft, rgba(0,0,0,.06)); font-size: .9rem; }
+.sxskip .chip-x { border: 0; background: none; font-size: 1.1rem; line-height: 1; cursor: pointer; padding: 2px 6px; border-radius: 999px; color: inherit; }
+.sxskip .chip-x:hover, .sxskip .chip-x:focus-visible { background: rgba(0,0,0,.1); }
+.sxskip select { min-height: 36px; }
+.zlist li.sm-off .sm-n { text-decoration: line-through; opacity: .7; }
+.zlist li.sm-off .sm-x { font-weight: 700; color: var(--accent); }
