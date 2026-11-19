@@ -148,7 +148,7 @@
  "overrides": [],
  "smsNumber": "+1 929 828 7677",
  "remoteConfigUrl": "",
- "savedAt": 1795065079614,
+ "savedAt": 1795065156342,
  "siteUrl": "https://minyan.cascadeshul.org/",
  "logo": "",
  "wallLogo": "logo-name.png",
@@ -318,7 +318,7 @@
   "round": 1,
   "prices": {
    "adult": "12",
-   "kid": "12",
+   "kid": "",
    "ytAdult": "",
    "ytKid": "",
    "ytDays": 0
