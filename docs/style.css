@@ -1193,3 +1193,16 @@ html.lobby .shabbos-z li { padding: .45em 0; }
 .side.learning li .sub { color: var(--muted); font-weight: 400; }
 .side.learning li.ex-t { font-size: .85rem; color: var(--muted); border-top: 0; padding-top: 0; margin-top: -4px; }
 .side.learning li.exam .z { color: var(--accent); }
+
+/* the שיעורים box's "כל השבוע" button and the week's table */
+.side.learning .learn-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.side.learning .learn-head h3 { margin: 0; }
+.learn-week { overflow-x: auto; margin: 8px 0 12px; }
+.learn-week table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+.learn-week th, .learn-week td { padding: 8px 6px; border-bottom: 1px solid var(--line, rgba(0,0,0,.1)); text-align: start; vertical-align: top; }
+.learn-week th { font-weight: 600; }
+.learn-week .sub { font-size: .8rem; color: var(--muted); font-weight: 400; }
+.learn-week th.day { white-space: nowrap; }
+.learn-week tr.today { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.learn-week td.exam b { color: var(--accent); }
+.learn-week td.exam .ex-t { font-size: .8rem; color: var(--muted); }

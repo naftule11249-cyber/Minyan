@@ -814,7 +814,39 @@
       }
     });
     if (!rows.length) return null;
-    return el('section', { class: 'side learning', dir: 'rtl' }, [el('h3', { text: 'שיעורים' }), el('ul', { class: 'zlist' }, rows)]);
+    var wk = el('button', { type: 'button', class: 'btn small', id: 'learn-week', text: 'כל השבוע', title: 'השיעורים של כל השבוע', onclick: function () { openLearningWeek(rd); } });
+    return el('section', { class: 'side learning', dir: 'rtl' }, [el('div', { class: 'learn-head' }, [el('h3', { text: 'שיעורים' }), wk]), el('ul', { class: 'zlist' }, rows)]);
+  }
+  /* the week's shiurim, Sunday to Shabbos, one column per program; ‹ › go a week back or ahead */
+  function openLearningWeek(rd) {
+    var old = $('#learn-overlay'); if (old) old.remove();
+    var progs = (cfg.learning || []).filter(function (p) { return p && p.name; }), todayIso = isoOf(Cal.nowInTz(Date.now(), loc().tz).rd);
+    var ov = el('div', { class: 'overlay modal', id: 'learn-overlay', dir: 'rtl' }), body = el('div', { class: 'learn-week' }), title = el('h2');
+    var sun = rd - Cal.dayInfo(rd, !!cfg.israel).dow;
+    function close() { ov.remove(); document.removeEventListener('keydown', onKey); }
+    function onKey(ev) { if (ev.key === 'Escape') close(); }
+    function cell(p, iso) {
+      var ex = (p.exams || []).filter(function (e) { return e.date === iso; })[0], d = ((p.days || {})[iso] || [''])[0];
+      if (ex) return el('td', { class: 'exam' }, [el('b', { text: 'בחינה' }), el('div', { class: 'ex-t', text: ex.text })]);
+      return el('td', { text: d ? (d === 'חזרה' ? 'חזרה' : 'דף ' + d) : '—' });
+    }
+    function draw() {
+      var pr = Cal.parshaOfWeek(sun + 6, !!cfg.israel);
+      title.textContent = 'שיעורים' + (pr ? ' – פרשת ' + pr : '');
+      var head = el('tr', null, [el('th', { text: '' })].concat(progs.map(function (p) { return el('th', null, [el('div', { text: p.name }), p.sub ? el('div', { class: 'sub', text: p.sub }) : null]); })));
+      var trs = [head];
+      for (var i = 0; i < 7; i++) {
+        var r = sun + i, iso = isoOf(r), h = Cal.hebFromRD(r);
+        trs.push(el('tr', { class: iso === todayIso ? 'today' : '' }, [el('th', { class: 'day' }, [el('div', { text: 'יום ' + 'אבגדהוש'.charAt(i) + (i === 6 ? 'ב״ק' : '׳') }), el('div', { class: 'sub', text: Cal.gematria(h.d) + ' ' + Cal.monthName(h.y, h.m) })])].concat(progs.map(function (p) { return cell(p, iso); }))));
+      }
+      body.textContent = ''; body.appendChild(el('table', null, trs));
+    }
+    var prev = el('button', { type: 'button', class: 'btn small', id: 'learn-prev', text: '› שבוע הקודם', onclick: function () { sun -= 7; draw(); } });
+    var next = el('button', { type: 'button', class: 'btn small', id: 'learn-next', text: 'שבוע הבא ‹', onclick: function () { sun += 7; draw(); } });
+    ov.appendChild(el('div', { class: 'panel small' }, [title, body, el('div', { class: 'bar' }, [prev, next, el('button', { type: 'button', class: 'btn primary', id: 'learn-close', text: 'סגירה', onclick: close })])]));
+    ov.addEventListener('click', function (ev) { if (ev.target === ov) close(); });
+    document.addEventListener('keydown', onKey);
+    draw(); document.body.appendChild(ov); $('#learn-close').focus();
   }
   function zmanimPanel(info, z, title) {
     var keys = ['alos', 'sunrise', 'shemaMGA', 'shema', 'tefillaMGA', 'tefilla', 'chatzos', 'minchag', 'minchak', 'candles', 'sunset', 'tzeis60', 'tzeis', 'tzeis72', 'chatzosNight'];
