@@ -118,13 +118,13 @@ var MinyanShere = (function () {
     }
     return { today: now.rd, days: out };
   }
-  /* "פון 8:00 ביז 12:00 און פון 1:30 ביז 3:15, נישט פאר קינדער" — or each set with its own kids when they differ */
+  /* "פון 8:00 ביז 12:00 און פון 1:30 ביז 3:15, נישט פאר קינדער" — or each set with its own kids when they differ; open to kids says nothing */
   function hoursText(cfg, x) {
     var e = MinyanEngine(cfg), rs = x.ranges;
     function one(r) { return 'פון ' + e.fmtTime(r.from) + ' ביז ' + e.fmtTime(r.until); }
-    function kids(k) { return k ? 'אויך קינדער' : 'נישט פאר קינדער'; }
-    if (rs.every(function (r) { return r.kids === rs[0].kids; })) return rs.map(one).join(' און ') + ', ' + kids(rs[0].kids);
-    return rs.map(function (r) { return one(r) + ', ' + kids(r.kids); }).join('; ');
+    function kids(k) { return k ? '' : ', נישט פאר קינדער'; } /* kids are said only when they are not taken */
+    if (rs.every(function (r) { return r.kids === rs[0].kids; })) return rs.map(one).join(' און ') + kids(rs[0].kids);
+    return rs.map(function (r) { return one(r) + kids(r.kids); }).join('; ');
   }
   function text(cfg, nowMs) {
     var s = settings(cfg), w = week(cfg, nowMs), lines = [], i, j;

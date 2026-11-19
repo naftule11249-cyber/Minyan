@@ -64,11 +64,11 @@ check('keyword punctuation', MinyanSms.keyword('Mincha?'), /^mincha$/);
   check('shere is off until the tab turns it on: שערן is an ordinary text', MinyanSms.buildReply(sc, 'שערן', on(2026, 11, 15, 10, 0)).keyword, /^next$/);
   sc.shere = { on: true };
   const S = (t, now) => MinyanSms.buildReply(sc, t, now).text;
-  check('שערן on a Sunday: the whole week, weekdays with the same hours together', S('שערן', on(2026, 11, 15, 10, 0)), /^שערן די וואך:\nהיינט, זונטאג ביז מיטוואך: פון 10:00 ביז 8:00, אויך קינדער\nדאנערשטאג: פון 10:00 ביז 9:00, אויך קינדער\nערב שבת פרשת ויצא \(י׳ כסלו\): פון 9:00 ביז 10:00 און פון 12:30 ביז \d:\d\d, נישט פאר קינדער$/);
+  check('שערן on a Sunday: the whole week, weekdays with the same hours together', S('שערן', on(2026, 11, 15, 10, 0)), /^שערן די וואך:\nהיינט, זונטאג ביז מיטוואך: פון 10:00 ביז 8:00\nדאנערשטאג: פון 10:00 ביז 9:00\nערב שבת פרשת ויצא \(י׳ כסלו\): פון 9:00 ביז 10:00 און פון 12:30 ביז \d:\d\d, נישט פאר קינדער$/);
   check('with spaces and a "!" too, and in English letters', S(' שערן! ', on(2026, 11, 15, 10, 0)) + S('Shere', on(2026, 11, 15, 10, 0)), /^שערן די וואך.*שערן די וואך/s);
   check('other texts still get the minyan', S('מנין', on(2026, 11, 15, 10, 0)), /מנין הבא: שחרית/);
   check('after Friday closes: next week', S('שערן', on(2026, 11, 13, 17, 0)), /^שערן די וואך:\nזונטאג ביז/);
-  check('Erev Pesach on a Wednesday closes before candle lighting; Yom Tov is left out', S('שערן', on(2027, 4, 18, 10, 0)), /\nמיטוואך, ערב פסח \(י״ד ניסן\): פון 10:00 ביז \d:\d\d, אויך קינדער$/);
+  check('Erev Pesach on a Wednesday closes before candle lighting; Yom Tov is left out', S('שערן', on(2027, 4, 18, 10, 0)), /\nמיטוואך, ערב פסח \(י״ד ניסן\): פון 10:00 ביז \d:\d\d$/);
   check('Erev Shvi\'i shel Pesach', S('שערן', on(2027, 4, 25, 10, 0)), /דינסטאג, ערב שביעי של פסח \(כ׳ ניסן\)/);
   check('Hoshana Rabbah on a Friday', S('שערן', on(2026, 9, 27, 10, 0)), /ערב שבת, הושענא רבה/);
   { const z = JSON.parse(JSON.stringify(sc)); z.shere = { on: true, round: 5, week: [{ from: 'sunrise+20', until: 'sunset-30' }], days: { '2026-11-17': { from: 'plag', until: '21:00' } } };
@@ -77,7 +77,7 @@ check('keyword punctuation', MinyanSms.keyword('Mincha?'), /^mincha$/);
     check('one day from plag until 9:00', t, /דינסטאג: פון 3:3\d ביז 9:00/); }
   { const z = JSON.parse(JSON.stringify(sc)); z.shere = { on: true, prices: { adult: '15', kid: '10', ytAdult: '20', ytDays: 0 },
       week: [null, null, null, null, null, { open: true, ranges: [{ from: '08:00', until: '12:00', kids: true }, { from: '13:30', until: '', kids: false }] }] };
-    check('Friday morning and afternoon, each with its own kids', MinyanSms.buildReply(z, 'שערן', on(2026, 11, 15, 10, 0)).text, /ערב שבת פרשת ויצא \(י׳ כסלו\): פון 8:00 ביז 12:00, אויך קינדער; פון 1:30 ביז \d:\d\d, נישט פאר קינדער\nפרייז: \$15, קינדער \$10$/);
+    check('Friday morning and afternoon, each with its own kids', MinyanSms.buildReply(z, 'שערן', on(2026, 11, 15, 10, 0)).text, /ערב שבת פרשת ויצא \(י׳ כסלו\): פון 8:00 ביז 12:00; פון 1:30 ביז \d:\d\d, נישט פאר קינדער\nפרייז: \$15, קינדער \$10$/);
     check('the price goes up on Erev Pesach only', MinyanSms.buildReply(z, 'שערן', on(2027, 4, 18, 10, 0)).text, /דינסטאג: .* · פרייז: \$15, קינדער \$10\nמיטוואך, ערב פסח \(י״ד ניסן\): .* · פרייז: \$20, קינדער \$10$/);
     z.shere.days = { '2026-11-16': { closed: false, ranges: [{ from: 'sunrise', until: 'chatzos', kids: false }], note: '', price: { adult: '25' } } };
     check('a calendar date with its own hours by the zman and its own price', MinyanSms.buildReply(z, 'שערן', on(2026, 11, 15, 10, 0)).text, /מאנטאג: פון 6:\d\d ביז 11:\d\d, נישט פאר קינדער · פרייז: \$25/); }
