@@ -4,7 +4,7 @@ const { chromium } = require('playwright');
   const browser = await chromium.launch(); const errors = []; let fails = 0;
   const ok = (name, got, want) => { if (JSON.stringify(got) === JSON.stringify(want)) console.log('ok   ' + name); else { fails++; console.log('FAIL ' + name + ' got ' + JSON.stringify(got) + ' want ' + JSON.stringify(want)); } };
   async function guide(ua) {
-    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'he', timezoneId: 'America/New_York', serviceWorkers: 'block', userAgent: ua || undefined });
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'he', timezoneId: 'America/New_York', serviceWorkers: 'block', userAgent: ua || undefined }); await ctx.addInitScript(() => { try { if (!localStorage.getItem('minyan-ui-lang')) localStorage.setItem('minyan-ui-lang', 'board'); } catch (e) {} }); /* these checks read the Hebrew wording */
     const page = await ctx.newPage(); page.on('pageerror', e => errors.push(e.message));
     page.on('console', x => { if (x.type() === 'error' && !/ERR_TUNNEL|ERR_NAME_NOT_RESOLVED|ERR_INTERNET|ERR_CONNECTION/.test(x.text())) errors.push(x.text()); });
     await page.goto('http://localhost:8790/index.html', { waitUntil: 'networkidle' }); await page.waitForTimeout(300);
@@ -24,6 +24,7 @@ const { chromium } = require('playwright');
   {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'he', timezoneId: 'America/New_York', serviceWorkers: 'block',
       userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36 MinyanBoardApp' });
+    await ctx.addInitScript(() => { try { if (!localStorage.getItem('minyan-ui-lang')) localStorage.setItem('minyan-ui-lang', 'board'); } catch (e) {} });
     const page = await ctx.newPage(); page.on('pageerror', e => errors.push(e.message));
     await page.goto('http://localhost:8790/index.html', { waitUntil: 'networkidle' }); await page.waitForTimeout(300);
     ok('in the store app the footer has no "install the app" button', [await page.locator('#install-guide').isVisible(), await page.locator('footer .btn.primary:visible').count()], [false, 0]);

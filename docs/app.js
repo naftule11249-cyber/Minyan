@@ -172,7 +172,7 @@
     return LANGS.indexOf(v) >= 0 ? v : langDefault();
   }
   /* the sheets (Settings, reminders, the install guide) may be in English while the board itself keeps its Hebrew or Yiddish */
-  function uiLang() { var v = null; try { v = localStorage.getItem('minyan-ui-lang'); } catch (e) {} return v === 'en' ? 'en' : langMode(); }
+  function uiLang() { var v = null; try { v = localStorage.getItem('minyan-ui-lang'); } catch (e) {} return v === 'board' ? langMode() : 'en'; } /* English unless "same as the board" was chosen */
   /* a zman's name in the given strings' language (English has its own; Hebrew and Yiddish share the calendar's) */
   function zmanName(k, L) { L = L || S(); return (L.zmanNames && L.zmanNames[k]) || Cal.ZMAN_NAMES[k] || k; }
   /* the board's own sheets read left to right in English, right to left otherwise */
@@ -330,8 +330,8 @@
     if (view.kind === 'board') {
       var sms = smsPanel();
       if (sms) colB.appendChild(sms);
-      var push = pushPanel();
-      if (push) colB.appendChild(push);
+      var push = pushPanel(SU()); /* in the settings' language, like the settings sheet */
+      if (push) { push.setAttribute('dir', sheetDir()); push.setAttribute('lang', uiLang()); colB.appendChild(push); }
     }
     main.appendChild(colA); main.appendChild(colB);
     root.appendChild(main);
@@ -1186,7 +1186,7 @@
     /* English for the sheets only: the board keeps its Hebrew or Yiddish */
     var uiSel = el('select', { id: 'ui-lang', 'aria-label': 'Language of the settings' }, [el('option', { value: '', text: SU().sameAsBoard }), el('option', { value: 'en', text: 'English' })]);
     uiSel.value = uiLang() === 'en' ? 'en' : '';
-    uiSel.addEventListener('change', function () { try { if (uiSel.value === 'en') localStorage.setItem('minyan-ui-lang', 'en'); else localStorage.removeItem('minyan-ui-lang'); } catch (e) {} render(); close(); openSettings(); });
+    uiSel.addEventListener('change', function () { try { localStorage.setItem('minyan-ui-lang', uiSel.value === 'en' ? 'en' : 'board'); } catch (e) {} render(); close(); openSettings(); });
     disp.push(srow(SU().uiLangLabel, uiSel, 'ui-lang'));
     var sheet = el('div', { class: 'panel sheet' }, [
       el('div', { class: 'sheet-head' }, [el('h2', { text: SU().settings }), el('button', { type: 'button', class: 'btn icon', text: '✕', 'aria-label': SU().close, onclick: close })]),

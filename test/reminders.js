@@ -8,7 +8,7 @@ const { chromium } = require('playwright'); const fs = require('fs');
   const errors = []; let fails = 0;
   const ok = (name, got, want) => { if (JSON.stringify(got) === JSON.stringify(want)) console.log('ok   ' + name); else { fails++; console.log('FAIL ' + name + ' got ' + JSON.stringify(got) + ' want ' + JSON.stringify(want)); } };
   try {
-    const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: 'he', timezoneId: 'America/New_York' });
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: 'he', timezoneId: 'America/New_York' }); await ctx.addInitScript(() => { try { if (!localStorage.getItem('minyan-ui-lang')) localStorage.setItem('minyan-ui-lang', 'board'); } catch (e) {} }); /* these checks read the Hebrew wording */
     await ctx.grantPermissions(['notifications'], { origin: 'http://localhost:8790' });
     const page = await ctx.newPage(); page.on('pageerror', e => errors.push(e.message));
     page.on('console', m => { if (m.type() === 'error' && !/404|Failed to load resource/.test(m.text())) errors.push(m.text()); });
