@@ -65,7 +65,7 @@ check('keyword punctuation', MinyanSms.keyword('Mincha?'), /^mincha$/);
   sc.shere = { on: true };
   const bare = t => t.replace(/ (אינדערפרי|נאכמיטאג|ביינאכט)/g, ''); /* most checks read the times alone */
   const S = (t, now) => bare(MinyanSms.buildReply(sc, t, now).text);
-  check('each time says when in the day: אינדערפרי before noon, נאכמיטאג until 6, ביינאכט after', MinyanSms.buildReply(sc, 'שערן', on(2026, 11, 15, 10, 0)).text, /פון 10:00 אינדערפרי ביז 8:00 ביינאכט[\s\S]*פון 12:30 נאכמיטאג ביז \d:\d\d נאכמיטאג/);
+  check('each time says when in the day: אינדערפרי before noon, נאכמיטאג until 6, ביינאכט after; said once when both times share it', MinyanSms.buildReply(sc, 'שערן', on(2026, 11, 15, 10, 0)).text, /פון 10:00 אינדערפרי ביז 8:00 ביינאכט[\s\S]*פון 9:00 ביז 10:00 אינדערפרי און פון 12:30 ביז \d:\d\d נאכמיטאג/);
   check('שערן on a Sunday: the whole week, weekdays with the same hours together', S('שערן', on(2026, 11, 15, 10, 0)), /^שערן די וואך:\nהיינט, זונטאג ביז מיטוואך: פון 10:00 ביז 8:00\nדאנערשטאג: פון 10:00 ביז 9:00\nערב שבת פרשת ויצא \(י׳ כסלו\): פון 9:00 ביז 10:00 און פון 12:30 ביז \d:\d\d, נישט פאר קינדער$/);
   check('with spaces and a "!" too, and in English letters', S(' שערן! ', on(2026, 11, 15, 10, 0)) + S('Shere', on(2026, 11, 15, 10, 0)), /^שערן די וואך.*שערן די וואך/s);
   check('other texts still get the minyan', S('מנין', on(2026, 11, 15, 10, 0)), /מנין הבא: שחרית/);

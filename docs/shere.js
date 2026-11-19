@@ -124,7 +124,10 @@ var MinyanShere = (function () {
     /* the time of day after each time: אינדערפרי before noon, נאכמיטאג until 6, ביינאכט from 6 */
     function part(m) { m = ((m % 1440) + 1440) % 1440; return m < 720 ? ' אינדערפרי' : m < 1080 ? ' נאכמיטאג' : ' ביינאכט'; }
     function at(m) { return e.fmtTime(m) + (cfg.clock24 ? '' : part(m)); }
-    function one(r) { return 'פון ' + at(r.from) + ' ביז ' + at(r.until); }
+    function one(r) { /* "פון 1:00 ביז 3:04 נאכמיטאג": the word once when both times are in the same part of the day */
+      if (!cfg.clock24 && part(r.from) === part(r.until)) return 'פון ' + e.fmtTime(r.from) + ' ביז ' + e.fmtTime(r.until) + part(r.until);
+      return 'פון ' + at(r.from) + ' ביז ' + at(r.until);
+    }
     function kids(k) { return k ? '' : ', נישט פאר קינדער'; } /* kids are said only when they are not taken */
     if (rs.every(function (r) { return r.kids === rs[0].kids; })) return rs.map(one).join(' און ') + kids(rs[0].kids);
     return rs.map(function (r) { return one(r) + kids(r.kids); }).join('; ');
