@@ -1210,11 +1210,11 @@
     var L = cfg.location || {};
     var f = el('footer', null, [el('span', { text: S().timesBy + (L.name || (L.lat + ', ' + L.lng)) + ' · ' + (cfg.israel ? S().eretz : S().chul) })]);
     var right = el('div', { class: 'tabs ltr', dir: 'ltr' });
-    ui.iosHint = el('button', { type: 'button', class: 'btn small', id: 'install-guide', text: S().installApp, onclick: function () { openSettings('app'); } });
-    ui.installBtn = el('button', { class: 'btn small primary', text: S().installApp, onclick: installApp });
-    ui.editBtn = el('button', { class: 'btn small', text: S().edit, onclick: openAdmin });
+    ui.iosHint = el('button', { type: 'button', class: 'btn small', id: 'install-guide', text: SU().installApp, onclick: function () { openSettings('app'); } });
+    ui.installBtn = el('button', { class: 'btn small primary', text: SU().installApp, onclick: installApp });
+    ui.editBtn = el('button', { class: 'btn small', text: SU().edit, onclick: openAdmin });
     ui.editBtn.hidden = !canEditNow();
-    right.appendChild(el('button', { type: 'button', class: 'btn small', id: 'settings-open', text: S().footerSettings, onclick: openSettings }));
+    right.appendChild(el('button', { type: 'button', class: 'btn small', id: 'settings-open', text: SU().footerSettings, onclick: openSettings }));
     right.appendChild(ui.iosHint); right.appendChild(ui.installBtn); right.appendChild(ui.editBtn);
     refreshInstallBtn();
     f.appendChild(right);
