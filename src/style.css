@@ -314,13 +314,13 @@ footer { max-width: 1120px; margin: 0 auto; padding-block: 0 30px; padding-left:
 .foldbtn { margin: 8px 12px; }
 /* the three minyanim after the next one */
 .soon-row { display: flex; gap: 8px; margin-top: 12px; justify-content: center; }
-.soon { flex: 1; max-width: 170px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 6px; text-align: center; }
-.soon .time { font-size: 1.35rem; font-weight: 700; line-height: 1.1; }
-.soon .room { font-size: .9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.soon .sub { font-size: .75rem; color: var(--muted); }
-.soon.tap { cursor: pointer; }
-.soon.tap:hover, .soon.tap:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
-#app.display .soon .time { font-size: 2rem; }
+.soon-row .soon { flex: 1; max-width: 170px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 6px; text-align: center; }
+.soon-row .soon .time { font-size: 1.35rem; font-weight: 700; line-height: 1.1; }
+.soon-row .soon .room { font-size: .9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.soon-row .soon .sub { font-size: .75rem; color: var(--muted); }
+.soon-row .soon.tap { cursor: pointer; }
+.soon-row .soon.tap:hover, .soon-row .soon.tap:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+#app.display .soon-row .soon .time { font-size: 2rem; }
 .zlist li.past { opacity: .5; }
 
 /* ===== Admin ("back end"): phone first, navy and gold, big white cards, large controls ===== */
