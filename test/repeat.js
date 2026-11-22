@@ -11,6 +11,7 @@ const { chromium } = require('playwright');
   await page.waitForSelector('#pin-input'); await page.fill('#pin-input', process.env.MINYAN_PIN || '1234'); await page.press('#pin-input', 'Enter');
   await page.waitForSelector('#tab-schedule'); await page.click('#tab-schedule');
   const maariv = page.locator('#dtp-weekday .fields.three > .field').nth(2);
+  await page.locator('#dtp-weekday .seg button').nth(2).click(); /* the tefilla's tab: one list shows at a time */
   await maariv.locator('button:has-text("+ Add repeating")').click();
   const row = maariv.locator('.mrow.series').first();
   await row.locator('input[aria-label="Every how many minutes"]').fill('10');

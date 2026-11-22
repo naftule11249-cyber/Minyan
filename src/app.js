@@ -1905,7 +1905,8 @@
     Cal.DAY_TYPES.forEach(function (t) {
       var key = t[0], b = el('button', { type: 'button', id: 'dt-' + key, text: t[3], 'aria-selected': 'false', 'data-nodirty': '1', onclick: function () { showType(key); } }); /* looking at another kind of day changes nothing */
       typeTabs.appendChild(b);
-      var page = el('div', { class: 'col dtp tef-0', id: 'dtp-' + key });
+      var tef0 = Math.min(ui.schedTef || 0, d.tefillos.length - 1); /* the tefilla last looked at stays chosen: across the kinds of day, and after a save */
+      var page = el('div', { class: 'col dtp tef-' + tef0, id: 'dtp-' + key });
       page.hidden = true;
       var onSunday = FALLBACK[key] === 'weekday' && key !== 'sunday' && key !== 'friday' ? ' When it lands on a Sunday it follows the Sunday list.' : '';
       page.appendChild(el('div', { class: 'hint', text: FALLBACK[key] ? t[3] + ': each tefilla either follows the ' + TYPE_EN[FALLBACK[key]] + ' schedule or gets its own list for this day.' + onSunday + (key === 'yomtov' ? ' When Yom Tov is on a Friday, its Mincha and Maariv are Erev Shabbos\'s: Shabbos is coming in.' : '')
@@ -1947,9 +1948,12 @@
         el('span', { class: 'hint', text: 'Opens Home on the coming day of this kind. Save first to see your changes there.' })]));
       var seg = el('div', { class: 'seg', role: 'tablist' });
       d.tefillos.forEach(function (tf, i) {
-        seg.appendChild(el('button', { type: 'button', role: 'tab', 'aria-selected': String(i === 0), text: tf.name, 'data-nodirty': '1', onclick: function () {
-          page.className = 'col dtp tef-' + i;
-          Array.prototype.forEach.call(seg.children, function (x, j) { x.setAttribute('aria-selected', String(j === i)); });
+        seg.appendChild(el('button', { type: 'button', role: 'tab', 'aria-selected': String(i === tef0), text: tf.name, 'data-nodirty': '1', onclick: function () {
+          ui.schedTef = i; /* one choice for every kind of day: שחרית stays שחרית when going from Weekdays to Shabbos */
+          Object.keys(typePages).forEach(function (k) {
+            var pg = typePages[k].page; pg.className = 'col dtp tef-' + i;
+            Array.prototype.forEach.call(pg.querySelector('.seg').children, function (x, j) { x.setAttribute('aria-selected', String(j === i)); });
+          });
         } }));
       });
       page.appendChild(seg);

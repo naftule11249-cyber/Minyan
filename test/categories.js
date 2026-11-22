@@ -8,7 +8,7 @@ const { chromium } = require('playwright');
   await page.goto('http://localhost:8790/admin.html', { waitUntil: 'networkidle' });
   await page.evaluate(() => { try { localStorage.clear(); } catch (e) {} }); await page.reload({ waitUntil: 'networkidle' });
   await page.waitForSelector('#pin-input'); await page.fill('#pin-input', process.env.MINYAN_PIN || '1234'); await page.press('#pin-input', 'Enter');
-  await page.waitForSelector('#tab-general'); await page.click('#tab-settings').then(() => page.click('#tab-general'));
+  await page.waitForSelector('#tab-settings'); await page.click('#tab-settings').then(() => page.click('#tab-general'));
   await page.fill('#f-name', 'בדיקת קטגוריות'); // an unsaved edit that must survive adding a category
   await page.click('button:has-text("+ Add category")'); await page.waitForSelector('#t-name-3');
   console.log('after add: name kept:', await page.inputValue('#f-name'), '| categories:', await page.locator('[id^="t-name-"]').count(), '| new kind:', await page.inputValue('#t-kind-3'));
@@ -16,6 +16,7 @@ const { chromium } = require('playwright');
   await page.click('#tab-schedule');
   const cat = page.locator('#dtp-weekday .fields.three > .field').nth(3);
   console.log('weekday editors:', await page.locator('#dtp-weekday .fields.three > .field').count(), '| 4th label:', await cat.locator('label').first().textContent());
+  await page.locator('#dtp-weekday .seg button').nth(3).click(); /* the tefilla's tab: one list shows at a time */
   await cat.locator('button:has-text("+ Add minyan")').click();
   await cat.locator('.mrow').last().locator('input[type=time]').fill('20:30');
   await cat.locator('.mrow').last().locator('select[aria-label="Room"]').selectOption('היכל ביהמ״ד');

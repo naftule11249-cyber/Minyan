@@ -434,9 +434,11 @@ footer { max-width: 1120px; margin: 0 auto; padding-block: 0 30px; padding-left:
 .subtabs { margin-bottom: 4px; }
 .subtabs[hidden] { display: none; }
 .tabs.daytypes button.has::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--a-gold); margin-right: 8px; vertical-align: 1px; }
-.seg { display: none; background: var(--a-soft); border-radius: 14px; padding: 4px; gap: 4px; }
+.seg { display: flex; background: var(--a-soft); border-radius: 14px; padding: 4px; gap: 4px; } /* Schedule: שחרית | מנחה | מעריב, one shown at a time, at every width */
+.dtp.tef-0 .fields.three > .field:not(:nth-child(1)), .dtp.tef-1 .fields.three > .field:not(:nth-child(2)), .dtp.tef-2 .fields.three > .field:not(:nth-child(3)), .dtp.tef-3 .fields.three > .field:not(:nth-child(4)), .dtp.tef-4 .fields.three > .field:not(:nth-child(5)) { display: none; }
 .seg button { flex: 1; border: 0; background: transparent; border-radius: 11px; padding: 11px 8px; font: inherit; font-weight: 700; color: var(--a-muted); min-height: 44px; }
 .seg button[aria-selected="true"] { background: #fff; color: var(--a-navy); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.seg button { font-size: 1.08rem; }
 .tef { border: 1px solid var(--a-line); border-radius: 16px; padding: 14px 16px; display: grid; gap: 12px; background: var(--a-field); }
 .tefhead { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-family: var(--font-display); font-size: 1.25rem; color: var(--a-navy); }
 .tef .fields input, .tef .fields select { background: #fff; }
@@ -887,8 +889,6 @@ details.help p { margin: 6px 0; }
   .abar h2 { font-size: 1.2rem; }
   .chead, .cbody, .tcard, .today-head { padding-left: 16px; padding-right: 16px; }
   .pubbar { bottom: 74px; margin: 0 8px; border-radius: 18px; }
-  .seg { display: flex; }
-  .dtp.tef-0 .fields.three > .field:not(:nth-child(1)), .dtp.tef-1 .fields.three > .field:not(:nth-child(2)), .dtp.tef-2 .fields.three > .field:not(:nth-child(3)), .dtp.tef-3 .fields.three > .field:not(:nth-child(4)), .dtp.tef-4 .fields.three > .field:not(:nth-child(5)) { display: none; }
   .tabs.daytypes { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
   .tabs.daytypes button { white-space: nowrap; }
   .overlay.full .btn.primary, .overlay.full .btn.gold { min-height: 48px; }

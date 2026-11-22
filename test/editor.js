@@ -16,6 +16,7 @@ const { chromium } = require('playwright');
   console.log('last shacharis row:', (await sh.locator('.mrow').last().textContent()).replace(/\s+/g, ' ').trim(), '| select =', await sh.locator('.mrow').last().locator('select').first().inputValue(), '| mins =', await sh.locator('.mrow').last().locator('input.mins').inputValue());
   console.log('first mincha row preview:', await mi.locator('.mrow').first().locator('.pv').textContent());
   // edit: change the first mincha row to sunset-15 round
+  await page.locator('#dtp-weekday .seg button').nth(1).click(); /* the tefilla's tab: one list shows at a time */
   const r0 = mi.locator('.mrow').first();
   await r0.locator('select').first().selectOption('sunset'); await r0.locator('select').nth(1).selectOption('-'); await r0.locator('input.mins').fill('15');
   console.log('after edit preview:', await r0.locator('.pv').textContent());
@@ -31,6 +32,7 @@ const { chromium } = require('playwright');
   await (await rowWithTime('17:45')).locator('select[aria-label="Room"]').selectOption('לב אהרן');
   // repeating row on sunday shacharis
   await page.click('#dt-sunday');
+  await page.locator('#dtp-sunday .seg button').nth(0).click(); /* the tefilla's tab: one list shows at a time */
   const sun = page.locator('#dtp-sunday').locator('.fields.three > .field').nth(0);
   if (await sun.locator('input[type=checkbox]').first().isChecked()) await sun.locator('label.same').click(); // own list for Sunday (the shul config already gives it one)
   await sun.locator('button.danger').first().click({ clickCount: 1 }).catch(() => {});
@@ -47,6 +49,7 @@ const { chromium } = require('playwright');
   await sun.locator('button:has-text("Back to the list")').click();
   // copy weekday -> sunday mincha
   const sunMi = page.locator('#dtp-sunday').locator('.fields.three > .field').nth(1);
+  await page.locator('#dtp-sunday .seg button').nth(1).click(); /* the tefilla's tab: one list shows at a time */
   await sunMi.locator('label.same').click();
   await sunMi.locator('select[aria-label="Copy from another day"]').selectOption('weekday');
   console.log('sunday mincha rows after copy:', await sunMi.locator('.mrow').count());

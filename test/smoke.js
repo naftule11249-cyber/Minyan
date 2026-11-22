@@ -20,6 +20,7 @@ const { chromium } = require('playwright');
       await page.fill('#f-name', 'ביהמ״ד בדיקה');
       await page.click('#tab-schedule');
       const mincha = page.locator('#dtp-weekday .fields.three > .field').nth(1);
+      await page.locator('#dtp-weekday .seg button').nth(1).click(); /* the tefilla's tab: one list shows at a time */
       await mincha.locator('button:has-text("Edit as text")').click();
       await mincha.locator('textarea').fill('שקיעה-15~5 ברך משה\n1:30 דברי יואל\nבלבול לב אהרן');
       await mincha.locator('button:has-text("Back to the list")').click();
