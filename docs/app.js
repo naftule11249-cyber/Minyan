@@ -1739,19 +1739,29 @@
         function offChange() { r.cond.off = (+mins.value || 0) * (sign.value === '-' ? -1 : 1); onChange(); }
         sign.addEventListener('change', offChange); mins.addEventListener('input', offChange);
         paint();
-        return el('div', { class: 'mrow-l cond' }, [el('span', { class: 'k', text: 'Show:' }), op, zman, minsW, sign]);
+        var box = el('div', { class: 'mrow-l cond' }, [el('span', { class: 'k', text: 'Show:' }), op, zman, minsW, sign]);
+        function mark() { box.classList.toggle('on', !!(r.cond && r.cond.op)); } /* a rule set: the one-line row gives it a line of its own */
+        op.addEventListener('change', mark); mark();
+        return box;
       }
       function renderRow(r) {
         var row = el('div', { class: 'mrow' + (r.series ? ' series' : '') + (r.disabled ? ' off' : '') + (r.comment ? ' note-line' : '') });
         var del = el('button', { type: 'button', class: 'btn small danger icon', text: '✕', title: 'Remove', 'aria-label': 'Remove', onclick: function () { rows.splice(rows.indexOf(r), 1); row.remove(); sync(); } });
         var pv = el('span', { class: 'pv num' });
-        function changed() { sync(); pv.textContent = previewText(r); }
+        /* the preview's words as before ("Mon Nov 23 6:20 · only …"), in three pieces so the time can stand large on a one-line row */
+        function paintPv() {
+          var txt = previewText(r), t = r.series || r.raw != null ? [] : timesOf(r), tm = t.length ? fmtTime(t[0]) : '', i = tm ? txt.indexOf(' ' + tm) : -1;
+          pv.textContent = '';
+          if (i < 0) { pv.textContent = txt; return; }
+          pv.appendChild(el('span', { class: 'pv-d', text: txt.slice(0, i + 1) })); pv.appendChild(el('span', { class: 'pv-t', text: tm })); pv.appendChild(el('span', { class: 'pv-c', text: txt.slice(i + 1 + tm.length) }));
+        }
+        function changed() { sync(); paintPv(); }
         /* On/Off: an Off row stays here, with its times and rooms, but is not on the board, in the texts or in Today */
         var onIn = el('input', { type: 'checkbox', 'aria-label': 'On' }), swl = el('span', { class: 'swl', text: r.disabled ? 'Off' : 'On' });
         onIn.checked = !r.disabled;
         var sw = el('label', { class: 'switch', title: 'Off keeps the row but takes the minyan off the board' }, [onIn, swl]);
         onIn.addEventListener('change', function () { r.disabled = !onIn.checked; row.classList.toggle('off', r.disabled); swl.textContent = r.disabled ? 'Off' : 'On'; changed(); });
-        row.appendChild(el('div', { class: 'mrow-h' }, [pv, el('span', { class: 'sp' }), r.comment ? null : sw, del]));
+        row.appendChild(el('div', { class: 'mrow-h' }, [pv, el('span', { class: 'sp' }), el('span', { class: 'mrow-c' }, [r.comment ? null : sw, del])]));
         if (r.raw != null) {
           var rawIn = el('input', { type: 'text', dir: 'auto', value: r.raw, class: 'grow' });
           rawIn.addEventListener('input', function () { r.raw = rawIn.value; sync(); });
@@ -1790,11 +1800,13 @@
           row.appendChild(condWidget(r, changed));
         } else {
           var room = roomPicker(function () { return r.room; }, function (v) { r.room = v; sync(); }, 'Room');
-          row.appendChild(el('div', { class: 'mrow-l' }, timeWidget(r, changed)));
-          row.appendChild(el('div', { class: 'mrow-l' }, room.concat([note])));
+          /* one minyan, one line where there is the width: its time, how the time is set, room and note, when it shows, On and ✕ */
+          row.classList.add('flat');
+          row.appendChild(el('div', { class: 'mrow-l mrow-t' }, timeWidget(r, changed)));
+          row.appendChild(el('div', { class: 'mrow-l mrow-p' }, room.concat([note])));
           row.appendChild(condWidget(r, changed));
         }
-        pv.textContent = previewText(r);
+        paintPv();
         /* when the gabbai leaves this row, it moves to its place in time order */
         row.addEventListener('focusout', function (ev) {
           if (ev.relatedTarget && row.contains(ev.relatedTarget)) return;

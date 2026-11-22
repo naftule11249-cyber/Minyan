@@ -413,6 +413,8 @@ footer { max-width: 1120px; margin: 0 auto; padding-block: 0 30px; padding-left:
 .field, .editor, .rows { align-content: start; }
 .fields.three { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
 .fields.three > .field { min-width: 0; }
+/* Schedule: שחרית, מנחה, מעריב one under the other, each the full width, so a minyan reads as one line (below 760px one tefilla shows at a time, by the tabs) */
+.dtp .fields.three { grid-template-columns: minmax(0, 1fr); }
 .hint { font-size: .85rem; color: var(--a-muted); line-height: 1.45; }
 .hint code { background: var(--a-soft); padding: 0 4px; border-radius: 4px; }
 .hint.lead { font-size: .95rem; }
@@ -480,6 +482,44 @@ footer { max-width: 1120px; margin: 0 auto; padding-block: 0 30px; padding-left:
 .mrow .k { font-size: .88rem; color: var(--a-muted); }
 .mrow .inl { display: contents; }
 .mrow-l.cond { border-top: 1px dashed var(--a-line); padding-top: 8px; margin-top: 2px; }
+.mrow-c { display: inline-flex; align-items: center; gap: 10px; }
+/* a minyan on one line, wherever its list is wide enough: time | how the time is set | room and note | On ✕, with "Show" beneath */
+.editor .rows { container-type: inline-size; }
+@container (min-width: 520px) {
+  /* tablet width: two lines a minyan — time and how it is set, then room, note and Show */
+  .mrow.flat { grid-template-columns: 7rem minmax(0, 1fr) 8rem auto; grid-template-areas: "pv t t c" "pv p cond c"; align-items: center; column-gap: 14px; row-gap: 6px; padding: 8px 12px; border-radius: 14px; }
+  .mrow.flat:has(.mrow-l.cond.on) { grid-template-areas: "pv t t c" "pv p p c" "pv cond cond c"; }
+  .mrow.flat > .mrow-h { display: contents; }
+  .mrow.flat .mrow-h .sp { display: none; }
+  .mrow.flat .pv { grid-area: pv; justify-self: stretch; white-space: normal; text-align: center; line-height: 1.2; padding: 6px 8px; border-radius: 12px; overflow: visible; }
+  .mrow.flat .pv-t { display: block; font-size: 1.45rem; font-weight: 800; letter-spacing: -.01em; }
+  .mrow.flat .pv-d { display: block; font-size: .72rem; font-weight: 600; opacity: .8; }
+  .mrow.flat .pv-c { display: block; font-size: .7rem; font-weight: 600; }
+  .mrow.flat .pv-c:empty { display: none; }
+  .mrow.flat .mrow-c { grid-area: c; }
+  .mrow.flat .mrow-t { grid-area: t; }
+  .mrow.flat .mrow-t select { flex: 1 1 6.5rem; width: auto; min-width: 0; }
+  .mrow.flat .mrow-t .roundw { flex: 1 1 6.5rem; min-width: 0; }
+  .mrow.flat .mrow-t .roundw select { flex: 1 1 auto; width: 100%; }
+  .mrow.flat .mrow-t input[type="time"] { flex: 0 0 auto; width: 8em; font-size: 1.05rem; }
+  .mrow.flat .mrow-t > select:first-child { flex: 2 1 7rem; }
+  .mrow.flat .mrow-p { grid-area: p; flex-wrap: nowrap; }
+  .mrow.flat .mrow-l.cond { grid-area: cond; border-top: 0; padding-top: 0; margin-top: 0; }
+  .mrow.flat .mrow-l.cond .k { display: none; } /* the select says it: Always / Only while … */
+  .mrow.flat .mrow-l.cond.on select { flex: 0 1 auto; min-width: 0; }
+  .mrow.flat .mrow-l.cond.on select[aria-label="Show only"] { flex: 0 0 auto; width: 13.6rem; }
+  .mrow.flat .mrow-l.cond.on select[aria-label="Condition zman"] { flex: 1 1 6rem; }
+  .mrow.flat .mrow-l.cond.on select[aria-label="Condition before or after"] { flex: 0 0 auto; width: 8.8rem; }
+  .mrow.flat .mrow-l.cond.on .step { flex: 0 0 auto; }
+  .mrow.flat .pv:not(:has(.pv-t)) { font-size: .72rem; font-weight: 600; } /* "not on Mon Nov 23: only before …" */
+  .mrow.flat select { min-width: 0; }
+  .mrow.flat .mrow-p .grow { flex: 1 1 110px; min-width: 0; }
+}
+@container (min-width: 760px) {
+  .mrow.flat { grid-template-columns: 7rem minmax(0, 1.6fr) minmax(0, 1.25fr) 8rem auto; grid-template-areas: "pv t p cond c"; }
+  .mrow.flat:has(.mrow-l.cond.on) { grid-template-areas: "pv t p p c" "pv cond cond cond c"; }
+  .mrow.flat .mrow-l.cond.on { flex-wrap: nowrap; }
+}
 .step { display: inline-flex; align-items: center; gap: 4px; }
 .step button { width: 40px; height: 44px; border: 1px solid var(--a-line); background: var(--a-soft); color: var(--a-navy); border-radius: 12px; font-size: 1.2rem; font-weight: 700; }
 .step input { width: 4.2em; text-align: center; }
