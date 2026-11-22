@@ -7,17 +7,19 @@ const { chromium } = require('playwright');
   const same = (g, w) => w instanceof RegExp ? w.test(String(g)) : Array.isArray(w) ? Array.isArray(g) && g.length === w.length && w.every((x, i) => same(g[i], x)) : JSON.stringify(g === undefined ? null : g) === JSON.stringify(w === undefined ? null : w);
   const ok = (name, got, want) => { const pass = same(got, want); if (!pass) fails++; console.log((pass ? 'ok   ' : 'FAIL ') + name + (pass ? '' : ' got ' + JSON.stringify(got) + ' want ' + (Array.isArray(want) ? want.map(String).join(' , ') : want))); };
   const PIN = process.env.MINYAN_PIN || '1234';
-  const svc = { editors: [{ number: '+17185550101', name: 'גבאי א' }], log: [{ at: Date.UTC(2026, 10, 22, 15, 0), who: 'גבאי א', text: 'cancel mincha 2:00', ok: true, reply: 'Cancelled: Mincha 2:00 ברך משה, today (Sunday).' }, { at: Date.UTC(2026, 10, 22, 14, 0), who: 'גבאי א', text: 'cancel mincha 2:07', ok: false, reply: 'No Mincha at 2:07 today.' }], ready: { github: false, twilio: true }, calls: [], keys: [], down: false };
+  const svc = { editors: [{ number: '+17185550101', name: 'גבאי א' }], log: [{ at: Date.UTC(2026, 10, 22, 15, 0), who: 'גבאי א', text: 'cancel mincha 2:00', ok: true, reply: 'Cancelled: Mincha 2:00 ברך משה, today (Sunday).' }, { at: Date.UTC(2026, 10, 22, 14, 0), who: 'גבאי א', text: 'cancel mincha 2:07', ok: false, reply: 'No Mincha at 2:07 today.' }], ready: { github: false, twilio: true }, calls: [], keys: [], tw: [], lastText: undefined, down: false };
   async function open(width) {
     const ctx = await browser.newContext({ viewport: { width: width, height: 900 }, locale: 'en-US', timezoneId: 'America/New_York', serviceWorkers: 'block' });
+    await ctx.route('https://*.workers.dev/**', route => route.abort()); /* nothing here may reach the real text service; the route below plays its part */
     await ctx.route('**/editors', async route => {
       const body = JSON.parse(route.request().postData() || '{}'); svc.calls.push(body);
       const cors = { 'Access-Control-Allow-Origin': '*', 'content-type': 'application/json' };
       if (svc.down) return route.abort();
       if (body.pin !== PIN) return route.fulfill({ status: 403, headers: cors, body: JSON.stringify({ error: 'wrong PIN' }) });
       if (typeof body.githubKey === 'string') { svc.keys.push(body.githubKey); if (body.githubKey === 'github_pat_FROMTHISDEVICE0123456789') svc.ready = { github: true, twilio: true, keyFrom: 'device' }; else if (!body.githubKey) svc.ready = { github: false, twilio: true, keyFrom: '' }; }
+      if (typeof body.twilioKey === 'string') { svc.tw.push(body.twilioKey); svc.ready = Object.assign({}, svc.ready, { twilio: !!body.twilioKey, twilioFrom: body.twilioKey ? 'device' : '' }); }
       if (Array.isArray(body.editors)) svc.editors = body.editors.map(e => ({ number: '+1' + e.number.replace(/\D/g, '').slice(-10), name: e.name }));
-      route.fulfill({ status: 200, headers: cors, body: JSON.stringify({ editors: svc.editors, log: svc.log, ready: svc.ready }) });
+      route.fulfill({ status: 200, headers: cors, body: JSON.stringify({ editors: svc.editors, log: svc.log, ready: svc.ready, lastText: svc.lastText }) });
     });
     const page = await ctx.newPage(); page.on('pageerror', e => errors.push(e.message));
     page.on('console', x => { if (x.type() === 'error' && !/ERR_TUNNEL|ERR_NAME_NOT_RESOLVED|ERR_INTERNET|ERR_CONNECTION|ERR_FAILED|Failed to load resource/.test(x.text())) errors.push(x.text()); });
@@ -59,8 +61,21 @@ const { chromium } = require('playwright');
   ok('the service not answering: said in words, the rows stay', [await page.locator('#te-msg').textContent(), await page.locator('.te-row').count()], [/^Not saved: /, 1]);
   await page.screenshot({ path: 'test/shot-textedit.png', fullPage: false });
   await ctx.close();
+  /* a service with no Twilio token: pasted here, handed over; and the line that says whether texts arrive */
+  svc.down = false; svc.ready = { github: false, twilio: false, keyFrom: '', twilioFrom: '' }; svc.lastText = undefined;
+  ({ ctx, page } = await open(1280)); await page.waitForSelector('#te-status');
+  ok('nothing set up: two steps, in order, and no text has arrived yet', [/Two things are missing/.test(await page.locator('#te-status').textContent()), /^Step 1: the Twilio token/.test(await page.locator('#te-twilio').textContent()), /^Step 2: let the text service save changes/.test(await page.locator('#te-setup').textContent()), /^No text has reached the text service yet/.test(await page.locator('#te-last').textContent())], [true, true, true, true]);
+  await page.click('#te-givetw');
+  ok('an empty box is not sent', [await page.locator('#te-msg').textContent(), svc.tw.length], ['Paste the Auth Token first.', 0]);
+  await page.fill('#te-twkey', '0123456789abcdef0123456789abcdef'); await page.click('#te-givetw'); await page.waitForFunction(() => !document.querySelector('#te-twilio'));
+  ok('pasted and given: the step is gone, the next one is the last, the token is not on the page', [svc.tw, /^Last step: let the text service/.test(await page.locator('#te-setup').textContent()), /0123456789abcdef/.test(await page.locator('#te-box').innerHTML()), await page.locator('#te-forgettw').count(), await page.locator('.abar .status.dirty').count()], [['0123456789abcdef0123456789abcdef'], true, false, 1, 0]);
+  svc.lastText = { at: Date.UTC(2026, 10, 22, 16, 5), signed: false, hadSignature: true }; await page.click('#te-refresh'); await page.waitForFunction(() => /Last text to reach/.test(document.querySelector('#te-last').textContent));
+  ok('a text that did not check out says the token is probably wrong', /did NOT check out against the Twilio token/.test(await page.locator('#te-last').textContent()), true);
+  svc.lastText = { at: Date.UTC(2026, 10, 22, 16, 9), signed: true, hadSignature: true }; await page.click('#te-refresh'); await page.waitForFunction(() => /checked out as coming from Twilio/.test(document.querySelector('#te-last').textContent));
+  ok('one that did says so, with its time', /Last text to reach the text service: 11\/22, 11:09 AM\. It checked out/.test(await page.locator('#te-last').textContent()), true);
+  await ctx.close();
   /* a phone: nothing wider than the screen */
-  svc.down = false; ({ ctx, page } = await open(390)); await page.waitForSelector('#te-status');
+  svc.ready = { github: false, twilio: false, keyFrom: '', twilioFrom: '' }; ({ ctx, page } = await open(390)); await page.waitForSelector('#te-status');
   ok('phone: the card fits', await page.evaluate(() => { const b = document.querySelector('#te-box'); return [b.scrollWidth <= b.clientWidth + 1, Array.from(document.querySelectorAll('#te-box button')).every(x => x.getBoundingClientRect().height >= 36)]; }), [true, true]);
   await ctx.close(); await browser.close();
   console.log(errors.length ? 'ERRORS:\n' + errors.join('\n') : 'no console errors');

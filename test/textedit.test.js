@@ -49,7 +49,7 @@ const PIN = process.env.MINYAN_PIN || '1234';
   ok('the list cannot be read or changed with a wrong PIN', [r.status, store.has('editors')], [403, false]);
   r = await editors({ pin: PIN, editors: [{ number: '(718) 555-0101', name: 'גבאי א' }, { number: '+1 718 555 0102', name: 'גבאי ב' }, { number: '718-555-0101', name: 'twice' }, { number: '12', name: 'not a number' }] });
   let j = await r.json();
-  ok('saved with the PIN: numbers tidied, a repeat and a non-number left out', [r.status, j.editors, j.ready], [200, [{ number: '+17185550101', name: 'גבאי א' }, { number: '+17185550102', name: 'גבאי ב' }], { github: true, twilio: true, keyFrom: 'secret' }]);
+  ok('saved with the PIN: numbers tidied, a repeat and a non-number left out', [r.status, j.editors, j.ready], [200, [{ number: '+17185550101', name: 'גבאי א' }, { number: '+17185550102', name: 'גבאי ב' }], { github: true, twilio: true, keyFrom: 'secret', twilioFrom: 'secret' }]);
   ok('reading it back without sending a list leaves it as it is', (await (await editors({ pin: PIN })).json()).editors.length, 2);
 
   /* who may */
@@ -107,6 +107,29 @@ const PIN = process.env.MINYAN_PIN || '1234';
   r = await sms(GABBAI, 'undo', { env: noKey });
   j = await kv({ pin: PIN, githubKey: '' });
   ok('taken back: not ready again', [j.ready.github, store.has('ghkey')], [false, false]);
+  /* a service with no Twilio secret: the token handed over from the back end */
+  const noTw = Object.assign({}, env); delete noTw.TWILIO_AUTH_TOKEN;
+  const tw = body => worker.fetch(new Request('https://w.example/editors', { method: 'POST', headers: { 'content-type': 'application/json', 'cf-connecting-ip': '9.9.9.9' }, body: JSON.stringify(body) }), noTw).then(x => x.json());
+  let putsTw = gh.puts.length;
+  r = await sms(GABBAI, 'add maariv 9:35', { env: noTw });
+  ok('without any Twilio token a text is answered as an ordinary one and changes nothing', [r.status, /Maariv|מעריב/.test(r.text), /^Added/.test(r.text), gh.puts.length - putsTw], [200, true, false, 0]);
+  j = await tw({ pin: PIN });
+  ok('the card is told so, and when the last text came', [j.ready.twilio, j.ready.twilioFrom, j.lastText.signed, j.lastText.hadSignature, j.lastText.at === now], [false, '', false, true, true]);
+  j = await tw({ pin: PIN, twilioKey: 'short' });
+  ok('something that is not a Twilio token is not kept', [/32 letters and digits/.test(j.keyError), j.ready.twilio], [true, false]);
+  j = await tw({ pin: PIN, twilioKey: 'abcdef0123456789abcdef0123456789' });
+  r = await sms(GABBAI, 'add maariv 9:35', { env: noTw });
+  ok('a wrong token: the shul\'s number still answers, but nothing can be changed', [j.ready.twilio, r.status, /^Added/.test(r.text), gh.puts.length - putsTw, (await tw({ pin: PIN })).lastText.signed], [true, 200, false, 0, false]);
+  env.TWILIO_AUTH_TOKEN = '0123456789abcdef0123456789abcdef'; /* what the shul's Twilio account signs with from here on */
+  j = await tw({ pin: PIN, twilioKey: ' 0123456789abcdef0123456789abcdef ' });
+  r = await sms(GABBAI, 'add maariv 9:35', { env: noTw });
+  ok('the right token, handed over: the text is trusted and the change is made; the token is never sent back', [j.ready.twilioFrom, r.text.split('\n')[0], gh.puts.length - putsTw, /0123456789abcdef/.test(JSON.stringify(j)), (await tw({ pin: PIN })).lastText.signed], ['device', 'Added: Maariv 9:35, today (Sunday).', 1, false, true]);
+  /* Twilio signs the address as typed in its settings: with no final slash here */
+  const bare = { From: GABBAI, Body: 'undo', To: '+19298287677' }, bareSig = crypto.createHmac('sha1', env.TWILIO_AUTH_TOKEN).update('https://w.example' + Object.keys(bare).sort().map(k => k + bare[k]).join('')).digest('base64');
+  r = await worker.fetch(new Request('https://w.example/', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', 'X-Twilio-Signature': bareSig }, body: new URLSearchParams(bare) }), noTw);
+  ok('an address typed without its final slash is the same address', [r.status, /Undone: Added: Maariv 9:35/.test(await r.text())], [200, true]);
+  j = await tw({ pin: PIN, twilioKey: '' });
+  ok('taken back', [j.ready.twilio, store.has('twkey')], [false, false]);
   r = await sms(GABBAI, 'גבאי');
   ok('examples for a gabbai', r.text, /^טוישן א מנין דורך טעקסט/);
   r = await sms(OTHER, 'גבאי');
@@ -119,7 +142,7 @@ const PIN = process.env.MINYAN_PIN || '1234';
 
   /* the log the admin page shows */
   j = await (await editors({ pin: PIN })).json();
-  ok('the last changes, newest first, by name', [j.log.length >= 8, j.log[0].who, j.log[0].ok, j.log.filter(x => x.ok).length, j.log.some(x => /9\.9\.9|gh-test|twilio-test|github_pat/.test(JSON.stringify(x)))], [true, 'גבאי א', false, 7, false]);
+  ok('the last changes, newest first, by name', [j.log.length >= 8, j.log[0].who, j.log[0].ok, j.log.filter(x => x.ok).length, j.log.some(x => /9\.9\.9|gh-test|twilio-test|github_pat/.test(JSON.stringify(x)))], [true, 'גבאי א', false, 9, false]);
   ok('the numbers are nowhere in the settings file', /5550101|5550102/.test(JSON.stringify(gh.cfg)), false);
   Date.now = realNow;
   console.log(fails ? fails + ' FAILURES' : 'textedit: all good');

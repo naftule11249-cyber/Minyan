@@ -1288,3 +1288,5 @@ html.lobby .shabbos-z li { padding: .45em 0; }
 .te-room { display: inline-flex; align-items: center; gap: 8px; }
 .te-room .mins { width: 4.2em; text-align: center; }
 .te-setup { border: 1px solid #ecd9a0; background: #fdf8ea; border-radius: 14px; padding: 12px 14px; display: grid; gap: 8px; line-height: 1.45; }
+.te-key { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+@media (max-width: 560px) { .te-key { grid-template-columns: minmax(0, 1fr); } }

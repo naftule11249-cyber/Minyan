@@ -12,12 +12,19 @@
    override them. The numbers that may do it are kept in KV ("editors"), never in the public config. ---- */
 async function sha256Hex(str) { var b = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str))), s = '', i; for (i = 0; i < b.length; i++) s += ('0' + b[i].toString(16)).slice(-2); return s; }
 function escapeXml(s) { return s.replace(/[<>&'"]/g, function (c) { return { '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]; }); }
+/* Twilio signs the address exactly as it was typed into the number's settings: "https://x.workers.dev" and "https://x.workers.dev/" are
+   the same place to us, so the signature is tried on both. */
 async function twilioSignatureOk(request, params, token) {
-  var data = request.url;
-  Object.keys(params).sort().forEach(function (k) { data += k + params[k]; });
+  var sig = request.headers.get('X-Twilio-Signature') || '', tail = '', urls = [request.url], i;
+  if (!sig) return false;
+  var u = new URL(request.url); if (u.pathname === '/') urls.push(u.origin + u.search);
+  Object.keys(params).sort().forEach(function (k) { tail += k + params[k]; });
   var key = await crypto.subtle.importKey('raw', new TextEncoder().encode(token), { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']);
-  var mac = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(data)));
-  return btoa(String.fromCharCode.apply(null, mac)) === (request.headers.get('X-Twilio-Signature') || '');
+  for (i = 0; i < urls.length; i++) {
+    var mac = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(urls[i] + tail)));
+    if (btoa(String.fromCharCode.apply(null, mac)) === sig) return true;
+  }
+  return false;
 }
 /* the published schedule, fresh within a minute or two of a publish: the address changes by the minute, so the site's CDN copy is passed by */
 async function loadConfig(env) { return (await fetch(env.CONFIG_URL + (env.CONFIG_URL.indexOf('?') < 0 ? '?' : '&') + 't=' + Math.floor(Date.now() / 60000), { cf: { cacheTtl: 60, cacheEverything: true } })).json(); }
@@ -187,24 +194,37 @@ export default {
           else await env.SUBS.put('ghkey', eb.githubKey);
         }
       }
-      var kvKey = !!(await env.SUBS.get('ghkey'));
+      /* the Twilio Auth Token, handed over the same way (or '' to forget it): it only proves a text is from Twilio; it is not used to send */
+      if (typeof eb.twilioKey === 'string') {
+        if (!eb.twilioKey) await env.SUBS.delete('twkey');
+        else if (!/^[A-Za-z0-9]{32}$/.test(eb.twilioKey.trim())) keyError = 'That does not look like a Twilio Auth Token: it is 32 letters and digits.';
+        else await env.SUBS.put('twkey', eb.twilioKey.trim());
+      }
+      var kvKey = !!(await env.SUBS.get('ghkey')), kvTw = !!(await env.SUBS.get('twkey'));
       return json(env, { editors: ((await env.SUBS.get('editors', 'json')) || []).map(function (e) { return { number: '+' + e.n, name: e.name }; }),
         log: (await env.SUBS.get('editlog', 'json')) || [], keyError: keyError || undefined,
-        ready: { github: !!env.GITHUB_TOKEN || kvKey, twilio: !!env.TWILIO_AUTH_TOKEN, keyFrom: env.GITHUB_TOKEN ? 'secret' : kvKey ? 'device' : '' } });
+        lastText: (await env.SUBS.get('lasttext', 'json')) || undefined,
+        ready: { github: !!env.GITHUB_TOKEN || kvKey, twilio: !!env.TWILIO_AUTH_TOKEN || kvTw, keyFrom: env.GITHUB_TOKEN ? 'secret' : kvKey ? 'device' : '', twilioFrom: env.TWILIO_AUTH_TOKEN ? 'secret' : kvTw ? 'device' : '' } });
     }
     /* Twilio webhook (SMS or WhatsApp): POST form. GET ?q=text[&from=+1…] answers in plain text for testing. */
-    var isPost = request.method === 'POST', text = '', params = {}, from = '';
+    var isPost = request.method === 'POST', text = '', params = {}, from = '', signed = false;
     if (isPost) {
       var form = await request.formData();
       form.forEach(function (v, k) { params[k] = v; });
       text = params.Body || ''; from = params.From || '';
-      if (env.TWILIO_AUTH_TOKEN && !(await twilioSignatureOk(request, params, env.TWILIO_AUTH_TOKEN))) return new Response('forbidden', { status: 403 });
+      /* Is this text really from Twilio? With the TWILIO_AUTH_TOKEN secret an unsigned text is refused, as always. With the token the
+         gabbai handed over from the admin page (KV "twkey") a text that does not check out is still answered like any other, but it
+         cannot change anything: a wrong token must not silence the shul's number. */
+      if (env.TWILIO_AUTH_TOKEN) { signed = await twilioSignatureOk(request, params, env.TWILIO_AUTH_TOKEN); if (!signed) return new Response('forbidden', { status: 403 }); }
+      else { var twk = await env.SUBS.get('twkey'); signed = !!twk && (await twilioSignatureOk(request, params, twk)); }
+      /* when the last text arrived and whether it checked out: the admin page shows it, to tell "texts do not reach this service" from the rest */
+      await env.SUBS.put('lasttext', JSON.stringify({ at: Date.now(), signed: signed, hadSignature: !!request.headers.get('X-Twilio-Signature') }));
     } else { text = url.searchParams.get('q') || url.searchParams.get('Body') || ''; from = url.searchParams.get('from') || ''; }
     var reply;
     try {
       var cfg = await loadConfig(env), cmd = MinyanNotify.parseCommand(text, cfg);
       /* a change to the schedule: only by a text Twilio signed (so the sender's number is real), never by the test address */
-      var edited = isPost && env.TWILIO_AUTH_TOKEN ? await textEdit(env, cfg, text, from) : null;
+      var edited = isPost && signed ? await textEdit(env, cfg, text, from) : null;
       if (edited != null) reply = edited;
       else if (cmd) {
         if (!from) reply = MinyanNotify.T[cmd.lang].notAvail;
