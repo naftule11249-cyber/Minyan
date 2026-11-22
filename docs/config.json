@@ -153,18 +153,17 @@
    "lead": "",
    "name": "מו״ה חיים דייטש הי״ו",
    "body": "לע״נ משה צבי הי״ד ב״ר אברהם שלום אהרן הי״ו",
-   "size": "",
-   "sizeOwn": "",
+   "size": "small",
+   "sizeOwn": "small",
    "logo": "",
    "from": "2026-11-22",
-   "to": "2026-11-22",
-   "fromTime": "17:46"
+   "to": "2026-11-22"
   }
  ],
  "overrides": [],
  "smsNumber": "+1 929 828 7677",
  "remoteConfigUrl": "",
- "savedAt": 1795323425612,
+ "savedAt": 1795323460475,
  "siteUrl": "https://minyan.cascadeshul.org/",
  "logo": "",
  "wallLogo": "logo-name.png",
