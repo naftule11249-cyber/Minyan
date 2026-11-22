@@ -91,7 +91,7 @@ for (const f of ['admin-192.png', 'admin-512.png', 'admin-maskable-512.png', 'ad
 }
 // SMS responder bundles: one file to paste into Twilio Functions, one to deploy as a Cloudflare Worker
 const strip = t => t.replace(/^if \(typeof module !== 'undefined'\) module\.exports = .*;$/mg, '');
-const core = ['src/cal.js', 'src/engine.js', 'src/shere.js', 'src/sms.js', 'src/notify.js'].map(f => strip(fs.readFileSync(path.join(__dirname, f), 'utf8'))).join('\n');
+const core = ['src/cal.js', 'src/engine.js', 'src/shere.js', 'src/sms.js', 'src/notify.js', 'src/edit.js'].map(f => strip(fs.readFileSync(path.join(__dirname, f), 'utf8'))).join('\n');
 fs.mkdirSync(path.join(__dirname, 'sms/dist'), { recursive: true });
 fs.writeFileSync(path.join(__dirname, 'sms/dist/twilio-function.js'), core + '\n' + fs.readFileSync(path.join(__dirname, 'sms/twilio.js'), 'utf8'));
 fs.writeFileSync(path.join(__dirname, 'sms/dist/worker.js'), core + '\n' + strip(fs.readFileSync(path.join(__dirname, 'sms/webpush.js'), 'utf8')) + '\n' + fs.readFileSync(path.join(__dirname, 'sms/worker.js'), 'utf8'));

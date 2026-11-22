@@ -163,11 +163,11 @@
  "overrides": [],
  "smsNumber": "+1 929 828 7677",
  "remoteConfigUrl": "",
- "savedAt": 1795323765462,
+ "savedAt": 1795325467713,
  "siteUrl": "https://minyan.cascadeshul.org/",
  "logo": "",
  "wallLogo": "logo-name.png",
- "rooms": "ברך משה, דברי יואל, לב אהרן, שלמה יודא, היכל אדל, היכל ביהמ״ד",
+ "rooms": "ברך משה, דברי יואל, לב אהרן, שלמה יודא, היכל אדל, היכל ביהמ״ד, היכל חנה",
  "pinHash": "8b59ac74b7a26072c640bd9ee3450c9ef50c9b7fb315cf43feb1ad4c2e2fa302",
  "githubRepo": "naftule11249-cyber/Minyan",
  "githubBranch": "main",
@@ -1279,5 +1279,13 @@
     }
    ]
   }
- ]
+ ],
+ "roomNumbers": {
+  "1": "דברי יואל",
+  "2": "ברך משה",
+  "3": "שלמה יודא",
+  "4": "לב אהרן",
+  "5": "היכל אדל",
+  "6": "היכל חנה"
+ }
 }

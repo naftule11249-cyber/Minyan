@@ -3319,6 +3319,98 @@
         pst && pst.id ? el('button', { type: 'button', class: 'btn', id: 'bc-test', 'data-nodirty': '1', text: 'Test on this device', onclick: function () { sendBroadcast(true); } }) : el('span', { class: 'hint', text: 'Turn reminders on for this device (Settings on the board) to be able to send yourself a test first.' }),
         bcMsg]));
       sp2.appendChild(cSend);
+
+      /* changes by text: who may add, move or cancel a minyan for one day by texting the shul's number (src/edit.js; the service keeps
+         the numbers, never the public settings). Read and saved with the admin PIN, apart from the page's own Save. */
+      var cEd = card('Changes by text', 'The people listed here can change one day\'s minyanim by texting the shul\'s number: add a minyan, cancel one, or move one to another time or room. It does what the This week tab does: that day only, the regular schedule stays as it is. Every change is answered with what was done, and "undo" takes it back.');
+      var te = ui.textEd || (ui.textEd = { editors: null, log: [], ready: null, msg: '' });
+      var teBox = el('div', { class: 'col', id: 'te-box', 'data-nodirty': '1' }), tePin = inp('te-pin', ui.pinValue || '', { type: 'password', autocomplete: 'new-password', placeholder: 'the admin PIN' });
+      function teCall(body) {
+        return fetch(notifyBase() + '/editors', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(Object.assign({ pin: tePin.value }, body || {})) })
+          .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || ('service ' + r.status)); return j; }, function () { throw new Error('service ' + r.status); }); });
+      }
+      function teTake(j) { te.editors = (j.editors || []).map(function (e) { return { name: e.name || '', number: tePretty(e.number) }; }); te.log = j.log || []; te.ready = j.ready || {}; }
+      function tePretty(n) { var d2 = String(n || '').replace(/\D/g, ''); return d2.length === 11 && d2.charAt(0) === '1' ? '(' + d2.slice(1, 4) + ') ' + d2.slice(4, 7) + '-' + d2.slice(7) : String(n || ''); }
+      function teValid(n) { var d2 = String(n || '').replace(/\D/g, ''); return d2.length === 10 || (d2.length >= 11 && d2.length <= 15); }
+      function teLoad() {
+        if (!tePin.value) { te.msg = 'Enter the admin PIN to see the numbers.'; tePaint(); return; }
+        te.msg = 'Loading…'; tePaint();
+        teCall().then(function (j) { teTake(j); te.msg = ''; tePaint(); }, function (e) { te.msg = 'Could not get the numbers: ' + (e && e.message === 'Failed to fetch' ? 'the text service did not answer. Check the connection and try again.' : (e && e.message || e)); tePaint(); });
+      }
+      function teSave() {
+        var rows = te.editors.filter(function (e) { return e.number.trim() || e.name.trim(); }), bad = rows.filter(function (e) { return !teValid(e.number); })[0];
+        if (bad) { te.msg = 'Check the number for ' + (bad.name.trim() || 'the row with no name') + ': a phone number has 10 digits, like 718-555-0101.'; tePaint(); return; }
+        te.msg = 'Saving…'; tePaint();
+        teCall({ editors: rows.map(function (e) { return { name: e.name.trim(), number: e.number.trim() }; }) }).then(function (j) { teTake(j); te.msg = 'Saved. ' + (te.editors.length === 1 ? '1 number' : te.editors.length + ' numbers') + ' can text changes.'; tePaint(); toast('Numbers saved'); },
+          function (e) { te.msg = 'Not saved: ' + (e && e.message === 'Failed to fetch' ? 'the text service did not answer. Try again.' : (e && e.message || e)); tePaint(); });
+      }
+      function tePaint() { tePaintBody(); Array.prototype.forEach.call(teBox.querySelectorAll('button, input, summary'), function (x) { x.setAttribute('data-nodirty', '1'); }); } /* each control says so itself: a button that repaints the box is out of it by the time the page looks */
+      function tePaintBody() {
+        teBox.textContent = '';
+        var msg = el('div', { class: 'hint', id: 'te-msg', role: 'status', text: te.msg || '' });
+        if (!te.editors) {
+          teBox.appendChild(el('div', { class: 'fields' }, [field('Admin PIN (the text service checks it)', tePin)]));
+          teBox.appendChild(el('div', { class: 'bar actions' }, [el('button', { type: 'button', class: 'btn primary', id: 'te-load', text: 'Show the numbers', onclick: teLoad }), msg]));
+          return;
+        }
+        var ready = te.ready || {}, isReady = ready.github && ready.twilio;
+        teBox.appendChild(el('div', { class: 'te-status ' + (isReady ? 'ok' : 'warn'), id: 'te-status' }, [el('b', { text: isReady ? 'Ready. ' : 'Not working yet. ' }),
+          isReady ? 'A text from one of these numbers changes the schedule; it is on the screen a minute or two later.'
+            : !ready.twilio ? 'The text service has no Twilio token, so it cannot be sure who a text is from. Until it has one, nobody can change anything by text.'
+            : 'One step is left: the text service needs a key of its own to save changes to the website (see "One-time setup" below). Until then these numbers get the answer "not set up yet".']));
+        var list = el('div', { class: 'col te-list' });
+        te.editors.forEach(function (e, i) {
+          var nm = el('input', { type: 'text', dir: 'auto', value: e.name, placeholder: 'Name', 'aria-label': 'Name', autocomplete: 'off' }), ph = el('input', { type: 'tel', dir: 'ltr', value: e.number, placeholder: '718-555-0101', 'aria-label': 'Phone number', autocomplete: 'off', inputmode: 'tel' });
+          nm.addEventListener('input', function () { e.name = nm.value; }); ph.addEventListener('input', function () { e.number = ph.value; });
+          list.appendChild(el('div', { class: 'te-row' }, [nm, ph, el('button', { type: 'button', class: 'btn small danger', text: 'Remove', 'aria-label': 'Remove ' + (e.name || 'this number'), onclick: function () { te.editors.splice(i, 1); te.msg = 'Press "Save the numbers" to finish removing it.'; tePaint(); } })]));
+        });
+        if (!te.editors.length) list.appendChild(el('div', { class: 'hint', text: 'Nobody yet. Add the first number below.' }));
+        teBox.appendChild(list);
+        teBox.appendChild(el('div', { class: 'bar actions' }, [
+          el('button', { type: 'button', class: 'btn small', id: 'te-add', text: '+ Add a number', onclick: function () { if (te.editors.length >= 20) { toast('20 numbers at most'); return; } te.editors.push({ name: '', number: '' }); te.msg = ''; tePaint(); var ins = teBox.querySelectorAll('.te-row input[type="text"]'); if (ins.length) ins[ins.length - 1].focus(); } }),
+          el('button', { type: 'button', class: 'btn primary', id: 'te-save', text: 'Save the numbers', onclick: teSave }), msg]));
+        teBox.appendChild(el('div', { class: 'hint', text: 'The numbers are kept by the text service only. They are not in the settings the website publishes, and Save at the top of this page does not touch them.' }));
+        teBox.appendChild(el('details', { class: 'te-more' }, [el('summary', { text: 'What to text' }), el('div', { class: 'te-ex' }, [['What it does', 'In Yiddish', 'In English'], ['Add a minyan', 'לייג צו מנחה 2:15 ברך משה', 'add mincha 2:15 ברך משה'], ['Cancel one', 'בטל מנחה 2:00', 'cancel mincha 2:00'], ['Move to another time', 'טויש מנחה 2:00 אויף 2:15', 'move mincha 2:00 to 2:15'], ['Move to another room', 'טויש מנחה 2:00 לב אהרן', 'move mincha 2:00 לב אהרן'], ['Take the last change back', 'צוריק', 'undo'], ['Get these examples by text', 'גבאי', 'gabbai']]
+            .map(function (r, k) { return el('div', { class: 'te-exr' + (k ? '' : ' h') }, [el('span', { text: r[0] }), el('span', { dir: 'rtl', lang: 'yi', text: r[1] }), el('span', { dir: 'ltr', text: r[2] })]); })),
+          el('div', { class: 'hint', text: 'It is for today unless the text says מארגן / tomorrow or a day (דינסטאג / tuesday), up to six days ahead. Write the time with a colon (2:15). A room can be its name, the start of its name, or its number from the list below. "undo" takes back the sender\'s own last change, for 24 hours. Nothing is changed or answered on Shabbos and Yom Tov.' })]));
+        if (!ready.github) teBox.appendChild(el('details', { class: 'te-more', open: '' }, [el('summary', { text: 'One-time setup: the key that lets the text service save a change' }), el('ol', { class: 'te-steps' }, [
+          el('li', { text: 'On github.com: your picture → Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token.' }),
+          el('li', { text: 'Name it "Minyan texts". Under Repository access choose "Only select repositories" and pick ' + ((d.githubRepo || '').split('/')[1] || 'the board\'s repository') + '. Under Permissions → Repository permissions set Contents to "Read and write". Press Generate token and copy the key it shows.' }),
+          el('li', { text: 'On dash.cloudflare.com: Workers & Pages → ' + ((/^https?:\/\/([^.]+)\./.exec(d.notifyUrl || '') || [])[1] || 'the text service') + ' → Settings → Variables and Secrets → Add. Type: Secret. Name: GITHUB_TOKEN. Value: paste the key. Press Deploy.' }),
+          el('li', { text: 'Come back here and press "Check again".' })]),
+          el('div', { class: 'hint', text: 'The key goes only into that one box on Cloudflare. Do not paste it into this page, an email or a chat.' }),
+          el('div', { class: 'bar actions' }, [el('button', { type: 'button', class: 'btn small', id: 'te-recheck', text: 'Check again', onclick: teLoad })])]));
+        var logBox = el('details', { class: 'te-more' }, [el('summary', { text: 'Last changes sent by text' + (te.log.length ? ' (' + te.log.length + ')' : '') })]);
+        if (!te.log.length) logBox.appendChild(el('div', { class: 'hint', text: 'None yet.' }));
+        te.log.forEach(function (x) {
+          logBox.appendChild(el('div', { class: 'te-log' + (x.ok ? '' : ' no') }, [el('span', { class: 'te-when num', text: new Date(x.at).toLocaleString([], { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' }) }),
+            el('b', { text: x.who || '' }), el('span', { dir: 'auto', text: x.text || '' }), el('span', { class: 'te-re', dir: 'auto', text: (x.ok ? '✓ ' : '✕ ') + (x.reply || '') })]));
+        });
+        teBox.appendChild(logBox);
+      }
+      tePaint();
+      if (!te.editors && tePin.value && !te.asked) { te.asked = true; teLoad(); } /* once a visit, when the PIN is already known */
+      cEd.body.appendChild(teBox);
+      /* room numbers: part of the settings (saved with Save), so that a text can say "4" for לב אהרן */
+      d.roomNumbers = d.roomNumbers || {};
+      var rnBox = el('div', { class: 'te-rooms', id: 'te-rooms' });
+      function rnPaint() {
+        rnBox.textContent = '';
+        var byRoom = {}; Object.keys(d.roomNumbers).forEach(function (k) { byRoom[d.roomNumbers[k]] = k; });
+        roomList().forEach(function (name) {
+          var n = el('input', { type: 'number', min: '1', max: '99', step: '1', inputmode: 'numeric', class: 'mins', value: byRoom[name] || '', 'aria-label': 'Number for ' + name });
+          n.addEventListener('input', function () {
+            Object.keys(d.roomNumbers).forEach(function (k) { if (d.roomNumbers[k] === name) delete d.roomNumbers[k]; });
+            var v = String(Math.floor(+n.value) || '');
+            if (v && +v >= 1 && +v <= 99) d.roomNumbers[v] = name; /* a number given twice goes to the room typed last */
+          });
+          rnBox.appendChild(el('label', { class: 'te-room' }, [n, el('span', { dir: 'auto', text: name })]));
+        });
+        if (!roomList().length) rnBox.appendChild(el('div', { class: 'hint', text: 'No rooms yet: add them under General → Rooms.' }));
+      }
+      rnPaint();
+      cEd.body.appendChild(el('div', { class: 'field' }, [el('label', { text: 'Room numbers for texts (optional)' }), rnBox, el('div', { class: 'hint', text: 'With a number here, "add mincha 2:15 4" means the room numbered 4. Saved with Save at the top, like the rest of the settings.' })]));
+      sp2.appendChild(cEd);
     } else sp2.appendChild(el('div', { class: 'hint lead', text: 'Enter the notification service address under General → Website and services to be able to send notifications.' }));
     pages.send = sp2;
 
@@ -3414,6 +3506,7 @@
       out.smsLang = fSmsLang.value;
       out.shabbosExtras = (d.shabbosExtras || []).filter(function (x) { return x && String(x.name || "").trim(); });
       out.shere = collectShere();
+      out.roomNumbers = {}; Object.keys(d.roomNumbers || {}).forEach(function (k) { if (/^\d{1,2}$/.test(k) && +k >= 1 && d.roomNumbers[k]) out.roomNumbers[k] = d.roomNumbers[k]; }); /* Send → Changes by text */
       /* A save is always newer than anything this page has seen, whatever this device's clock says: boards take the settings
          with the later stamp, so a change saved on a phone whose clock runs behind another's must still come out later. */
       out.savedAt = Math.max(Date.now(), (cfg.savedAt || 0) + 1, (ui.inc || 0) + 1);
