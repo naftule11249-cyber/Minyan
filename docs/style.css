@@ -1217,5 +1217,6 @@ html.lobby .shabbos-z li { padding: .45em 0; }
 .zlist li.sm-off .sm-n { text-decoration: line-through; opacity: .7; }
 .zlist li.sm-off .sm-x { font-weight: 700; color: var(--accent); }
 /* פרנס היום: its לע״נ / לרגל line reads as large as the rest of the panel */
-#app.display .wall .sponsor.sp-day .b { font-size: calc(1.2rem * var(--sp)); } /* about 70% of the name, whatever size the panel is */
+#app.display .wall .sponsor.sp-day .b { font-size: calc(1.4rem * var(--sp)); } /* about 80% of the name, whatever size the panel is */
 #app.display .wall .sponsor.sp-day .b .hon { font-size: .7em; }
+#app.display .wall .sponsor.sp-day .b .bl + .bl { font-size: .62em; font-weight: 600; } /* the lines after the first (שהיארצייט חל היום …) stay small */
