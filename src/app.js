@@ -3137,17 +3137,11 @@
       var saveT = el('button', { type: 'button', class: 'btn primary', text: isToday ? 'Save today\'s changes' : 'Save the changes for ' + dayName(st.rd), 'data-nodirty': '1', onclick: function () {
         var days = Object.keys(quickDays).filter(function (k2) { return Object.keys(quickDays[k2].quick).length > 0; });
         if (!days.length) { toast('Nothing changed yet'); return; }
-        var c = collect();
-        days.forEach(function (k2) {
-          var s3 = quickDays[k2], ovr = c.overrides.filter(function (o) { return o.date === s3.iso; })[0];
-          if (!ovr) { ovr = { date: s3.iso, label: s3.rd === todayRd ? 'שינוי להיום' : 'שינוי', lines: {} }; c.overrides.push(ovr); }
-          d.tefillos.forEach(function (tf) { var l = quickLines(s3, tf); if (l != null) ovr.lines[tf.id] = l; });
-        });
-        saveConfig(c);
+        saveConfig(collect()); /* collect() takes the touched days with it */
       } });
       var row = el('div', { class: 'bar actions' }, [saveT]);
       if (touched.length > 1 || (touched.length === 1 && touched[0] !== st.iso)) row.appendChild(el('span', { class: 'hint', text: 'Also saves: ' + touched.filter(function (k2) { return k2 !== st.iso; }).map(function (k2) { return dayName(quickDays[k2].rd); }).join(', ') }));
-      if (existing) row.appendChild(el('button', { type: 'button', class: 'btn', text: 'Back to the regular schedule for ' + (isToday ? 'today' : 'this day'), 'data-nodirty': '1', onclick: function () { var c = collect(); c.overrides = c.overrides.filter(function (o) { return o.date !== st.iso; }); saveConfig(c); } }));
+      if (existing) row.appendChild(el('button', { type: 'button', class: 'btn', text: 'Back to the regular schedule for ' + (isToday ? 'today' : 'this day'), 'data-nodirty': '1', onclick: function () { delete quickDays[st.iso]; var c = collect(); c.overrides = c.overrides.filter(function (o) { return o.date !== st.iso; }); saveConfig(c); } }));
       tp.appendChild(row);
       tp.appendChild(shabbosExtrasCard());
     }
@@ -3541,6 +3535,14 @@
         else o.calLabel = r.cal.value;
         return o;
       }).filter(function (o) { return o.date || (o.hm != null && o.hd) || o.calLabel; });
+      /* what was moved, cancelled or added on the This week tab goes with every save, whichever Save button is pressed: each day
+         that was touched gets (or keeps) its own one-date schedule, with the lists of the tefillos that were changed */
+      Object.keys(quickDays).forEach(function (k2) {
+        var s3 = quickDays[k2]; if (!Object.keys(s3.quick).length) return;
+        var ovr = out.overrides.filter(function (o) { return o.date === s3.iso; })[0];
+        if (!ovr) { ovr = { date: s3.iso, label: s3.rd === todayRd ? 'שינוי להיום' : 'שינוי', lines: {} }; out.overrides.push(ovr); }
+        d.tefillos.forEach(function (tf) { var l = quickLines(s3, tf); if (l != null) ovr.lines[tf.id] = l; });
+      });
       out.remoteConfigUrl = fRemote.value.trim();
       out.smsNumber = fSms.value.trim();
       out.smsLang = fSmsLang.value;
