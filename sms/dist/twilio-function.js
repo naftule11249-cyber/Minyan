@@ -654,6 +654,31 @@ var MinyanEngine = (function () {
     return { cfg: cfg, loc: loc, zmanimFor: zmanimFor, resolveMin: resolveMin, expand: expand, condLimit: condLimit, tefillos: tefillos, activeNotices: activeNotices, activeBanner: activeBanner, dayTexts: dayTexts, scheduleFor: scheduleFor, fmtDate: fmtDate,
       after: after, upcoming: upcoming, fmtTime: fmtTime, fmtCountdown: fmtCountdown, dayLine: dayLine, typeLabel: typeLabel, parseLine: parseLine };
   }
+  /* One-day changes that were texted in (src/edit.js) are kept by the text service, not in the published settings. This lays them
+     over the settings: days = { '2026-11-22': { mincha: { line, base, at } } }, where line is that tefilla's list for that day as a
+     special date writes it (null: no list of its own), and base is the line the settings themselves had for it when the text came.
+     A change holds only while the settings still have that same line: once the back end has given the day another list for that
+     tefilla, the back end's stands. The settings object itself is never altered. */
+  function withDayLines(cfg, days) {
+    var isos = Object.keys(days || {}), touched = false;
+    if (!isos.length) return cfg;
+    var list = (cfg.overrides || []).map(function (o) { var c = {}, k; for (k in o) c[k] = o[k]; c.lines = {}; for (k in (o.lines || {})) c.lines[k] = o.lines[k]; return c; }), emptied = [];
+    isos.forEach(function (iso) {
+      Object.keys(days[iso] || {}).forEach(function (tef) {
+        var e = days[iso][tef]; if (!e) return;
+        var ovr = list.filter(function (o) { return o.date === iso; })[0], own = ovr && Object.prototype.hasOwnProperty.call(ovr.lines, tef) ? ovr.lines[tef] : null;
+        if (own !== (e.base == null ? null : e.base)) return;
+        if (e.line == null) { if (own != null) { delete ovr.lines[tef]; if (!Object.keys(ovr.lines).length) emptied.push(ovr); touched = true; } return; }
+        if (!ovr) { ovr = { date: iso, label: 'שינוי', lines: {} }; list.push(ovr); }
+        ovr.lines[tef] = e.line; touched = true;
+      });
+    });
+    if (!touched) return cfg;
+    var out = {}, k; for (k in cfg) out[k] = cfg[k];
+    out.overrides = list.filter(function (o) { return emptied.indexOf(o) < 0 || Object.keys(o.lines).length; });
+    return out;
+  }
+  create.withDayLines = withDayLines;
   create.parseLine = parseLine; create.parseSpec = parseSpec; create.sameEntry = sameEntry; create.gregStr = gregStr; create.isoDate = isoDate;
   create.TEFILLA_DEFAULTS = TEFILLA_DEFAULTS; create.FALLBACK = FALLBACK; create.TYPE_NAME = TYPE_NAME; create.TYPE_NAME_EN = TYPE_NAME_EN;
   return create;
@@ -1184,7 +1209,7 @@ var MinyanEdit = (function () {
   var T = {
     yi: {
       added: 'צוגעלייגט', cancelled: 'אראפגענומען', moved: 'געטוישט', undone: 'צוריקגעצויגן', today: 'היינט', tomorrow: 'מארגן',
-      soon: 'עס וועט זיין אויפן סקרין אין א מינוט-צוויי. נאר פאר דעם טאג.', undoHint: 'צוריקצוציען שיקט: צוריק',
+      soon: 'עס וועט זיין אויפן סקרין אין א מינוט. נאר פאר דעם טאג.', undoHint: 'צוריקצוציען שיקט: צוריק',
       help: 'טוישן א מנין דורך טעקסט (נאר פאר איין טאג):\nלייג צו מנחה 2:15 ברך משה\nבטל מנחה 2:00\nטויש מנחה 2:00 אויף 2:15\nמען קען צושרייבן מארגן אדער א טאג (דינסטאג), און א חדר.\nצוריק = ציט צוריק די לעצטע ענדערונג.',
       needTefilla: 'וועלכע תפילה? שרייבט שחרית, מנחה אדער מעריב. צום ביישפיל: ',
       needTime: 'וועלכע צייט? צום ביישפיל: ', needNew: 'אויף וואס טוישן? שרייבט א נייע צייט אדער א חדר. צום ביישפיל: ',
@@ -1200,7 +1225,7 @@ var MinyanEdit = (function () {
     },
     en: {
       added: 'Added', cancelled: 'Cancelled', moved: 'Moved', undone: 'Undone', today: 'today', tomorrow: 'tomorrow',
-      soon: 'It will be on the screen in a minute or two. For that day only.', undoHint: 'To take it back, text: undo',
+      soon: 'It will be on the screen within a minute. For that day only.', undoHint: 'To take it back, text: undo',
       help: 'Change a minyan by text (for one day only):\nadd mincha 2:15 ברך משה\ncancel mincha 2:00\nmove mincha 2:00 to 2:15\nYou can add tomorrow or a day (tuesday), and a room.\nundo = takes back your last change.',
       needTefilla: 'Which tefilla? Write shacharis, mincha or maariv. For example: ',
       needTime: 'Which time? For example: ', needNew: 'Move it to what? Write a new time or a room. For example: ',

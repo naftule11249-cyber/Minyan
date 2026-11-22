@@ -30,9 +30,12 @@
 
   /* ---------- schedule engine (engine.js) ---------- */
   var engine = null;
+  var textDays = { days: {}, raw: '' }; try { textDays.raw = localStorage.getItem('minyan-textdays') || ''; textDays.days = JSON.parse(textDays.raw || '{}') || {}; } catch (e) { textDays = { days: {}, raw: '' }; } /* the last ones seen, for a start with no connection */
   var TEFILLA_DEFAULTS = MinyanEngine.TEFILLA_DEFAULTS, FALLBACK = MinyanEngine.FALLBACK, TYPE_NAME = MinyanEngine.TYPE_NAME, TYPE_EN = MinyanEngine.TYPE_NAME_EN;
   var sameEntry = MinyanEngine.sameEntry, gregStr = MinyanEngine.gregStr, parseLine = MinyanEngine.parseLine;
-  function setCfg(c) { cfg = (c && typeof c === 'object') ? c : {}; cfg.location = cfg.location || {}; engine = MinyanEngine(cfg); applyLook(); }
+  /* the one-day changes that were texted in (kept by the text service, read by loadTextDays) lie over the settings in everything the
+     board works out; the settings themselves, which the back end edits and publishes, are not touched by them */
+  function setCfg(c) { cfg = (c && typeof c === 'object') ? c : {}; cfg.location = cfg.location || {}; engine = MinyanEngine(MinyanEngine.withDayLines(cfg, textDays.days)); applyLook(); }
   /* looks: the palette chosen in General is the default and what the lobby screen and door displays always use; each phone may pick its own in the footer */
   var LOOKS = [['hallway', 'Hallway'], ['shul', 'Shul'], ['classic', 'Classic'], ['contrast', 'High contrast']], LOOK_BAND = { hallway: '#4a3a28', shul: '#3a332c', classic: '#223b68', contrast: '#000000' };
   function isLook(v) { return LOOKS.some(function (l) { return l[0] === v; }); }
@@ -3329,7 +3332,7 @@
         return fetch(notifyBase() + '/editors', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(Object.assign({ pin: tePin.value }, body || {})) })
           .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || ('service ' + r.status)); return j; }, function () { throw new Error('service ' + r.status); }); });
       }
-      function teTake(j) { te.lastText = j.lastText || null; te.editors = (j.editors || []).map(function (e) { return { name: e.name || '', number: tePretty(e.number) }; }); te.log = j.log || []; te.ready = j.ready || {}; }
+      function teTake(j) { te.lastText = j.lastText || null; te.days = j.days || {}; te.editors = (j.editors || []).map(function (e) { return { name: e.name || '', number: tePretty(e.number) }; }); te.log = j.log || []; te.ready = j.ready || {}; }
       function tePretty(n) { var d2 = String(n || '').replace(/\D/g, ''); return d2.length === 11 && d2.charAt(0) === '1' ? '(' + d2.slice(1, 4) + ') ' + d2.slice(4, 7) + '-' + d2.slice(7) : String(n || ''); }
       function teValid(n) { var d2 = String(n || '').replace(/\D/g, ''); return d2.length === 10 || (d2.length >= 11 && d2.length <= 15); }
       function teLoad() {
@@ -3353,15 +3356,15 @@
           teBox.appendChild(el('div', { class: 'bar actions' }, [el('button', { type: 'button', class: 'btn primary', id: 'te-load', text: 'Show the numbers', onclick: teLoad }), msg]));
           return;
         }
-        var ready = te.ready || {}, isReady = ready.github && ready.twilio;
-        teBox.appendChild(el('div', { class: 'te-status ' + (isReady ? 'ok' : 'warn'), id: 'te-status' }, [el('b', { text: isReady ? 'Ready. ' : 'Not working yet. ' }),
-          isReady ? 'A text from one of these numbers changes the schedule; it is on the screen a minute or two later.'
-            : !ready.twilio ? 'Two things are missing; they are the steps below. Until both are done, nobody can change anything by text.'
-            : 'One step is left: the text service needs a GitHub key to save changes to the website (the button below). Until then these numbers get the answer "not set up yet".']));
-        /* did a text ever get here, and did it check out? tells "the shul's number sends its texts somewhere else" from a wrong token */
-        var lt = te.lastText, ltWhen = lt ? new Date(lt.at).toLocaleString([], { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
-        teBox.appendChild(el('div', { class: 'hint', id: 'te-last' }, [!lt ? 'No text has reached the text service yet. After the steps here, text the shul\'s number and press "Check again": if this line stays the same although the text was answered, the number is sending its texts somewhere else (in Twilio: Phone Numbers → the number → Messaging → "A message comes in" must be Webhook, HTTP POST, ' + notifyBase() + ').'
-          : 'Last text to reach the text service: ' + ltWhen + '. ' + (lt.signed ? 'It checked out as coming from Twilio.' : ready.twilio ? 'It did NOT check out against the Twilio token, so it could not change anything: the token is probably not the right one. Take it back below and paste the Auth Token again.' : 'It could not be checked, because the service has no Twilio token yet.'),
+        var ready = te.ready || {}, isReady = !!ready.trust, lt = te.lastText, ltWhen = lt ? new Date(lt.at).toLocaleString([], { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+        var wrongAccount = ready.trust === 'account' && lt && !lt.signed && lt.hadSignature, badToken = ready.trust === 'signature' && lt && !lt.signed;
+        teBox.appendChild(el('div', { class: 'te-status ' + (isReady && !wrongAccount && !badToken ? 'ok' : 'warn'), id: 'te-status' }, [el('b', { text: !isReady ? 'One text to go. ' : wrongAccount || badToken ? 'Check this. ' : 'Ready. ' }),
+          !isReady ? 'Nothing to set up. The first text that reaches the text service through Twilio shows it which Twilio account is the shul\'s; from then on a text from one of these numbers changes the schedule. Text anything to the shul\'s number (גבאי, for the examples), then press "Check again".'
+            : badToken ? 'The last text did not match the Twilio token that was pasted here, so it could not change anything. Take the token back below and paste the Auth Token again.'
+            : wrongAccount ? 'The last text came through a different Twilio account than the first one did, so it could not change anything. If the shul\'s number moved to another Twilio account, press "Start over" below.'
+            : 'A text from one of these numbers changes the schedule; it is on the screen within a minute.']));
+        teBox.appendChild(el('div', { class: 'hint', id: 'te-last' }, [!lt ? 'No text has reached the text service yet. If you text the shul\'s number, get an answer, and this still says so after "Check again", the number is sending its texts somewhere else. In Twilio: Phone Numbers → the number → Messaging → "A message comes in" must be Webhook, HTTP POST, ' + notifyBase() + ' .'
+          : 'Last text to reach the text service: ' + ltWhen + '. ' + (lt.signed ? 'It was accepted as coming from Twilio.' : 'It was not accepted as coming from Twilio.'),
           ' ', el('button', { type: 'button', class: 'btn small', id: 'te-refresh', text: 'Check again', onclick: teLoad })]));
         var list = el('div', { class: 'col te-list' });
         te.editors.forEach(function (e, i) {
@@ -3374,53 +3377,49 @@
         teBox.appendChild(el('div', { class: 'bar actions' }, [
           el('button', { type: 'button', class: 'btn small', id: 'te-add', text: '+ Add a number', onclick: function () { if (te.editors.length >= 20) { toast('20 numbers at most'); return; } te.editors.push({ name: '', number: '' }); te.msg = ''; tePaint(); var ins = teBox.querySelectorAll('.te-row input[type="text"]'); if (ins.length) ins[ins.length - 1].focus(); } }),
           el('button', { type: 'button', class: 'btn primary', id: 'te-save', text: 'Save the numbers', onclick: teSave }), msg]));
-        teBox.appendChild(el('div', { class: 'hint', text: 'The numbers are kept by the text service only. They are not in the settings the website publishes, and Save at the top of this page does not touch them.' }));
+        teBox.appendChild(el('div', { class: 'hint', text: 'The numbers, and the changes they text in, are kept by the text service only. They are not in the settings the website publishes, and Save at the top of this page does not touch them.' }));
         teBox.appendChild(el('details', { class: 'te-more' }, [el('summary', { text: 'What to text' }), el('div', { class: 'te-ex' }, [['What it does', 'In Yiddish', 'In English'], ['Add a minyan', 'לייג צו מנחה 2:15 ברך משה', 'add mincha 2:15 ברך משה'], ['Cancel one', 'בטל מנחה 2:00', 'cancel mincha 2:00'], ['Move to another time', 'טויש מנחה 2:00 אויף 2:15', 'move mincha 2:00 to 2:15'], ['Move to another room', 'טויש מנחה 2:00 לב אהרן', 'move mincha 2:00 לב אהרן'], ['Take the last change back', 'צוריק', 'undo'], ['Get these examples by text', 'גבאי', 'gabbai']]
             .map(function (r, k) { return el('div', { class: 'te-exr' + (k ? '' : ' h') }, [el('span', { text: r[0] }), el('span', { dir: 'rtl', lang: 'yi', text: r[1] }), el('span', { dir: 'ltr', text: r[2] })]); })),
           el('div', { class: 'hint', text: 'It is for today unless the text says מארגן / tomorrow or a day (דינסטאג / tuesday), up to six days ahead. Write the time with a colon (2:15). A room can be its name, the start of its name, or its number from the list below. "undo" takes back the sender\'s own last change, for 24 hours. Nothing is changed or answered on Shabbos and Yom Tov.' })]));
-        /* the Twilio token: pasted here once and handed to the service, which uses it only to tell that a text is really from Twilio */
         function teGive(body, doing, done) {
           te.msg = doing; tePaint();
           teCall(body).then(function (j) { teTake(j); te.msg = j.keyError ? 'Not done: ' + j.keyError : done; tePaint(); if (!j.keyError) toast(done); },
             function (e) { te.msg = 'Not done: ' + (e && e.message === 'Failed to fetch' ? 'the text service did not answer. Try again.' : (e && e.message || e)); tePaint(); });
         }
-        if (!ready.twilio) {
+        /* what is changed by text right now: each day and tefilla, with a way to put it back */
+        var dayKeys = Object.keys(te.days || {}).sort(), dayBox = el('details', { class: 'te-more', id: 'te-days' }, [el('summary', { text: 'Days changed by text right now' + (dayKeys.length ? ' (' + dayKeys.length + ')' : '') })]);
+        if (!dayKeys.length) dayBox.appendChild(el('div', { class: 'hint', text: 'None. Every day is as the schedule and the This week tab have it.' }));
+        dayKeys.forEach(function (iso) {
+          var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso), rd2 = m ? Cal.rdFromGreg(+m[1], +m[2], +m[3]) : null, tefs = Object.keys(te.days[iso]).map(function (id) { var t = d.tefillos.filter(function (x) { return x.id === id; })[0]; return t ? t.name : id; });
+          dayBox.appendChild(el('div', { class: 'te-day' }, [el('span', null, [el('b', { text: rd2 == null ? iso : DAYS_EN[Cal.dayInfo(rd2, !!d.israel).dow] + ' ' + engine.fmtDate(rd2) }), ' · ', el('span', { dir: 'auto', text: tefs.join(', ') })]),
+            el('button', { type: 'button', class: 'btn small', text: 'Back to the regular schedule', 'aria-label': 'Put ' + iso + ' back to the regular schedule', onclick: function () {
+              if (!confirm('Take back every change made by text for this day?')) return;
+              teGive({ clearDay: iso }, 'Putting it back…', 'That day is back to the regular schedule.'); setTimeout(loadTextDays, 1500);
+            } })]));
+        });
+        teBox.appendChild(dayBox);
+        /* optional: the Twilio Auth Token makes every text be checked by its signature */
+        var lock = el('details', { class: 'te-more', id: 'te-lock' }, [el('summary', { text: 'A stronger lock (optional)' })]);
+        if (ready.trust !== 'signature') {
           var twIn = el('input', { type: 'password', id: 'te-twkey', autocomplete: 'off', placeholder: 'paste the Auth Token here', 'aria-label': 'Twilio Auth Token', dir: 'ltr' });
-          teBox.appendChild(el('div', { class: 'te-setup', id: 'te-twilio' }, [el('b', { text: 'Step 1: the Twilio token' }),
-            el('div', { text: 'It lets the text service be sure a text really came through Twilio, so nobody can fake a gabbai\'s number. On console.twilio.com, the first page shows "Account Info": next to Auth Token press Show and copy it. Paste it here.' }),
-            el('div', { class: 'te-key' }, [twIn, el('button', { type: 'button', class: 'btn primary', id: 'te-givetw', text: 'Give it to the text service', onclick: function () {
-              if (!twIn.value.trim()) { te.msg = 'Paste the Auth Token first.'; tePaint(); return; }
-              teGive({ twilioKey: twIn.value.trim() }, 'Saving…', 'The text service has the Twilio token.');
-            } })]),
-            el('div', { class: 'hint', text: 'It goes straight to your text service, which keeps it privately and never shows it again. Do not put it in an email or a chat.' })]));
-        }
-        /* the GitHub key: one button hands over the key this device already publishes with; the Cloudflare way stays as the other way */
-        if (!ready.github) {
-          var haveKey = ghConfigured(ghSettings());
-          teBox.appendChild(el('div', { class: 'te-setup', id: 'te-setup' }, [el('b', { text: (ready.twilio ? 'Last step' : 'Step 2') + ': let the text service save changes' }),
-            el('div', { text: haveKey ? 'This device already has the GitHub key you publish with. One press gives it to your text service, which keeps it privately and uses it only to save a change that was texted in.'
-              : 'This device has no GitHub key yet. Go to Settings → Publish, connect the website there (enter the GitHub key once), then come back here.' }),
-            el('div', { class: 'bar actions' }, [haveKey ? el('button', { type: 'button', class: 'btn primary', id: 'te-usekey', text: 'Use this device\'s GitHub key', onclick: function () {
-              teGive({ githubKey: ghSettings().token }, 'Checking the key with GitHub…', 'Done. The text service can save changes now.');
-            } }) : null, el('button', { type: 'button', class: 'btn small', id: 'te-recheck', text: 'Check again', onclick: teLoad })])]));
-          teBox.appendChild(el('details', { class: 'te-more' }, [el('summary', { text: 'The other way: put a key into Cloudflare yourself' }), el('ol', { class: 'te-steps' }, [
-            el('li', { text: 'On github.com: your picture → Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token.' }),
-            el('li', { text: 'Name it "Minyan texts". Under Repository access choose "Only select repositories" and pick ' + ((d.githubRepo || '').split('/')[1] || 'the board\'s repository') + '. Under Permissions → Repository permissions set Contents to "Read and write". Press Generate token and copy the key it shows.' }),
-            el('li', { text: 'On dash.cloudflare.com: Workers & Pages → ' + ((/^https?:\/\/([^.]+)\./.exec(d.notifyUrl || '') || [])[1] || 'the text service') + ' → Settings → Variables and Secrets → Add. Type: Secret. Name: GITHUB_TOKEN. Value: paste the key. Press Deploy.' }),
-            el('li', { text: 'Come back here and press "Check again".' })]),
-            el('div', { class: 'hint', text: 'The key goes only into that one box on Cloudflare. Do not paste it into an email or a chat.' })]));
-        }
-        if (ready.twilio && ready.twilioFrom === 'device') teBox.appendChild(el('div', { class: 'bar actions' }, [el('span', { class: 'hint', text: 'The text service is using the Twilio token pasted here.' }), el('button', { type: 'button', class: 'btn small', id: 'te-forgettw', text: 'Take the Twilio token back', onclick: function () {
-          if (!confirm('Take the Twilio token back from the text service? Changes by text stop working until it has one again.')) return;
-          teGive({ twilioKey: '' }, 'Taking it back…', 'The text service no longer has the Twilio token.');
-        } })]));
-        if (ready.github && ready.keyFrom === 'device') {
-          teBox.appendChild(el('div', { class: 'bar actions' }, [el('span', { class: 'hint', text: 'The text service is using the GitHub key this device gave it.' }), el('button', { type: 'button', class: 'btn small', id: 'te-forget', text: 'Take the key back', onclick: function () {
-            if (!confirm('Take the GitHub key back from the text service? Changes by text stop working until it has a key again.')) return;
-            te.msg = 'Taking it back…'; tePaint();
-            teCall({ githubKey: '' }).then(function (j) { teTake(j); te.msg = 'The text service no longer has the key.'; tePaint(); }, function (e) { te.msg = 'Not done: ' + (e && e.message || e); tePaint(); });
+          lock.appendChild(el('div', { class: 'hint', text: 'As it is, the text service believes a text when it comes through the shul\'s own Twilio account. That keeps out someone who only knows a gabbai\'s number. With the account\'s Auth Token every text is checked by Twilio\'s signature, which cannot be copied. On console.twilio.com the first page shows "Account Info": next to Auth Token press Show, copy it and paste it here.' }));
+          lock.appendChild(el('div', { class: 'te-key' }, [twIn, el('button', { type: 'button', class: 'btn', id: 'te-givetw', text: 'Give it to the text service', onclick: function () {
+            if (!twIn.value.trim()) { te.msg = 'Paste the Auth Token first.'; tePaint(); return; }
+            teGive({ twilioKey: twIn.value.trim() }, 'Saving…', 'The text service has the Twilio token.');
           } })]));
-        }
+          lock.appendChild(el('div', { class: 'hint', text: 'It goes straight to your text service, which keeps it privately and never shows it again. Do not put it in an email or a chat.' }));
+        } else lock.appendChild(el('div', { class: 'hint', text: 'Every text is checked by Twilio\'s signature.' + (ready.twilioFrom === 'device' ? '' : ' The token is set in the service itself.') }));
+        var lockBar = el('div', { class: 'bar actions' });
+        if (ready.twilioFrom === 'device') lockBar.appendChild(el('button', { type: 'button', class: 'btn small', id: 'te-forgettw', text: 'Take the Twilio token back', onclick: function () {
+          if (!confirm('Take the Twilio token back from the text service?')) return;
+          teGive({ twilioKey: '' }, 'Taking it back…', 'The text service no longer has the Twilio token.');
+        } }));
+        if (ready.trust === 'account') lockBar.appendChild(el('button', { type: 'button', class: 'btn small', id: 'te-forgetacct', text: 'Start over', title: 'Forget which Twilio account is the shul\'s; the next text says so again', onclick: function () {
+          if (!confirm('Forget which Twilio account is the shul\'s? The next text that arrives through Twilio sets it again.')) return;
+          teGive({ forgetAccount: true }, 'Starting over…', 'Done. The next text through Twilio sets the account again.');
+        } }));
+        if (lockBar.children.length) lock.appendChild(lockBar);
+        teBox.appendChild(lock);
         var logBox = el('details', { class: 'te-more' }, [el('summary', { text: 'Last changes sent by text' + (te.log.length ? ' (' + te.log.length + ')' : '') })]);
         if (!te.log.length) logBox.appendChild(el('div', { class: 'hint', text: 'None yet.' }));
         te.log.forEach(function (x) {
@@ -3879,6 +3878,20 @@
       return changed;
     });
   }
+  /* the texted one-day changes, from the text service: looked for as often as the settings are; a change shows at the next look */
+  function loadTextDays() {
+    if (inArtifact || !(cfg.notifyUrl || '').trim() || !/^https?:$/.test(location.protocol)) return Promise.resolve(false);
+    return fetch(notifyBase() + '/changes', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+      if (!j || !j.days || typeof j.days !== 'object') return false;
+      var raw = JSON.stringify(j.days);
+      if (raw === textDays.raw) return false;
+      textDays = { days: j.days, raw: raw };
+      try { localStorage.setItem('minyan-textdays', raw); } catch (e) {}
+      setCfg(cfg);
+      if (!ui.adminOpen) render();
+      return true;
+    }).catch(function () { return false; });
+  }
   function ghSettings() { try { return JSON.parse(localStorage.getItem('minyan-github') || 'null') || {}; } catch (e) { return {}; } }
   function ghConfigured(s) { return !!(s && s.repo && s.token); }
   function utf8b64(str) {
@@ -4026,12 +4039,12 @@
     window.addEventListener('resize', function () { clearTimeout(ui.fitTimer); ui.fitTimer = setTimeout(function () { if (document.documentElement.classList.contains('lobby')) render(); }, 200); });
     if (!inArtifact && isAdminPage()) openAdmin();
     if (!inArtifact) {
-      loadRemote();
+      loadRemote().then(loadTextDays, loadTextDays);
       /* a screen on the wall is always on and has nobody to refresh it: it looks for new settings every minute, so a change made in
          the back end shows there within a minute or two of being published; a phone looks every five */
       var bootKind = currentView().kind;
-      setInterval(loadRemote, (bootKind === 'display' || bootKind === 'room' ? 1 : 5) * 60 * 1000);
-      document.addEventListener('visibilitychange', function () { if (!document.hidden) loadRemote(); });
+      setInterval(function () { loadRemote(); loadTextDays(); }, (bootKind === 'display' || bootKind === 'room' ? 1 : 5) * 60 * 1000);
+      document.addEventListener('visibilitychange', function () { if (!document.hidden) { loadRemote(); loadTextDays(); } });
       window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferredInstall = e; refreshInstallBtn(); });
       window.addEventListener('appinstalled', function () { deferredInstall = null; refreshInstallBtn(); toast('App installed'); });
       registerSW();

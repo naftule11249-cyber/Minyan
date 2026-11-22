@@ -3,8 +3,8 @@
 # Nothing else to configure for app notifications: the KV namespace below is created on the first deploy and the
 # notification keys are made by the worker itself. Texting needs the Twilio secrets (Settings -> Variables and Secrets):
 #   TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM (+1718...), optional WA_FROM (whatsapp:+1...) and WA_CONTENT_SID.
-# Changing a minyan by text (admin page -> Settings -> Send -> "Changes by text") needs one more secret, GITHUB_TOKEN:
-#   a fine-grained GitHub token for this repository only, with Contents: Read and write. Add it the same way, as a Secret.
+# Changing a minyan by text (admin page -> Settings -> Send -> "Changes by text") needs nothing more: the worker keeps those
+# one-day changes in the same KV namespace and the board reads them from it.
 # From a computer instead: cd sms && npx wrangler login && npx wrangler deploy
 name = "cascade-zmanim-notify"
 main = "dist/worker.js"

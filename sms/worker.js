@@ -5,11 +5,8 @@
    Secrets (wrangler secret put): TWILIO_AUTH_TOKEN (also verifies Twilio's signature), TWILIO_ACCOUNT_SID, TWILIO_FROM (+1718…),
    WA_FROM (whatsapp:+1718…, optional), WA_CONTENT_SID (optional WhatsApp template), VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY.
    Cron trigger every 5 minutes (wrangler.toml) sends what is due.
-   Changes by text: a GitHub key (the secret GITHUB_TOKEN, or the key the admin page hands over with one button; a fine-grained token,
-   this repository only, Contents: read and write) lets the gabbaim
-   named on the admin page change one day's minyanim by a text. Without it those texts are answered "not set up yet". The repository,
-   branch and file come from the site's config (githubRepo / githubBranch / githubPath); GITHUB_REPO, GITHUB_BRANCH and GITHUB_PATH
-   override them. The numbers that may do it are kept in KV ("editors"), never in the public config. ---- */
+   Changes by text: the gabbaim named on the admin page change one day's minyanim by a text. The changes and the numbers are kept
+   in KV (never in the public config); see "changes by text" below. No extra secret is needed. ---- */
 async function sha256Hex(str) { var b = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str))), s = '', i; for (i = 0; i < b.length; i++) s += ('0' + b[i].toString(16)).slice(-2); return s; }
 function escapeXml(s) { return s.replace(/[<>&'"]/g, function (c) { return { '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]; }); }
 /* Twilio signs the address exactly as it was typed into the number's settings: "https://x.workers.dev" and "https://x.workers.dev/" are
@@ -27,7 +24,9 @@ async function twilioSignatureOk(request, params, token) {
   return false;
 }
 /* the published schedule, fresh within a minute or two of a publish: the address changes by the minute, so the site's CDN copy is passed by */
-async function loadConfig(env) { return (await fetch(env.CONFIG_URL + (env.CONFIG_URL.indexOf('?') < 0 ? '?' : '&') + 't=' + Math.floor(Date.now() / 60000), { cf: { cacheTtl: 60, cacheEverything: true } })).json(); }
+async function loadSiteConfig(env) { return (await fetch(env.CONFIG_URL + (env.CONFIG_URL.indexOf('?') < 0 ? '?' : '&') + 't=' + Math.floor(Date.now() / 60000), { cf: { cacheTtl: 60, cacheEverything: true } })).json(); }
+/* the settings as everyone sees them: with the texted one-day changes laid over */
+async function loadConfig(env) { var c = await loadSiteConfig(env); return MinyanEngine.withDayLines(c, await textDays(env, c)); }
 function twiml(text) { return new Response('<?xml version="1.0" encoding="UTF-8"?><Response>' + (text ? '<Message>' + escapeXml(text) + '</Message>' : '') + '</Response>', { headers: { 'content-type': 'text/xml; charset=utf-8' } }); }
 function cors(env, extra) { return Object.assign({ 'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN || '*', 'Access-Control-Allow-Methods': 'GET,POST,OPTIONS', 'Access-Control-Allow-Headers': 'content-type' }, extra || {}); }
 function json(env, obj, status) { return new Response(JSON.stringify(obj), { status: status || 200, headers: cors(env, { 'content-type': 'application/json' }) }); }
@@ -74,53 +73,49 @@ async function adminRefusal(request, env, body, cfg) {
   return json(env, { error: hasPin ? 'wrong PIN' : 'set an admin PIN first' }, 403);
 }
 
-/* ---- changes by text: a gabbai's number texts "add mincha 2:15", and that day's schedule on the website changes (src/edit.js) ---- */
+/* ---- changes by text: a gabbai's number texts "add mincha 2:15", and that day's schedule changes (src/edit.js).
+   The service keeps these one-day changes itself, in KV ("textdays"), and gives them out at /changes; the board, the app and this
+   service's own answers lay them over the published settings (MinyanEngine.withDayLines). Nothing is written to the website's
+   files, so no GitHub key is needed, and a change is on the screen at the screen's next look, within a minute.
+   textdays = { '2026-11-22': { mincha: { line, base, at } } }: see withDayLines for what line and base are. ---- */
 function phoneDigits(n) { var d = String(n || '').replace(/\D/g, ''); return d.length === 10 ? '1' + d : d; } /* +1 718 555 1234 = whatsapp:+17185551234 = 7185551234 */
-function b64ToUtf8(b64) { var bin = atob(String(b64).replace(/\s+/g, '')), bytes = new Uint8Array(bin.length), i; for (i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i); return new TextDecoder().decode(bytes); }
-function utf8ToB64(str) { var bytes = new TextEncoder().encode(str), bin = '', i; for (i = 0; i < bytes.length; i += 8192) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192)); return btoa(bin); }
-function ghTarget(env, cfg) { return { repo: env.GITHUB_REPO || cfg.githubRepo, branch: env.GITHUB_BRANCH || cfg.githubBranch || 'main', path: env.GITHUB_PATH || cfg.githubPath || 'docs/config.json' }; }
-function ghUrl(t) { return 'https://api.github.com/repos/' + t.repo + '/contents/' + t.path.split('/').map(encodeURIComponent).join('/'); }
-/* The key that lets the service write the settings file: the GITHUB_TOKEN secret, or the key the gabbai handed over from the admin
-   page ("Use this device's GitHub key"), which is kept in KV under "ghkey". It is never sent back out and never logged. */
-async function ghKey(env) { return env.GITHUB_TOKEN || (await env.SUBS.get('ghkey')) || ''; }
-function ghHeaders(env) { return { Authorization: 'Bearer ' + env.GH_KEY, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'minyan-board-texts', 'content-type': 'application/json' }; }
-/* Read the settings as they are on GitHub this second (not the site's copy, which runs a minute or two behind), change them, write
-   them back as the admin page's Publish does. If someone else wrote in between, read again and try once more. */
-async function changeSettings(env, siteCfg, change) {
-  var t = ghTarget(env, siteCfg), tries = 0;
-  env = Object.assign({}, env, { GH_KEY: await ghKey(env) });
-  if (!t.repo) throw new Error('no repository');
-  for (;;) {
-    var r = await fetch(ghUrl(t) + '?ref=' + encodeURIComponent(t.branch), { headers: ghHeaders(env) });
-    if (!r.ok) throw new Error('GitHub ' + r.status);
-    var file = await r.json(), res = change(JSON.parse(b64ToUtf8(file.content)));
-    if (!res.cfg) return res; /* nothing to write: not understood, not found, … */
-    var w = await fetch(ghUrl(t), { method: 'PUT', headers: ghHeaders(env), body: JSON.stringify({ message: 'Update minyan schedule (by text)', content: utf8ToB64(JSON.stringify(res.cfg, null, 1)), branch: t.branch, sha: file.sha }) });
-    if (w.ok) return res;
-    if (w.status !== 409 || ++tries > 1) throw new Error('GitHub ' + w.status);
-  }
+async function textDays(env, cfg) {
+  var days = (await env.SUBS.get('textdays', 'json')) || {};
+  if (!cfg) return days;
+  var today = MinyanEngine.isoDate(Cal.nowInTz(Date.now(), MinyanEngine(cfg).loc().tz).rd), out = {};
+  Object.keys(days).forEach(function (iso) { if (iso >= today) out[iso] = days[iso]; }); /* days gone by are dropped */
+  return out;
+}
+function ownLine(cfg, iso, tef) { var o = (cfg.overrides || []).filter(function (x) { return x.date === iso; })[0]; return o && o.lines && Object.prototype.hasOwnProperty.call(o.lines, tef) ? o.lines[tef] : null; }
+/* After a change (or its undo) was worked out on the settings-with-changes: note that tefilla's list for that day. When it is again
+   what the published settings give by themselves, the note simply goes. */
+async function keepDay(env, siteCfg, days, changed, iso, tef) {
+  var line = ownLine(changed, iso, tef), base = ownLine(siteCfg, iso, tef);
+  days[iso] = days[iso] || {};
+  if (line === base) delete days[iso][tef]; else days[iso][tef] = { line: line, base: base, at: Date.now() };
+  if (!Object.keys(days[iso]).length) delete days[iso];
+  await env.SUBS.put('textdays', JSON.stringify(days));
 }
 async function editLog(env, entry) { var log = (await env.SUBS.get('editlog', 'json')) || []; log.unshift(entry); await env.SUBS.put('editlog', JSON.stringify(log.slice(0, 30))); }
-/* The reply to a gabbai's change, or null when this text is not one (the sender is not on the list, or it is an ordinary text). */
-async function textEdit(env, cfg, text, from) {
+/* The reply to a gabbai's change, or null when this text is not one (the sender is not on the list, or it is an ordinary text).
+   cfg is the settings with the changes so far already laid over them; siteCfg is the published settings alone. */
+async function textEdit(env, cfg, siteCfg, days, text, from) {
   if (!MinyanEdit.parse(text)) return null;
   var who = phoneDigits(from), ed = ((await env.SUBS.get('editors', 'json')) || []).filter(function (e) { return e.n === who; })[0];
   if (!ed) return null;
-  var now = Date.now(), first = MinyanEdit.run(cfg, text, now), L = MinyanEdit.T[first.lang], undoKey = 'undo:' + who, res;
+  var now = Date.now(), res = MinyanEdit.run(cfg, text, now), L = MinyanEdit.T[res.lang], undoKey = 'undo:' + who;
   function note(ok, reply) { return editLog(env, { at: now, who: ed.name || ('…' + who.slice(-4)), text: String(text).trim().slice(0, 140), ok: ok, reply: String(reply).split('\n')[0].slice(0, 200) }); }
   if (MinyanNotify.holyNow(cfg, now)) { await note(false, 'Shabbos / Yom Tov: nothing changed, nothing answered'); return ''; } /* nothing is changed or sent on Shabbos and Yom Tov */
-  if (!first.wantsUndo && !first.cfg) { if (MinyanEdit.parse(text).action !== 'help') await note(false, first.reply); return first.reply; } /* examples, or a text that does not add up: no need to ask GitHub */
-  if (!(await ghKey(env))) { await note(false, 'not set up: the service has no GitHub key'); return L.notSetUp; }
   try {
-    if (first.wantsUndo) {
+    if (res.wantsUndo) {
       var rec = await env.SUBS.get(undoKey, 'json');
       if (!rec) return L.noUndo;
-      res = await changeSettings(env, cfg, function (c) { return MinyanEdit.undo(c, rec, first.lang, now); });
-      if (res.cfg) await env.SUBS.delete(undoKey);
-    } else {
-      res = await changeSettings(env, cfg, function (c) { return MinyanEdit.run(c, text, now); });
-      if (res.cfg) await env.SUBS.put(undoKey, JSON.stringify(res.undo), { expirationTtl: 86400 });
-    }
+      res = MinyanEdit.undo(cfg, rec, res.lang, now);
+      if (res.cfg) { await keepDay(env, siteCfg, days, res.cfg, rec.iso, rec.tefilla); await env.SUBS.delete(undoKey); }
+    } else if (res.cfg) {
+      await keepDay(env, siteCfg, days, res.cfg, res.undo.iso, res.undo.tefilla);
+      await env.SUBS.put(undoKey, JSON.stringify(res.undo), { expirationTtl: 86400 });
+    } else if (MinyanEdit.parse(text).action === 'help') return res.reply; /* the examples: not worth a line in the log */
   } catch (e) { await note(false, 'not saved: ' + (e && e.message || e)); return L.failed; }
   await note(!!res.cfg, res.reply);
   return res.reply;
@@ -168,6 +163,8 @@ export default {
       }
       return json(env, { sent: sent, failed: failed, gone: gone });
     }
+    /* the one-day changes that were texted in, for the board and the app to lay over the settings: schedule lines only, nothing private */
+    if (path === '/changes') return new Response(JSON.stringify({ days: await textDays(env, await loadSiteConfig(env)) }), { headers: { 'Access-Control-Allow-Origin': '*', 'content-type': 'application/json', 'cache-control': 'no-store' } });
     /* Who may change the schedule by a text: the admin page reads and saves the list here, with the admin PIN. The numbers live in KV
        only. Also tells the page whether the service can do it yet, and the last changes that were texted in. */
     if (path === '/editors' && request.method === 'POST') {
@@ -180,31 +177,22 @@ export default {
         eb.editors.slice(0, 20).forEach(function (e) { var n = phoneDigits(e && e.number); if (/^\d{11,15}$/.test(n) && !seen[n]) { seen[n] = 1; clean.push({ n: n, name: String(e.name || '').trim().slice(0, 40) }); } });
         await env.SUBS.put('editors', JSON.stringify(clean));
       }
-      /* the admin page hands over the GitHub key it publishes with (or '' to forget it): tried on the settings file first, kept only if it can write there */
       var keyError = '';
-      if (typeof eb.githubKey === 'string') {
-        if (!eb.githubKey) await env.SUBS.delete('ghkey');
-        else if (!/^[A-Za-z0-9_]{20,255}$/.test(eb.githubKey)) keyError = 'That does not look like a GitHub key.';
-        else {
-          var gt = ghTarget(env, await loadConfig(env)), probe = await fetch('https://api.github.com/repos/' + gt.repo, { headers: ghHeaders({ GH_KEY: eb.githubKey }) }).catch(function () { return null; });
-          var pj = probe && probe.ok ? await probe.json().catch(function () { return null; }) : null;
-          if (!probe) keyError = 'GitHub did not answer. Try again in a minute.';
-          else if (!probe.ok) keyError = probe.status === 401 ? 'GitHub does not accept this key any more. Enter a new one on the Publish tab first.' : 'This key cannot open the repository ' + gt.repo + ' (GitHub ' + probe.status + ').';
-          else if (!pj || !pj.permissions || !pj.permissions.push) keyError = 'This key can read the repository but not write to it. It needs Contents: Read and write.';
-          else await env.SUBS.put('ghkey', eb.githubKey);
-        }
-      }
       /* the Twilio Auth Token, handed over the same way (or '' to forget it): it only proves a text is from Twilio; it is not used to send */
       if (typeof eb.twilioKey === 'string') {
         if (!eb.twilioKey) await env.SUBS.delete('twkey');
         else if (!/^[A-Za-z0-9]{32}$/.test(eb.twilioKey.trim())) keyError = 'That does not look like a Twilio Auth Token: it is 32 letters and digits.';
         else await env.SUBS.put('twkey', eb.twilioKey.trim());
       }
-      var kvKey = !!(await env.SUBS.get('ghkey')), kvTw = !!(await env.SUBS.get('twkey'));
+      if (typeof eb.clearDay === 'string') { var td = (await env.SUBS.get('textdays', 'json')) || {}; delete td[eb.clearDay]; await env.SUBS.put('textdays', JSON.stringify(td)); } /* a day's texted changes taken back from the admin page */
+      if (eb.forgetAccount) await env.SUBS.delete('twsid'); /* start over: the next text from Twilio says which account is the shul's */
+      var kvTw = !!(await env.SUBS.get('twkey')), sid = await env.SUBS.get('twsid');
       return json(env, { editors: ((await env.SUBS.get('editors', 'json')) || []).map(function (e) { return { number: '+' + e.n, name: e.name }; }),
         log: (await env.SUBS.get('editlog', 'json')) || [], keyError: keyError || undefined,
-        lastText: (await env.SUBS.get('lasttext', 'json')) || undefined,
-        ready: { github: !!env.GITHUB_TOKEN || kvKey, twilio: !!env.TWILIO_AUTH_TOKEN || kvTw, keyFrom: env.GITHUB_TOKEN ? 'secret' : kvKey ? 'device' : '', twilioFrom: env.TWILIO_AUTH_TOKEN ? 'secret' : kvTw ? 'device' : '' } });
+        lastText: (await env.SUBS.get('lasttext', 'json')) || undefined, days: await textDays(env),
+        /* how the service knows a text is really from Twilio: 'signature' (the Auth Token checks every text), 'account' (texts must
+           come from the Twilio account the first text came from), or '' (no text has come yet) */
+        ready: { trust: env.TWILIO_AUTH_TOKEN || kvTw ? 'signature' : sid ? 'account' : '', twilioFrom: env.TWILIO_AUTH_TOKEN ? 'secret' : kvTw ? 'device' : '' } });
     }
     /* Twilio webhook (SMS or WhatsApp): POST form. GET ?q=text[&from=+1…] answers in plain text for testing. */
     var isPost = request.method === 'POST', text = '', params = {}, from = '', signed = false;
@@ -212,19 +200,28 @@ export default {
       var form = await request.formData();
       form.forEach(function (v, k) { params[k] = v; });
       text = params.Body || ''; from = params.From || '';
-      /* Is this text really from Twilio? With the TWILIO_AUTH_TOKEN secret an unsigned text is refused, as always. With the token the
-         gabbai handed over from the admin page (KV "twkey") a text that does not check out is still answered like any other, but it
-         cannot change anything: a wrong token must not silence the shul's number. */
-      if (env.TWILIO_AUTH_TOKEN) { signed = await twilioSignatureOk(request, params, env.TWILIO_AUTH_TOKEN); if (!signed) return new Response('forbidden', { status: 403 }); }
-      else { var twk = await env.SUBS.get('twkey'); signed = !!twk && (await twilioSignatureOk(request, params, twk)); }
-      /* when the last text arrived and whether it checked out: the admin page shows it, to tell "texts do not reach this service" from the rest */
-      await env.SUBS.put('lasttext', JSON.stringify({ at: Date.now(), signed: signed, hadSignature: !!request.headers.get('X-Twilio-Signature') }));
+      /* Is this text really from Twilio, so that the sender's number can be believed?
+         - With the TWILIO_AUTH_TOKEN secret every text is checked by its signature, and one that fails is refused, as always.
+         - With the Auth Token the gabbai pasted into the admin page (KV "twkey") the same check, but a text that fails is still
+           answered like any other; it only cannot change anything. A wrong token must not silence the shul's number.
+         - With neither: Twilio sends its account's ID with every text. The first text to arrive says which account is the shul's
+           (KV "twsid"); from then on only texts carrying that ID are believed. The ID is long and is not published anywhere, which
+           keeps out someone who merely knows this address and a gabbai's number; the Auth Token is the stronger lock. */
+      var hadSig = !!request.headers.get('X-Twilio-Signature'), twk = env.TWILIO_AUTH_TOKEN || (await env.SUBS.get('twkey'));
+      if (twk) { signed = await twilioSignatureOk(request, params, twk); if (!signed && env.TWILIO_AUTH_TOKEN) return new Response('forbidden', { status: 403 }); }
+      else if (hadSig && /^AC[0-9a-fA-F]{32}$/.test(params.AccountSid || '')) {
+        var pinned = await env.SUBS.get('twsid');
+        if (!pinned) { pinned = params.AccountSid; await env.SUBS.put('twsid', pinned); }
+        signed = pinned === params.AccountSid;
+      }
+      /* when the last text arrived and whether it was believed: the admin page shows it, to tell "texts do not reach this service" from the rest */
+      await env.SUBS.put('lasttext', JSON.stringify({ at: Date.now(), signed: signed, hadSignature: hadSig }));
     } else { text = url.searchParams.get('q') || url.searchParams.get('Body') || ''; from = url.searchParams.get('from') || ''; }
     var reply;
     try {
-      var cfg = await loadConfig(env), cmd = MinyanNotify.parseCommand(text, cfg);
-      /* a change to the schedule: only by a text Twilio signed (so the sender's number is real), never by the test address */
-      var edited = isPost && signed ? await textEdit(env, cfg, text, from) : null;
+      var siteCfg = await loadSiteConfig(env), days = await textDays(env, siteCfg), cfg = MinyanEngine.withDayLines(siteCfg, days), cmd = MinyanNotify.parseCommand(text, cfg);
+      /* a change to the schedule: only by a text that is really from Twilio (so the sender's number is real), never by the test address */
+      var edited = isPost && signed ? await textEdit(env, cfg, siteCfg, days, text, from) : null;
       if (edited != null) reply = edited;
       else if (cmd) {
         if (!from) reply = MinyanNotify.T[cmd.lang].notAvail;

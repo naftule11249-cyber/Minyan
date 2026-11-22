@@ -1,5 +1,5 @@
-/* Changes by text, end to end in the Worker bundle: a fake KV, a fake GitHub holding the settings file, texts signed as Twilio signs them.
-   Clock: Sunday 22 Nov 2026, 10:00 in New York. Nothing here touches the real settings. */
+/* Changes by text, end to end in the Worker bundle: a fake KV, texts posted as Twilio posts them. The service keeps the one-day
+   changes itself and gives them out at /changes; nothing is written to the website. Clock: Sunday 22 Nov 2026, 10:00 in New York. */
 const crypto = require('crypto');
 global.Cal = require('../src/cal.js');
 const Engine = require('../src/engine.js');
@@ -12,138 +12,113 @@ const PIN = process.env.MINYAN_PIN || '1234';
   const ok = (name, got, want) => { const pass = same(got, want); if (!pass) fails++; console.log((pass ? 'ok   ' : 'FAIL ') + name + (pass ? '' : ' -> ' + JSON.stringify(got) + ' want ' + (Array.isArray(want) ? want.map(String).join(' , ') : want))); };
   const store = new Map();
   const SUBS = { get: async (k, t) => { const v = store.get(k); return v == null ? null : t === 'json' ? JSON.parse(v) : v; }, put: async (k, v) => { store.set(k, v); }, delete: async k => { store.delete(k); }, list: async () => ({ keys: [...store.keys()].map(name => ({ name })), list_complete: true }) };
-  const env = { SUBS, CONFIG_URL: 'https://minyan.cascadeshul.org/config.json', ALLOWED_ORIGIN: 'https://minyan.cascadeshul.org', TWILIO_AUTH_TOKEN: 'twilio-test-token', GITHUB_TOKEN: 'gh-test-token' };
-  /* the fake GitHub: one file, with a sha that changes at every write */
-  const gh = { cfg: JSON.parse(JSON.stringify(base)), sha: 'sha1', puts: [], gets: 0, failNext: 0, down: false, probes: [], keys: ['Bearer gh-test-token', 'Bearer github_pat_DEVICEKEY_0123456789abcdef'] };
-  const FILE = 'https://api.github.com/repos/naftule11249-cyber/Minyan/contents/docs/config.json';
-  global.fetch = async (url, init) => {
+  const env = { SUBS, CONFIG_URL: 'https://minyan.cascadeshul.org/config.json', ALLOWED_ORIGIN: 'https://minyan.cascadeshul.org' }; /* as the live service is: no secrets for this at all */
+  let site = JSON.parse(JSON.stringify(base)); const outside = [];
+  global.fetch = async (url) => {
     url = String(url);
-    if (url.split('?')[0] === env.CONFIG_URL) return new Response(JSON.stringify(base), { headers: { 'content-type': 'application/json' } }); /* the site's copy: a little behind GitHub */
-    if (url === 'https://api.github.com/repos/naftule11249-cyber/Minyan') { /* the check a handed-over key goes through */
-      gh.probes.push(init.headers.Authorization);
-      if (init.headers.Authorization === 'Bearer github_pat_READONLY_0123456789abcdef') return new Response(JSON.stringify({ permissions: { pull: true, push: false } }));
-      return gh.keys.indexOf(init.headers.Authorization) >= 0 ? new Response(JSON.stringify({ permissions: { pull: true, push: true } })) : new Response('{}', { status: 401 });
-    }
-    if (url.split('?')[0] === FILE) {
-      if (gh.keys.indexOf(init.headers.Authorization || '') < 0) return new Response('{}', { status: 401 });
-      if (gh.down) return new Response('{}', { status: 503 });
-      if (!init.method || init.method === 'GET') { gh.gets++; return new Response(JSON.stringify({ sha: gh.sha, content: Buffer.from(JSON.stringify(gh.cfg, null, 1)).toString('base64').replace(/(.{60})/g, '$1\n') })); }
-      const body = JSON.parse(init.body);
-      if (gh.failNext) { gh.failNext--; gh.sha = 'moved' + gh.gets; return new Response('{}', { status: 409 }); }
-      if (body.sha !== gh.sha) return new Response('{}', { status: 409 });
-      gh.cfg = JSON.parse(Buffer.from(body.content, 'base64').toString('utf8')); gh.sha = 'sha' + (gh.puts.length + 2); gh.puts.push(body);
-      return new Response('{}', { status: 200 });
-    }
-    throw new Error('unexpected fetch ' + url);
+    if (url.split('?')[0] === env.CONFIG_URL) return new Response(JSON.stringify(site), { headers: { 'content-type': 'application/json' } });
+    outside.push(url); throw new Error('unexpected fetch ' + url);
   };
   const realNow = Date.now; let now = Cal.epochFromWall(Cal.rdFromGreg(2026, 11, 22), 10 * 60, 'America/New_York'); Date.now = () => now;
-  const HOOK = 'https://w.example/';
-  const sign = params => crypto.createHmac('sha1', env.TWILIO_AUTH_TOKEN).update(HOOK + Object.keys(params).sort().map(k => k + params[k]).join('')).digest('base64');
-  const sms = async (from, text, opts) => { const params = { From: from, Body: text, To: '+19298287677' }; const r = await worker.fetch(new Request(HOOK, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', 'X-Twilio-Signature': opts && opts.badSig ? 'nope' : sign(params) }, body: new URLSearchParams(params) }), opts && opts.env || env); const x = await r.text(); return { status: r.status, text: (/<Message>([\s\S]*)<\/Message>/.exec(x) || [, ''])[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&apos;/g, "'").replace(/&gt;/g, '>') }; };
-  const editors = body => worker.fetch(new Request('https://w.example/editors', { method: 'POST', headers: { 'content-type': 'application/json', 'cf-connecting-ip': '9.9.9.9' }, body: JSON.stringify(body) }), env);
-  const mincha = () => { const e = Engine(gh.cfg); return e.scheduleFor(Cal.rdFromGreg(2026, 11, 22)).byTefilla.mincha.map(x => e.fmtTime(x.start) + ' ' + x.room); };
+  const HOOK = 'https://w.example/', SID = 'AC' + '0123456789abcdef'.repeat(2), TOKEN = '0123456789abcdef'.repeat(2); /* made up, and put together here so that nothing in this file has the shape of a real Twilio ID */
+  const sign = (params, token) => crypto.createHmac('sha1', token || TOKEN).update(HOOK + Object.keys(params).sort().map(k => k + params[k]).join('')).digest('base64');
+  const sms = async (from, text, o) => { o = o || {}; const params = { From: from, Body: text, To: '+19298287677', AccountSid: o.sid || SID }; const headers = { 'content-type': 'application/x-www-form-urlencoded' }; if (!o.noSig) headers['X-Twilio-Signature'] = sign(params, o.token); const r = await worker.fetch(new Request(o.url || HOOK, { method: 'POST', headers, body: new URLSearchParams(params) }), o.env || env); const x = await r.text(); return { status: r.status, text: (/<Message>([\s\S]*)<\/Message>/.exec(x) || [, ''])[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&apos;/g, "'").replace(/&gt;/g, '>') }; };
+  const editors = (body, e) => worker.fetch(new Request('https://w.example/editors', { method: 'POST', headers: { 'content-type': 'application/json', 'cf-connecting-ip': '9.9.9.9' }, body: JSON.stringify(body) }), e || env);
+  const changes = async () => (await (await worker.fetch(new Request('https://w.example/changes'), env)).json()).days;
+  /* the day as everyone sees it: the published settings with the service's changes laid over, as the board does */
+  const day = async (tef, iso) => { const c = Engine.withDayLines(site, await changes()), e = Engine(c), m = /(\d+)-(\d+)-(\d+)/.exec(iso || '2026-11-22'); return (e.scheduleFor(Cal.rdFromGreg(+m[1], +m[2], +m[3])).byTefilla[tef] || []).map(x => e.fmtTime(x.start) + (x.room ? ' ' + x.room : '')); };
   const GABBAI = '+17185550101', OTHER = '+17185550999';
 
-  /* the list of numbers: by the admin PIN only, kept in the service, never in the settings file */
+  /* the list of numbers: by the admin PIN only, kept in the service */
   let r = await editors({ pin: '0000', editors: [{ number: OTHER, name: 'x' }] });
   ok('the list cannot be read or changed with a wrong PIN', [r.status, store.has('editors')], [403, false]);
   r = await editors({ pin: PIN, editors: [{ number: '(718) 555-0101', name: 'גבאי א' }, { number: '+1 718 555 0102', name: 'גבאי ב' }, { number: '718-555-0101', name: 'twice' }, { number: '12', name: 'not a number' }] });
   let j = await r.json();
-  ok('saved with the PIN: numbers tidied, a repeat and a non-number left out', [r.status, j.editors, j.ready], [200, [{ number: '+17185550101', name: 'גבאי א' }, { number: '+17185550102', name: 'גבאי ב' }], { github: true, twilio: true, keyFrom: 'secret', twilioFrom: 'secret' }]);
-  ok('reading it back without sending a list leaves it as it is', (await (await editors({ pin: PIN })).json()).editors.length, 2);
+  ok('saved with the PIN: numbers tidied, a repeat and a non-number left out; no text has come yet', [r.status, j.editors, j.ready], [200, [{ number: '+17185550101', name: 'גבאי א' }, { number: '+17185550102', name: 'גבאי ב' }], { trust: '', twilioFrom: '' }]);
 
-  /* who may */
-  r = await sms(OTHER, 'cancel mincha 2:00');
-  ok('a number that is not on the list gets the ordinary answer, and nothing changes', [/Mincha|מנחה/.test(r.text), gh.puts.length, gh.gets], [true, 0, 0]);
-  r = await sms(GABBAI, 'cancel mincha 2:00', { badSig: true });
-  ok('a text Twilio did not sign is refused', [r.status, gh.puts.length], [403, 0]);
+  /* who is believed */
   const viaGet = await (await worker.fetch(new Request(HOOK + '?q=' + encodeURIComponent('cancel mincha 2:00') + '&from=' + encodeURIComponent(GABBAI)), env)).text();
-  ok('the test address cannot change anything, whatever number it claims', [/Cancelled/.test(viaGet), gh.puts.length], [false, 0]);
+  ok('the test address cannot change anything, whatever number it claims', [/Cancelled/.test(viaGet), await changes()], [false, {}]);
+  r = await sms(GABBAI, 'cancel mincha 2:00', { noSig: true });
+  ok('a post that does not even look like Twilio\'s is answered as an ordinary text and changes nothing', [r.status, /^Cancelled/.test(r.text), await changes(), store.has('twsid')], [200, false, {}, false]);
+  r = await sms(OTHER, 'מנחה');
+  ok('the first text from Twilio says which Twilio account is the shul\'s', [/מנחה/.test(r.text), store.get('twsid'), (await (await editors({ pin: PIN })).json()).ready.trust], [true, SID, 'account']);
+  r = await sms(OTHER, 'cancel mincha 2:00');
+  ok('a number that is not on the list gets the ordinary answer, and nothing changes', [/Mincha|מנחה/.test(r.text), /^Cancelled/.test(r.text), await changes()], [true, false, {}]);
+  r = await sms(GABBAI, 'cancel mincha 2:00', { sid: 'AC' + 'f'.repeat(32) });
+  ok('a gabbai\'s number arriving from another Twilio account is not believed', [/^Cancelled/.test(r.text), await changes(), (await (await editors({ pin: PIN })).json()).lastText.signed], [false, {}, false]);
   r = await sms(GABBAI, 'מנחה');
-  ok('a gabbai\'s ordinary text is answered as always', [/מנחה/.test(r.text), gh.puts.length], [true, 0]);
+  ok('a gabbai\'s ordinary text is answered as always', [/מנחה/.test(r.text), await changes()], [true, {}]);
 
   /* a change */
+  const before = await day('mincha');
   r = await sms(GABBAI, 'לייג צו מנחה 2:15 לב אהרן');
-  ok('add: answered, and written to the settings file as the back end\'s Publish writes it', [r.text.split('\n')[0], gh.puts.length, gh.puts[0].message, gh.puts[0].branch, mincha().includes('2:15 לב אהרן'), gh.cfg.overrides[0].date], ['צוגעלייגט: מנחה 2:15 לב אהרן, היינט (זונטאג).', 1, 'Update minyan schedule (by text)', 'main', true, '2026-11-22']);
-  ok('the rest of the settings went back as they were', [JSON.stringify(Object.assign({}, gh.cfg, { overrides: [], savedAt: 0 })) === JSON.stringify(Object.assign({}, base, { overrides: [], savedAt: 0 })), gh.cfg.savedAt > (base.savedAt || 0)], [true, true]);
+  ok('add: answered, kept by the service, and on the day as the board sees it', [r.text.split('\n')[0], (await day('mincha')).includes('2:15 לב אהרן'), Object.keys(await changes()), Object.keys((await changes())['2026-11-22'])], ['צוגעלייגט: מנחה 2:15 לב אהרן, היינט (זונטאג).', true, ['2026-11-22'], ['mincha']]);
+  ok('nothing was sent anywhere but to the site for its settings; the other days and tefillos are as they were', [outside, await day('shacharis'), await day('mincha', '2026-11-23')], [[], (() => { const e = Engine(base); return e.scheduleFor(Cal.rdFromGreg(2026, 11, 22)).byTefilla.shacharis.map(x => e.fmtTime(x.start) + ' ' + x.room); })(), (() => { const e = Engine(base); return e.scheduleFor(Cal.rdFromGreg(2026, 11, 23)).byTefilla.mincha.map(x => e.fmtTime(x.start) + ' ' + x.room); })()]);
   r = await sms('whatsapp:+17185550102', 'cancel mincha 2:00');
-  ok('the second gabbai, by WhatsApp: the change builds on the first one, from GitHub\'s copy, not the site\'s older one', [r.text.split('\n')[0], mincha().includes('2:15 לב אהרן'), mincha().includes('2:00 ברך משה')], ['Cancelled: Mincha 2:00 ברך משה, today (Sunday).', true, false]);
+  ok('the second gabbai, by WhatsApp: the change builds on the first one', [r.text.split('\n')[0], (await day('mincha')).includes('2:15 לב אהרן'), (await day('mincha')).includes('2:00 ברך משה')], ['Cancelled: Mincha 2:00 ברך משה, today (Sunday).', true, false]);
   r = await sms(GABBAI, 'cancel mincha 2:00');
-  ok('what is no longer there is not found, and nothing is written', [/^No Mincha at 2:00 today/.test(r.text), gh.puts.length], [true, 2]);
+  ok('what is no longer there is not found', /^No Mincha at 2:00 today/.test(r.text), true);
+  r = await sms(OTHER, 'mincha');
+  ok('the answers to everyone else follow the change', [/2:15/.test(r.text), /2:00/.test(r.text)], [true, false]);
 
   /* undo: each sender their own last change */
   r = await sms(GABBAI, 'צוריק');
-  ok('undo takes back the sender\'s own change and leaves the other gabbai\'s', [r.text.split('\n')[0], mincha().includes('2:15 לב אהרן'), mincha().includes('2:00 ברך משה')], ['צוריקגעצויגן: צוגעלייגט: מנחה 2:15 לב אהרן, היינט (זונטאג).', false, false]);
+  ok('undo takes back the sender\'s own change and leaves the other gabbai\'s', [r.text.split('\n')[0], (await day('mincha')).includes('2:15 לב אהרן'), (await day('mincha')).includes('2:00 ברך משה')], ['צוריקגעצויגן: צוגעלייגט: מנחה 2:15 לב אהרן, היינט (זונטאג).', false, false]);
   r = await sms(GABBAI, 'undo');
-  ok('a second undo has nothing to take back', [r.text, gh.puts.length], [/^Nothing to undo/, 3]);
+  ok('a second undo has nothing to take back', r.text, /^Nothing to undo/);
   r = await sms('+17185550102', 'undo');
-  ok('the other gabbai\'s undo: the day is back on the regular schedule', [/^Undone: Cancelled: Mincha 2:00/.test(r.text), gh.cfg.overrides.length, mincha().includes('2:00 ברך משה')], [true, 0, true]);
+  ok('the other gabbai\'s undo: the day is the regular one again and the service holds nothing', [/^Undone: Cancelled: Mincha 2:00/.test(r.text), await changes(), await day('mincha')], [true, {}, before]);
 
-  /* things going wrong */
-  gh.failNext = 1; r = await sms(GABBAI, 'add maariv 9:15 ברך משה');
-  ok('someone published at the same moment: read again and written once', [r.text.split('\n')[0], gh.cfg.overrides[0].lines.maariv.includes('21:15 ברך משה')], ['Added: Maariv 9:15 ברך משה, today (Sunday).', true]);
-  gh.down = true; const putsBefore = gh.puts.length; r = await sms(GABBAI, 'add maariv 9:25');
-  ok('GitHub not answering: said so plainly, nothing changed, no undo left behind for it', [r.text, gh.puts.length - putsBefore, JSON.parse(store.get('undo:17185550101')).summary], ['It could not be saved. Nothing changed; try again in a minute.', 0, 'Added: Maariv 9:15 ברך משה, today (Sunday)']);
-  gh.down = false;
-  const noKey = Object.assign({}, env); delete noKey.GITHUB_TOKEN;
-  r = await sms(GABBAI, 'add maariv 9:25', { env: noKey });
-  ok('the service without its GitHub key: says it is not set up', [r.text, gh.puts.length - putsBefore], ['Changes by text are not set up yet. Nothing changed.', 0]);
-  /* the key handed over from the back end, for a service that has no secret of its own */
-  const kv = body => worker.fetch(new Request('https://w.example/editors', { method: 'POST', headers: { 'content-type': 'application/json', 'cf-connecting-ip': '9.9.9.9' }, body: JSON.stringify(body) }), noKey).then(x => x.json());
-  j = await kv({ pin: PIN });
-  ok('no secret and no handed-over key: not ready', [j.ready.github, j.ready.keyFrom], [false, '']);
-  j = await kv({ pin: PIN, githubKey: 'not a key!' });
-  ok('something that is not a key is not kept, and GitHub is not asked', [j.keyError, j.ready.github, gh.probes.length], ['That does not look like a GitHub key.', false, 0]);
-  j = await kv({ pin: PIN, githubKey: 'github_pat_EXPIRED_0123456789abcdef' });
-  ok('a key GitHub no longer accepts is not kept', [/does not accept this key/.test(j.keyError), j.ready.github, store.has('ghkey')], [true, false, false]);
-  j = await kv({ pin: PIN, githubKey: 'github_pat_READONLY_0123456789abcdef' });
-  ok('a key that cannot write is not kept', [/not write to it/.test(j.keyError), store.has('ghkey')], [true, false]);
-  j = await (await worker.fetch(new Request('https://w.example/editors', { method: 'POST', headers: { 'content-type': 'application/json', 'cf-connecting-ip': '8.8.8.8' }, body: JSON.stringify({ pin: '0000', githubKey: 'github_pat_DEVICEKEY_0123456789abcdef' }) }), noKey)).json();
-  ok('nobody hands over a key without the PIN', [j.error, store.has('ghkey')], ['wrong PIN', false]);
-  j = await kv({ pin: PIN, githubKey: 'github_pat_DEVICEKEY_0123456789abcdef' });
-  ok('the key the back end publishes with is kept, and never sent back', [j.keyError, j.ready.github, j.ready.keyFrom, /DEVICEKEY/.test(JSON.stringify(j))], [undefined, true, 'device', false]);
-  r = await sms(GABBAI, 'add maariv 9:25', { env: noKey });
-  ok('and a text is saved with it', [r.text.split('\n')[0], gh.cfg.overrides[0].lines.maariv.includes('21:25')], ['Added: Maariv 9:25, today (Sunday).', true]);
-  r = await sms(GABBAI, 'undo', { env: noKey });
-  j = await kv({ pin: PIN, githubKey: '' });
-  ok('taken back: not ready again', [j.ready.github, store.has('ghkey')], [false, false]);
-  /* a service with no Twilio secret: the token handed over from the back end */
-  const noTw = Object.assign({}, env); delete noTw.TWILIO_AUTH_TOKEN;
-  const tw = body => worker.fetch(new Request('https://w.example/editors', { method: 'POST', headers: { 'content-type': 'application/json', 'cf-connecting-ip': '9.9.9.9' }, body: JSON.stringify(body) }), noTw).then(x => x.json());
-  let putsTw = gh.puts.length;
-  r = await sms(GABBAI, 'add maariv 9:35', { env: noTw });
-  ok('without any Twilio token a text is answered as an ordinary one and changes nothing', [r.status, /Maariv|מעריב/.test(r.text), /^Added/.test(r.text), gh.puts.length - putsTw], [200, true, false, 0]);
-  j = await tw({ pin: PIN });
-  ok('the card is told so, and when the last text came', [j.ready.twilio, j.ready.twilioFrom, j.lastText.signed, j.lastText.hadSignature, j.lastText.at === now], [false, '', false, true, true]);
-  j = await tw({ pin: PIN, twilioKey: 'short' });
-  ok('something that is not a Twilio token is not kept', [/32 letters and digits/.test(j.keyError), j.ready.twilio], [true, false]);
-  j = await tw({ pin: PIN, twilioKey: 'abcdef0123456789abcdef0123456789' });
-  r = await sms(GABBAI, 'add maariv 9:35', { env: noTw });
-  ok('a wrong token: the shul\'s number still answers, but nothing can be changed', [j.ready.twilio, r.status, /^Added/.test(r.text), gh.puts.length - putsTw, (await tw({ pin: PIN })).lastText.signed], [true, 200, false, 0, false]);
-  env.TWILIO_AUTH_TOKEN = '0123456789abcdef0123456789abcdef'; /* what the shul's Twilio account signs with from here on */
-  j = await tw({ pin: PIN, twilioKey: ' 0123456789abcdef0123456789abcdef ' });
-  r = await sms(GABBAI, 'add maariv 9:35', { env: noTw });
-  ok('the right token, handed over: the text is trusted and the change is made; the token is never sent back', [j.ready.twilioFrom, r.text.split('\n')[0], gh.puts.length - putsTw, /0123456789abcdef/.test(JSON.stringify(j)), (await tw({ pin: PIN })).lastText.signed], ['device', 'Added: Maariv 9:35, today (Sunday).', 1, false, true]);
-  /* Twilio signs the address as typed in its settings: with no final slash here */
-  const bare = { From: GABBAI, Body: 'undo', To: '+19298287677' }, bareSig = crypto.createHmac('sha1', env.TWILIO_AUTH_TOKEN).update('https://w.example' + Object.keys(bare).sort().map(k => k + bare[k]).join('')).digest('base64');
-  r = await worker.fetch(new Request('https://w.example/', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', 'X-Twilio-Signature': bareSig }, body: new URLSearchParams(bare) }), noTw);
-  ok('an address typed without its final slash is the same address', [r.status, /Undone: Added: Maariv 9:35/.test(await r.text())], [200, true]);
-  j = await tw({ pin: PIN, twilioKey: '' });
-  ok('taken back', [j.ready.twilio, store.has('twkey')], [false, false]);
+  /* together with the back end */
+  r = await sms(GABBAI, 'add maariv 9:15 ברך משה');
+  site = JSON.parse(JSON.stringify(base)); site.savedAt = now + 5; site.banner = { text: 'x' }; /* something else is published: the change stays */
+  ok('a publish of something else leaves the texted change in place', (await day('maariv')).includes('9:15 ברך משה'), true);
+  site.overrides = [{ date: '2026-11-22', label: 'שינוי להיום', lines: { maariv: '20:00 דברי יואל' } }]; /* the back end gives that day's maariv a list of its own */
+  ok('once the back end gives that tefilla its own list for the day, the back end\'s stands', await day('maariv'), ['8:00 דברי יואל']);
+  r = await sms(GABBAI, 'add maariv 9:25');
+  ok('and a new text builds on the back end\'s list', [r.text.split('\n')[0], await day('maariv')], ['Added: Maariv 9:25, today (Sunday).', ['8:00 דברי יואל', '9:25']]);
+  r = await sms(GABBAI, 'cancel maariv 8:00'); r = await sms(GABBAI, 'cancel maariv 9:25');
+  ok('a tefilla emptied by texts shows none that day, not the regular list', [await day('maariv'), (await changes())['2026-11-22'].maariv.line], [[], '# בוטל להיום']);
+  site = JSON.parse(JSON.stringify(base)); store.delete('textdays');
+
+  /* the stronger lock: the Twilio Auth Token pasted into the card */
+  j = await (await editors({ pin: PIN, twilioKey: 'short' })).json();
+  ok('something that is not a Twilio token is not kept', [/32 letters and digits/.test(j.keyError), j.ready.trust], [true, 'account']);
+  j = await (await editors({ pin: PIN, twilioKey: ' ' + TOKEN + ' ' })).json();
+  ok('the token is kept and never sent back; every text is now checked by its signature', [j.ready, /0123456789abcdef/.test(JSON.stringify(j))], [{ trust: 'signature', twilioFrom: 'device' }, false]);
+  r = await sms(GABBAI, 'add mincha 2:15', { token: 'f'.repeat(32) });
+  ok('a text signed with something else is still answered, but cannot change anything', [r.status, /^Added/.test(r.text), await changes()], [200, false, {}]);
+  r = await sms(GABBAI, 'add mincha 2:15');
+  ok('a properly signed one can', [r.text.split('\n')[0], (await day('mincha')).includes('2:15')], ['Added: Mincha 2:15, today (Sunday).', true]);
+  const bare = { From: GABBAI, Body: 'undo', To: '+19298287677', AccountSid: SID }, bareSig = crypto.createHmac('sha1', TOKEN).update('https://w.example' + Object.keys(bare).sort().map(k => k + bare[k]).join('')).digest('base64');
+  r = await worker.fetch(new Request('https://w.example/', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', 'X-Twilio-Signature': bareSig }, body: new URLSearchParams(bare) }), env);
+  ok('an address typed into Twilio without its final slash is the same address', [r.status, /Undone: Added: Mincha 2:15/.test(await r.text())], [200, true]);
+  const withSecret = Object.assign({}, env, { TWILIO_AUTH_TOKEN: TOKEN });
+  r = await sms(GABBAI, 'מנחה', { env: withSecret, token: 'f'.repeat(32) });
+  ok('with the token as the service\'s own secret an unsigned text is refused outright, as before', r.status, 403);
+  j = await (await editors({ pin: PIN, twilioKey: '' })).json();
+  ok('token taken back: the account lock is still there', j.ready, { trust: 'account', twilioFrom: '' });
+  j = await (await editors({ pin: PIN, forgetAccount: true })).json();
+  ok('and that can be started over too', [j.ready.trust, store.has('twsid')], ['', false]);
+  await sms(OTHER, 'מנחה');
+
+  /* odds and ends */
   r = await sms(GABBAI, 'גבאי');
   ok('examples for a gabbai', r.text, /^טוישן א מנין דורך טעקסט/);
   r = await sms(OTHER, 'גבאי');
   ok('but not for anyone else', /טוישן א מנין/.test(r.text), false);
-
-  /* Shabbos */
+  r = await sms(GABBAI, 'add mincha 2:15 tuesday');
+  now = Cal.epochFromWall(Cal.rdFromGreg(2026, 11, 25), 10 * 60, 'America/New_York');
+  ok('a day that has gone by is no longer given out', [Object.keys(await changes()), store.has('textdays')], [[], true]);
   now = Cal.epochFromWall(Cal.rdFromGreg(2026, 11, 28), 10 * 60, 'America/New_York');
-  const putsShabbos = gh.puts.length; r = await sms(GABBAI, 'add mincha 2:15');
-  ok('on Shabbos nothing is changed and nothing is answered', [r.text, gh.puts.length - putsShabbos], ['', 0]);
+  r = await sms(GABBAI, 'add mincha 2:15');
+  ok('on Shabbos nothing is changed and nothing is answered', [r.text, await changes()], ['', {}]);
 
   /* the log the admin page shows */
   j = await (await editors({ pin: PIN })).json();
-  ok('the last changes, newest first, by name', [j.log.length >= 8, j.log[0].who, j.log[0].ok, j.log.filter(x => x.ok).length, j.log.some(x => /9\.9\.9|gh-test|twilio-test|github_pat/.test(JSON.stringify(x)))], [true, 'גבאי א', false, 9, false]);
-  ok('the numbers are nowhere in the settings file', /5550101|5550102/.test(JSON.stringify(gh.cfg)), false);
+  ok('the last changes, newest first, by name', [j.log.length >= 10, j.log[0].who, j.log[0].ok, j.log.some(x => /9\.9\.9|0123456789abcdef/.test(JSON.stringify(x)))], [true, 'גבאי א', false, false]);
+  ok('the numbers are nowhere in what the board is given', /5550101|5550102/.test(JSON.stringify(await (await worker.fetch(new Request('https://w.example/changes'), env)).text())), false);
   Date.now = realNow;
   console.log(fails ? fails + ' FAILURES' : 'textedit: all good');
   if (fails) process.exit(1);

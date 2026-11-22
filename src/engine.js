@@ -279,6 +279,31 @@ var MinyanEngine = (function () {
     return { cfg: cfg, loc: loc, zmanimFor: zmanimFor, resolveMin: resolveMin, expand: expand, condLimit: condLimit, tefillos: tefillos, activeNotices: activeNotices, activeBanner: activeBanner, dayTexts: dayTexts, scheduleFor: scheduleFor, fmtDate: fmtDate,
       after: after, upcoming: upcoming, fmtTime: fmtTime, fmtCountdown: fmtCountdown, dayLine: dayLine, typeLabel: typeLabel, parseLine: parseLine };
   }
+  /* One-day changes that were texted in (src/edit.js) are kept by the text service, not in the published settings. This lays them
+     over the settings: days = { '2026-11-22': { mincha: { line, base, at } } }, where line is that tefilla's list for that day as a
+     special date writes it (null: no list of its own), and base is the line the settings themselves had for it when the text came.
+     A change holds only while the settings still have that same line: once the back end has given the day another list for that
+     tefilla, the back end's stands. The settings object itself is never altered. */
+  function withDayLines(cfg, days) {
+    var isos = Object.keys(days || {}), touched = false;
+    if (!isos.length) return cfg;
+    var list = (cfg.overrides || []).map(function (o) { var c = {}, k; for (k in o) c[k] = o[k]; c.lines = {}; for (k in (o.lines || {})) c.lines[k] = o.lines[k]; return c; }), emptied = [];
+    isos.forEach(function (iso) {
+      Object.keys(days[iso] || {}).forEach(function (tef) {
+        var e = days[iso][tef]; if (!e) return;
+        var ovr = list.filter(function (o) { return o.date === iso; })[0], own = ovr && Object.prototype.hasOwnProperty.call(ovr.lines, tef) ? ovr.lines[tef] : null;
+        if (own !== (e.base == null ? null : e.base)) return;
+        if (e.line == null) { if (own != null) { delete ovr.lines[tef]; if (!Object.keys(ovr.lines).length) emptied.push(ovr); touched = true; } return; }
+        if (!ovr) { ovr = { date: iso, label: 'שינוי', lines: {} }; list.push(ovr); }
+        ovr.lines[tef] = e.line; touched = true;
+      });
+    });
+    if (!touched) return cfg;
+    var out = {}, k; for (k in cfg) out[k] = cfg[k];
+    out.overrides = list.filter(function (o) { return emptied.indexOf(o) < 0 || Object.keys(o.lines).length; });
+    return out;
+  }
+  create.withDayLines = withDayLines;
   create.parseLine = parseLine; create.parseSpec = parseSpec; create.sameEntry = sameEntry; create.gregStr = gregStr; create.isoDate = isoDate;
   create.TEFILLA_DEFAULTS = TEFILLA_DEFAULTS; create.FALLBACK = FALLBACK; create.TYPE_NAME = TYPE_NAME; create.TYPE_NAME_EN = TYPE_NAME_EN;
   return create;

@@ -31,7 +31,7 @@ var MinyanEdit = (function () {
   var T = {
     yi: {
       added: 'צוגעלייגט', cancelled: 'אראפגענומען', moved: 'געטוישט', undone: 'צוריקגעצויגן', today: 'היינט', tomorrow: 'מארגן',
-      soon: 'עס וועט זיין אויפן סקרין אין א מינוט-צוויי. נאר פאר דעם טאג.', undoHint: 'צוריקצוציען שיקט: צוריק',
+      soon: 'עס וועט זיין אויפן סקרין אין א מינוט. נאר פאר דעם טאג.', undoHint: 'צוריקצוציען שיקט: צוריק',
       help: 'טוישן א מנין דורך טעקסט (נאר פאר איין טאג):\nלייג צו מנחה 2:15 ברך משה\nבטל מנחה 2:00\nטויש מנחה 2:00 אויף 2:15\nמען קען צושרייבן מארגן אדער א טאג (דינסטאג), און א חדר.\nצוריק = ציט צוריק די לעצטע ענדערונג.',
       needTefilla: 'וועלכע תפילה? שרייבט שחרית, מנחה אדער מעריב. צום ביישפיל: ',
       needTime: 'וועלכע צייט? צום ביישפיל: ', needNew: 'אויף וואס טוישן? שרייבט א נייע צייט אדער א חדר. צום ביישפיל: ',
@@ -47,7 +47,7 @@ var MinyanEdit = (function () {
     },
     en: {
       added: 'Added', cancelled: 'Cancelled', moved: 'Moved', undone: 'Undone', today: 'today', tomorrow: 'tomorrow',
-      soon: 'It will be on the screen in a minute or two. For that day only.', undoHint: 'To take it back, text: undo',
+      soon: 'It will be on the screen within a minute. For that day only.', undoHint: 'To take it back, text: undo',
       help: 'Change a minyan by text (for one day only):\nadd mincha 2:15 ברך משה\ncancel mincha 2:00\nmove mincha 2:00 to 2:15\nYou can add tomorrow or a day (tuesday), and a room.\nundo = takes back your last change.',
       needTefilla: 'Which tefilla? Write shacharis, mincha or maariv. For example: ',
       needTime: 'Which time? For example: ', needNew: 'Move it to what? Write a new time or a room. For example: ',
