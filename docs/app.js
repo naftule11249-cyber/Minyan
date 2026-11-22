@@ -3356,8 +3356,8 @@
         var ready = te.ready || {}, isReady = ready.github && ready.twilio;
         teBox.appendChild(el('div', { class: 'te-status ' + (isReady ? 'ok' : 'warn'), id: 'te-status' }, [el('b', { text: isReady ? 'Ready. ' : 'Not working yet. ' }),
           isReady ? 'A text from one of these numbers changes the schedule; it is on the screen a minute or two later.'
-            : !ready.twilio ? 'The text service has no Twilio token, so it cannot be sure who a text is from. Until it has one, nobody can change anything by text.'
-            : 'One step is left: the text service needs a key of its own to save changes to the website (see "One-time setup" below). Until then these numbers get the answer "not set up yet".']));
+            : !ready.twilio ? 'The text service has no Twilio token, so it cannot be sure who a text is from. Until it has one, nobody can change anything by text. See "The Twilio token" below.'
+            : 'One step is left: the text service needs a GitHub key to save changes to the website (the button below). Until then these numbers get the answer "not set up yet".']));
         var list = el('div', { class: 'col te-list' });
         te.editors.forEach(function (e, i) {
           var nm = el('input', { type: 'text', dir: 'auto', value: e.name, placeholder: 'Name', 'aria-label': 'Name', autocomplete: 'off' }), ph = el('input', { type: 'tel', dir: 'ltr', value: e.number, placeholder: '718-555-0101', 'aria-label': 'Phone number', autocomplete: 'off', inputmode: 'tel' });
@@ -3373,13 +3373,37 @@
         teBox.appendChild(el('details', { class: 'te-more' }, [el('summary', { text: 'What to text' }), el('div', { class: 'te-ex' }, [['What it does', 'In Yiddish', 'In English'], ['Add a minyan', 'לייג צו מנחה 2:15 ברך משה', 'add mincha 2:15 ברך משה'], ['Cancel one', 'בטל מנחה 2:00', 'cancel mincha 2:00'], ['Move to another time', 'טויש מנחה 2:00 אויף 2:15', 'move mincha 2:00 to 2:15'], ['Move to another room', 'טויש מנחה 2:00 לב אהרן', 'move mincha 2:00 לב אהרן'], ['Take the last change back', 'צוריק', 'undo'], ['Get these examples by text', 'גבאי', 'gabbai']]
             .map(function (r, k) { return el('div', { class: 'te-exr' + (k ? '' : ' h') }, [el('span', { text: r[0] }), el('span', { dir: 'rtl', lang: 'yi', text: r[1] }), el('span', { dir: 'ltr', text: r[2] })]); })),
           el('div', { class: 'hint', text: 'It is for today unless the text says מארגן / tomorrow or a day (דינסטאג / tuesday), up to six days ahead. Write the time with a colon (2:15). A room can be its name, the start of its name, or its number from the list below. "undo" takes back the sender\'s own last change, for 24 hours. Nothing is changed or answered on Shabbos and Yom Tov.' })]));
-        if (!ready.github) teBox.appendChild(el('details', { class: 'te-more', open: '' }, [el('summary', { text: 'One-time setup: the key that lets the text service save a change' }), el('ol', { class: 'te-steps' }, [
-          el('li', { text: 'On github.com: your picture → Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token.' }),
-          el('li', { text: 'Name it "Minyan texts". Under Repository access choose "Only select repositories" and pick ' + ((d.githubRepo || '').split('/')[1] || 'the board\'s repository') + '. Under Permissions → Repository permissions set Contents to "Read and write". Press Generate token and copy the key it shows.' }),
-          el('li', { text: 'On dash.cloudflare.com: Workers & Pages → ' + ((/^https?:\/\/([^.]+)\./.exec(d.notifyUrl || '') || [])[1] || 'the text service') + ' → Settings → Variables and Secrets → Add. Type: Secret. Name: GITHUB_TOKEN. Value: paste the key. Press Deploy.' }),
+        if (!ready.twilio) teBox.appendChild(el('details', { class: 'te-more', open: '', id: 'te-twilio' }, [el('summary', { text: 'The Twilio token: three steps, once' }), el('ol', { class: 'te-steps' }, [
+          el('li', { text: 'On console.twilio.com: the first page shows "Account Info". Next to Auth Token press Show, then copy it.' }),
+          el('li', { text: 'On dash.cloudflare.com: Workers & Pages → ' + ((/^https?:\/\/([^.]+)\./.exec(d.notifyUrl || '') || [])[1] || 'the text service') + ' → Settings → Variables and Secrets → Add. Type: Secret. Name: TWILIO_AUTH_TOKEN. Value: paste. Press Deploy.' }),
+          el('li', { text: 'On console.twilio.com: Phone Numbers → Manage → Active numbers → the shul\'s number → Messaging → "A message comes in". It must be Webhook, HTTP POST, with this address: ' + (d.notifyUrl || '').trim().replace(/\/+$/, '') + ' . Save.' }),
           el('li', { text: 'Come back here and press "Check again".' })]),
-          el('div', { class: 'hint', text: 'The key goes only into that one box on Cloudflare. Do not paste it into this page, an email or a chat.' }),
-          el('div', { class: 'bar actions' }, [el('button', { type: 'button', class: 'btn small', id: 'te-recheck', text: 'Check again', onclick: teLoad })])]));
+          el('div', { class: 'hint', text: 'The token goes only into that one box on Cloudflare. Do not paste it into an email or a chat.' }),
+          el('div', { class: 'bar actions' }, [el('button', { type: 'button', class: 'btn small', id: 'te-recheck2', text: 'Check again', onclick: teLoad })])]));
+        /* the GitHub key: one button hands over the key this device already publishes with; the Cloudflare way stays as the other way */
+        if (!ready.github) {
+          var haveKey = ghConfigured(ghSettings());
+          teBox.appendChild(el('div', { class: 'te-setup', id: 'te-setup' }, [el('b', { text: 'Let the text service save changes' }),
+            el('div', { text: haveKey ? 'This device already has the GitHub key you publish with. One press gives it to your text service, which keeps it privately and uses it only to save a change that was texted in.'
+              : 'This device has no GitHub key yet. Go to Settings → Publish, connect the website there (enter the GitHub key once), then come back here.' }),
+            el('div', { class: 'bar actions' }, [haveKey ? el('button', { type: 'button', class: 'btn primary', id: 'te-usekey', text: 'Use this device\'s GitHub key', onclick: function () {
+              te.msg = 'Checking the key with GitHub…'; tePaint();
+              teCall({ githubKey: ghSettings().token }).then(function (j) { teTake(j); te.msg = j.keyError ? 'Not done: ' + j.keyError : 'Done. The text service can save changes now.'; tePaint(); if (!j.keyError) toast('The text service has its key'); },
+                function (e) { te.msg = 'Not done: ' + (e && e.message === 'Failed to fetch' ? 'the text service did not answer. Try again.' : (e && e.message || e)); tePaint(); });
+            } }) : null, el('button', { type: 'button', class: 'btn small', id: 'te-recheck', text: 'Check again', onclick: teLoad })])]));
+          teBox.appendChild(el('details', { class: 'te-more' }, [el('summary', { text: 'The other way: put a key into Cloudflare yourself' }), el('ol', { class: 'te-steps' }, [
+            el('li', { text: 'On github.com: your picture → Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token.' }),
+            el('li', { text: 'Name it "Minyan texts". Under Repository access choose "Only select repositories" and pick ' + ((d.githubRepo || '').split('/')[1] || 'the board\'s repository') + '. Under Permissions → Repository permissions set Contents to "Read and write". Press Generate token and copy the key it shows.' }),
+            el('li', { text: 'On dash.cloudflare.com: Workers & Pages → ' + ((/^https?:\/\/([^.]+)\./.exec(d.notifyUrl || '') || [])[1] || 'the text service') + ' → Settings → Variables and Secrets → Add. Type: Secret. Name: GITHUB_TOKEN. Value: paste the key. Press Deploy.' }),
+            el('li', { text: 'Come back here and press "Check again".' })]),
+            el('div', { class: 'hint', text: 'The key goes only into that one box on Cloudflare. Do not paste it into an email or a chat.' })]));
+        } else if (ready.keyFrom === 'device') {
+          teBox.appendChild(el('div', { class: 'bar actions' }, [el('span', { class: 'hint', text: 'The text service is using the GitHub key this device gave it.' }), el('button', { type: 'button', class: 'btn small', id: 'te-forget', text: 'Take the key back', onclick: function () {
+            if (!confirm('Take the GitHub key back from the text service? Changes by text stop working until it has a key again.')) return;
+            te.msg = 'Taking it back…'; tePaint();
+            teCall({ githubKey: '' }).then(function (j) { teTake(j); te.msg = 'The text service no longer has the key.'; tePaint(); }, function (e) { te.msg = 'Not done: ' + (e && e.message || e); tePaint(); });
+          } })]));
+        }
         var logBox = el('details', { class: 'te-more' }, [el('summary', { text: 'Last changes sent by text' + (te.log.length ? ' (' + te.log.length + ')' : '') })]);
         if (!te.log.length) logBox.appendChild(el('div', { class: 'hint', text: 'None yet.' }));
         te.log.forEach(function (x) {

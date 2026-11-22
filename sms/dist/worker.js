@@ -1451,7 +1451,8 @@ var WebPush = (function () {
    Secrets (wrangler secret put): TWILIO_AUTH_TOKEN (also verifies Twilio's signature), TWILIO_ACCOUNT_SID, TWILIO_FROM (+1718…),
    WA_FROM (whatsapp:+1718…, optional), WA_CONTENT_SID (optional WhatsApp template), VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY.
    Cron trigger every 5 minutes (wrangler.toml) sends what is due.
-   Changes by text: the secret GITHUB_TOKEN (a fine-grained token, this repository only, Contents: read and write) lets the gabbaim
+   Changes by text: a GitHub key (the secret GITHUB_TOKEN, or the key the admin page hands over with one button; a fine-grained token,
+   this repository only, Contents: read and write) lets the gabbaim
    named on the admin page change one day's minyanim by a text. Without it those texts are answered "not set up yet". The repository,
    branch and file come from the site's config (githubRepo / githubBranch / githubPath); GITHUB_REPO, GITHUB_BRANCH and GITHUB_PATH
    override them. The numbers that may do it are kept in KV ("editors"), never in the public config. ---- */
@@ -1518,11 +1519,15 @@ function b64ToUtf8(b64) { var bin = atob(String(b64).replace(/\s+/g, '')), bytes
 function utf8ToB64(str) { var bytes = new TextEncoder().encode(str), bin = '', i; for (i = 0; i < bytes.length; i += 8192) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192)); return btoa(bin); }
 function ghTarget(env, cfg) { return { repo: env.GITHUB_REPO || cfg.githubRepo, branch: env.GITHUB_BRANCH || cfg.githubBranch || 'main', path: env.GITHUB_PATH || cfg.githubPath || 'docs/config.json' }; }
 function ghUrl(t) { return 'https://api.github.com/repos/' + t.repo + '/contents/' + t.path.split('/').map(encodeURIComponent).join('/'); }
-function ghHeaders(env) { return { Authorization: 'Bearer ' + env.GITHUB_TOKEN, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'minyan-board-texts', 'content-type': 'application/json' }; }
+/* The key that lets the service write the settings file: the GITHUB_TOKEN secret, or the key the gabbai handed over from the admin
+   page ("Use this device's GitHub key"), which is kept in KV under "ghkey". It is never sent back out and never logged. */
+async function ghKey(env) { return env.GITHUB_TOKEN || (await env.SUBS.get('ghkey')) || ''; }
+function ghHeaders(env) { return { Authorization: 'Bearer ' + env.GH_KEY, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'minyan-board-texts', 'content-type': 'application/json' }; }
 /* Read the settings as they are on GitHub this second (not the site's copy, which runs a minute or two behind), change them, write
    them back as the admin page's Publish does. If someone else wrote in between, read again and try once more. */
 async function changeSettings(env, siteCfg, change) {
   var t = ghTarget(env, siteCfg), tries = 0;
+  env = Object.assign({}, env, { GH_KEY: await ghKey(env) });
   if (!t.repo) throw new Error('no repository');
   for (;;) {
     var r = await fetch(ghUrl(t) + '?ref=' + encodeURIComponent(t.branch), { headers: ghHeaders(env) });
@@ -1544,7 +1549,7 @@ async function textEdit(env, cfg, text, from) {
   function note(ok, reply) { return editLog(env, { at: now, who: ed.name || ('…' + who.slice(-4)), text: String(text).trim().slice(0, 140), ok: ok, reply: String(reply).split('\n')[0].slice(0, 200) }); }
   if (MinyanNotify.holyNow(cfg, now)) { await note(false, 'Shabbos / Yom Tov: nothing changed, nothing answered'); return ''; } /* nothing is changed or sent on Shabbos and Yom Tov */
   if (!first.wantsUndo && !first.cfg) { if (MinyanEdit.parse(text).action !== 'help') await note(false, first.reply); return first.reply; } /* examples, or a text that does not add up: no need to ask GitHub */
-  if (!env.GITHUB_TOKEN) { await note(false, 'not set up: the service has no GITHUB_TOKEN'); return L.notSetUp; }
+  if (!(await ghKey(env))) { await note(false, 'not set up: the service has no GitHub key'); return L.notSetUp; }
   try {
     if (first.wantsUndo) {
       var rec = await env.SUBS.get(undoKey, 'json');
@@ -1614,8 +1619,24 @@ export default {
         eb.editors.slice(0, 20).forEach(function (e) { var n = phoneDigits(e && e.number); if (/^\d{11,15}$/.test(n) && !seen[n]) { seen[n] = 1; clean.push({ n: n, name: String(e.name || '').trim().slice(0, 40) }); } });
         await env.SUBS.put('editors', JSON.stringify(clean));
       }
+      /* the admin page hands over the GitHub key it publishes with (or '' to forget it): tried on the settings file first, kept only if it can write there */
+      var keyError = '';
+      if (typeof eb.githubKey === 'string') {
+        if (!eb.githubKey) await env.SUBS.delete('ghkey');
+        else if (!/^[A-Za-z0-9_]{20,255}$/.test(eb.githubKey)) keyError = 'That does not look like a GitHub key.';
+        else {
+          var gt = ghTarget(env, await loadConfig(env)), probe = await fetch('https://api.github.com/repos/' + gt.repo, { headers: ghHeaders({ GH_KEY: eb.githubKey }) }).catch(function () { return null; });
+          var pj = probe && probe.ok ? await probe.json().catch(function () { return null; }) : null;
+          if (!probe) keyError = 'GitHub did not answer. Try again in a minute.';
+          else if (!probe.ok) keyError = probe.status === 401 ? 'GitHub does not accept this key any more. Enter a new one on the Publish tab first.' : 'This key cannot open the repository ' + gt.repo + ' (GitHub ' + probe.status + ').';
+          else if (!pj || !pj.permissions || !pj.permissions.push) keyError = 'This key can read the repository but not write to it. It needs Contents: Read and write.';
+          else await env.SUBS.put('ghkey', eb.githubKey);
+        }
+      }
+      var kvKey = !!(await env.SUBS.get('ghkey'));
       return json(env, { editors: ((await env.SUBS.get('editors', 'json')) || []).map(function (e) { return { number: '+' + e.n, name: e.name }; }),
-        log: (await env.SUBS.get('editlog', 'json')) || [], ready: { github: !!env.GITHUB_TOKEN, twilio: !!env.TWILIO_AUTH_TOKEN } });
+        log: (await env.SUBS.get('editlog', 'json')) || [], keyError: keyError || undefined,
+        ready: { github: !!env.GITHUB_TOKEN || kvKey, twilio: !!env.TWILIO_AUTH_TOKEN, keyFrom: env.GITHUB_TOKEN ? 'secret' : kvKey ? 'device' : '' } });
     }
     /* Twilio webhook (SMS or WhatsApp): POST form. GET ?q=text[&from=+1…] answers in plain text for testing. */
     var isPost = request.method === 'POST', text = '', params = {}, from = '';

@@ -7,7 +7,7 @@ const { chromium } = require('playwright');
   const same = (g, w) => w instanceof RegExp ? w.test(String(g)) : Array.isArray(w) ? Array.isArray(g) && g.length === w.length && w.every((x, i) => same(g[i], x)) : JSON.stringify(g === undefined ? null : g) === JSON.stringify(w === undefined ? null : w);
   const ok = (name, got, want) => { const pass = same(got, want); if (!pass) fails++; console.log((pass ? 'ok   ' : 'FAIL ') + name + (pass ? '' : ' got ' + JSON.stringify(got) + ' want ' + (Array.isArray(want) ? want.map(String).join(' , ') : want))); };
   const PIN = process.env.MINYAN_PIN || '1234';
-  const svc = { editors: [{ number: '+17185550101', name: 'גבאי א' }], log: [{ at: Date.UTC(2026, 10, 22, 15, 0), who: 'גבאי א', text: 'cancel mincha 2:00', ok: true, reply: 'Cancelled: Mincha 2:00 ברך משה, today (Sunday).' }, { at: Date.UTC(2026, 10, 22, 14, 0), who: 'גבאי א', text: 'cancel mincha 2:07', ok: false, reply: 'No Mincha at 2:07 today.' }], ready: { github: false, twilio: true }, calls: [], down: false };
+  const svc = { editors: [{ number: '+17185550101', name: 'גבאי א' }], log: [{ at: Date.UTC(2026, 10, 22, 15, 0), who: 'גבאי א', text: 'cancel mincha 2:00', ok: true, reply: 'Cancelled: Mincha 2:00 ברך משה, today (Sunday).' }, { at: Date.UTC(2026, 10, 22, 14, 0), who: 'גבאי א', text: 'cancel mincha 2:07', ok: false, reply: 'No Mincha at 2:07 today.' }], ready: { github: false, twilio: true }, calls: [], keys: [], down: false };
   async function open(width) {
     const ctx = await browser.newContext({ viewport: { width: width, height: 900 }, locale: 'en-US', timezoneId: 'America/New_York', serviceWorkers: 'block' });
     await ctx.route('**/editors', async route => {
@@ -15,6 +15,7 @@ const { chromium } = require('playwright');
       const cors = { 'Access-Control-Allow-Origin': '*', 'content-type': 'application/json' };
       if (svc.down) return route.abort();
       if (body.pin !== PIN) return route.fulfill({ status: 403, headers: cors, body: JSON.stringify({ error: 'wrong PIN' }) });
+      if (typeof body.githubKey === 'string') { svc.keys.push(body.githubKey); if (body.githubKey === 'github_pat_FROMTHISDEVICE0123456789') svc.ready = { github: true, twilio: true, keyFrom: 'device' }; else if (!body.githubKey) svc.ready = { github: false, twilio: true, keyFrom: '' }; }
       if (Array.isArray(body.editors)) svc.editors = body.editors.map(e => ({ number: '+1' + e.number.replace(/\D/g, '').slice(-10), name: e.name }));
       route.fulfill({ status: 200, headers: cors, body: JSON.stringify({ editors: svc.editors, log: svc.log, ready: svc.ready }) });
     });
@@ -28,7 +29,7 @@ const { chromium } = require('playwright');
   let { ctx, page } = await open(1280);
   await page.waitForSelector('#te-status');
   ok('the numbers come by themselves, with the PIN typed at the door', [svc.calls.length, svc.calls[0].pin === PIN, await page.locator('.te-row').count(), await page.locator('.te-row input[type=tel]').first().inputValue()], [1, true, 1, '(718) 555-0101']);
-  ok('not ready yet: says which step is left, with the setup opened', [await page.locator('#te-status').getAttribute('class'), /One step is left/.test(await page.locator('#te-status').textContent()), await page.locator('details.te-more[open] .te-steps li').count(), /GITHUB_TOKEN/.test(await page.locator('.te-steps').textContent())], ['te-status warn', true, 4, true]);
+  ok('not ready yet: says which step is left; a device with no GitHub key is sent to Publish first', [await page.locator('#te-status').getAttribute('class'), /One step is left/.test(await page.locator('#te-status').textContent()), /Settings → Publish/.test(await page.locator('#te-setup').textContent()), await page.locator('#te-usekey').count(), /GITHUB_TOKEN/.test(await page.locator('.te-steps').textContent())], ['te-status warn', true, true, 0, true]);
   ok('the page does not count these as unsaved changes', await page.locator('.abar .status.dirty').count(), 0);
   await page.click('#te-add'); await page.locator('.te-row').nth(1).locator('input[type=text]').fill('משה אליעזר'); await page.locator('.te-row').nth(1).locator('input[type=tel]').fill('718 555');
   await page.click('#te-save');
@@ -37,8 +38,13 @@ const { chromium } = require('playwright');
   ok('saved through the service', [svc.editors.map(e => e.number + ' ' + e.name), await page.locator('#te-msg').textContent(), await page.locator('.abar .status.dirty').count()], [['+17185550101 גבאי א', '+17185550102 משה אליעזר'], 'Saved. 2 numbers can text changes.', 0]);
   await page.locator('.te-row').first().locator('button').click(); await page.click('#te-save'); await page.waitForFunction(() => /1 number can/.test(document.querySelector('#te-msg').textContent));
   ok('removed and saved', svc.editors.map(e => e.name), ['משה אליעזר']);
-  svc.ready = { github: true, twilio: true }; await page.click('#te-recheck'); await page.waitForSelector('#te-status.ok');
-  ok('after the key is in place: Ready, and the setup steps are gone', [/^Ready\./.test(await page.locator('#te-status').textContent()), await page.locator('.te-steps').count()], [true, 0]);
+  /* the device that publishes hands its key over with one press */
+  await page.evaluate(() => localStorage.setItem('minyan-github', JSON.stringify({ repo: 'naftule11249-cyber/Minyan', branch: 'main', path: 'docs/config.json', token: 'github_pat_FROMTHISDEVICE0123456789' })));
+  await page.click('#te-recheck'); await page.waitForSelector('#te-usekey');
+  ok('with the Publish key on this device: one button', /already has the GitHub key/.test(await page.locator('#te-setup').textContent()), true);
+  await page.click('#te-usekey'); await page.waitForSelector('#te-status.ok');
+  ok('pressed: the key went to the service, the card says Ready, the setup is gone, the key is not shown anywhere', [svc.keys, /^Ready\./.test(await page.locator('#te-status').textContent()), await page.locator('#te-setup').count(), /github_pat/.test(await page.locator('#te-box').innerHTML()), await page.locator('#te-msg').textContent()], [['github_pat_FROMTHISDEVICE0123456789'], true, 0, false, 'Done. The text service can save changes now.']);
+  ok('and it can be taken back', await page.locator('#te-forget').count(), 1);
   await page.locator('details.te-more', { hasText: 'Last changes' }).locator('summary').click();
   ok('the last changes by text: who, what, and what was answered', [await page.locator('.te-log').count(), await page.locator('.te-log.no').count(), /גבאי א.*cancel mincha 2:00.*✓ Cancelled/.test((await page.locator('.te-log').first().textContent()))], [2, 1, true]);
   /* room numbers belong to the settings */

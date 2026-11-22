@@ -14,13 +14,18 @@ const PIN = process.env.MINYAN_PIN || '1234';
   const SUBS = { get: async (k, t) => { const v = store.get(k); return v == null ? null : t === 'json' ? JSON.parse(v) : v; }, put: async (k, v) => { store.set(k, v); }, delete: async k => { store.delete(k); }, list: async () => ({ keys: [...store.keys()].map(name => ({ name })), list_complete: true }) };
   const env = { SUBS, CONFIG_URL: 'https://minyan.cascadeshul.org/config.json', ALLOWED_ORIGIN: 'https://minyan.cascadeshul.org', TWILIO_AUTH_TOKEN: 'twilio-test-token', GITHUB_TOKEN: 'gh-test-token' };
   /* the fake GitHub: one file, with a sha that changes at every write */
-  const gh = { cfg: JSON.parse(JSON.stringify(base)), sha: 'sha1', puts: [], gets: 0, failNext: 0, down: false };
+  const gh = { cfg: JSON.parse(JSON.stringify(base)), sha: 'sha1', puts: [], gets: 0, failNext: 0, down: false, probes: [], keys: ['Bearer gh-test-token', 'Bearer github_pat_DEVICEKEY_0123456789abcdef'] };
   const FILE = 'https://api.github.com/repos/naftule11249-cyber/Minyan/contents/docs/config.json';
   global.fetch = async (url, init) => {
     url = String(url);
     if (url.split('?')[0] === env.CONFIG_URL) return new Response(JSON.stringify(base), { headers: { 'content-type': 'application/json' } }); /* the site's copy: a little behind GitHub */
+    if (url === 'https://api.github.com/repos/naftule11249-cyber/Minyan') { /* the check a handed-over key goes through */
+      gh.probes.push(init.headers.Authorization);
+      if (init.headers.Authorization === 'Bearer github_pat_READONLY_0123456789abcdef') return new Response(JSON.stringify({ permissions: { pull: true, push: false } }));
+      return gh.keys.indexOf(init.headers.Authorization) >= 0 ? new Response(JSON.stringify({ permissions: { pull: true, push: true } })) : new Response('{}', { status: 401 });
+    }
     if (url.split('?')[0] === FILE) {
-      if ((init.headers.Authorization || '') !== 'Bearer gh-test-token') return new Response('{}', { status: 401 });
+      if (gh.keys.indexOf(init.headers.Authorization || '') < 0) return new Response('{}', { status: 401 });
       if (gh.down) return new Response('{}', { status: 503 });
       if (!init.method || init.method === 'GET') { gh.gets++; return new Response(JSON.stringify({ sha: gh.sha, content: Buffer.from(JSON.stringify(gh.cfg, null, 1)).toString('base64').replace(/(.{60})/g, '$1\n') })); }
       const body = JSON.parse(init.body);
@@ -44,7 +49,7 @@ const PIN = process.env.MINYAN_PIN || '1234';
   ok('the list cannot be read or changed with a wrong PIN', [r.status, store.has('editors')], [403, false]);
   r = await editors({ pin: PIN, editors: [{ number: '(718) 555-0101', name: 'גבאי א' }, { number: '+1 718 555 0102', name: 'גבאי ב' }, { number: '718-555-0101', name: 'twice' }, { number: '12', name: 'not a number' }] });
   let j = await r.json();
-  ok('saved with the PIN: numbers tidied, a repeat and a non-number left out', [r.status, j.editors, j.ready], [200, [{ number: '+17185550101', name: 'גבאי א' }, { number: '+17185550102', name: 'גבאי ב' }], { github: true, twilio: true }]);
+  ok('saved with the PIN: numbers tidied, a repeat and a non-number left out', [r.status, j.editors, j.ready], [200, [{ number: '+17185550101', name: 'גבאי א' }, { number: '+17185550102', name: 'גבאי ב' }], { github: true, twilio: true, keyFrom: 'secret' }]);
   ok('reading it back without sending a list leaves it as it is', (await (await editors({ pin: PIN })).json()).editors.length, 2);
 
   /* who may */
@@ -83,6 +88,25 @@ const PIN = process.env.MINYAN_PIN || '1234';
   const noKey = Object.assign({}, env); delete noKey.GITHUB_TOKEN;
   r = await sms(GABBAI, 'add maariv 9:25', { env: noKey });
   ok('the service without its GitHub key: says it is not set up', [r.text, gh.puts.length - putsBefore], ['Changes by text are not set up yet. Nothing changed.', 0]);
+  /* the key handed over from the back end, for a service that has no secret of its own */
+  const kv = body => worker.fetch(new Request('https://w.example/editors', { method: 'POST', headers: { 'content-type': 'application/json', 'cf-connecting-ip': '9.9.9.9' }, body: JSON.stringify(body) }), noKey).then(x => x.json());
+  j = await kv({ pin: PIN });
+  ok('no secret and no handed-over key: not ready', [j.ready.github, j.ready.keyFrom], [false, '']);
+  j = await kv({ pin: PIN, githubKey: 'not a key!' });
+  ok('something that is not a key is not kept, and GitHub is not asked', [j.keyError, j.ready.github, gh.probes.length], ['That does not look like a GitHub key.', false, 0]);
+  j = await kv({ pin: PIN, githubKey: 'github_pat_EXPIRED_0123456789abcdef' });
+  ok('a key GitHub no longer accepts is not kept', [/does not accept this key/.test(j.keyError), j.ready.github, store.has('ghkey')], [true, false, false]);
+  j = await kv({ pin: PIN, githubKey: 'github_pat_READONLY_0123456789abcdef' });
+  ok('a key that cannot write is not kept', [/not write to it/.test(j.keyError), store.has('ghkey')], [true, false]);
+  j = await (await worker.fetch(new Request('https://w.example/editors', { method: 'POST', headers: { 'content-type': 'application/json', 'cf-connecting-ip': '8.8.8.8' }, body: JSON.stringify({ pin: '0000', githubKey: 'github_pat_DEVICEKEY_0123456789abcdef' }) }), noKey)).json();
+  ok('nobody hands over a key without the PIN', [j.error, store.has('ghkey')], ['wrong PIN', false]);
+  j = await kv({ pin: PIN, githubKey: 'github_pat_DEVICEKEY_0123456789abcdef' });
+  ok('the key the back end publishes with is kept, and never sent back', [j.keyError, j.ready.github, j.ready.keyFrom, /DEVICEKEY/.test(JSON.stringify(j))], [undefined, true, 'device', false]);
+  r = await sms(GABBAI, 'add maariv 9:25', { env: noKey });
+  ok('and a text is saved with it', [r.text.split('\n')[0], gh.cfg.overrides[0].lines.maariv.includes('21:25')], ['Added: Maariv 9:25, today (Sunday).', true]);
+  r = await sms(GABBAI, 'undo', { env: noKey });
+  j = await kv({ pin: PIN, githubKey: '' });
+  ok('taken back: not ready again', [j.ready.github, store.has('ghkey')], [false, false]);
   r = await sms(GABBAI, 'גבאי');
   ok('examples for a gabbai', r.text, /^טוישן א מנין דורך טעקסט/);
   r = await sms(OTHER, 'גבאי');
@@ -90,12 +114,12 @@ const PIN = process.env.MINYAN_PIN || '1234';
 
   /* Shabbos */
   now = Cal.epochFromWall(Cal.rdFromGreg(2026, 11, 28), 10 * 60, 'America/New_York');
-  r = await sms(GABBAI, 'add mincha 2:15');
-  ok('on Shabbos nothing is changed and nothing is answered', [r.text, gh.puts.length - putsBefore], ['', 0]);
+  const putsShabbos = gh.puts.length; r = await sms(GABBAI, 'add mincha 2:15');
+  ok('on Shabbos nothing is changed and nothing is answered', [r.text, gh.puts.length - putsShabbos], ['', 0]);
 
   /* the log the admin page shows */
   j = await (await editors({ pin: PIN })).json();
-  ok('the last changes, newest first, by name', [j.log.length >= 8, j.log[0].who, j.log[0].ok, j.log.filter(x => x.ok).length, j.log.some(x => /9\.9\.9|gh-test|twilio-test/.test(JSON.stringify(x)))], [true, 'גבאי א', false, 5, false]);
+  ok('the last changes, newest first, by name', [j.log.length >= 8, j.log[0].who, j.log[0].ok, j.log.filter(x => x.ok).length, j.log.some(x => /9\.9\.9|gh-test|twilio-test|github_pat/.test(JSON.stringify(x)))], [true, 'גבאי א', false, 7, false]);
   ok('the numbers are nowhere in the settings file', /5550101|5550102/.test(JSON.stringify(gh.cfg)), false);
   Date.now = realNow;
   console.log(fails ? fails + ' FAILURES' : 'textedit: all good');
