@@ -14,6 +14,10 @@ binding = "SUBS"
 # No id: Wrangler creates the namespace on the first deploy. If the deploy log asks for one, create a KV namespace
 # in the dashboard (Storage & Databases -> KV), paste its ID here as  id = "..."  and deploy again.
 
+# The AI that reads a gabbai's text written in his own words (Workers AI, part of Cloudflare: no key to set up).
+[ai]
+binding = "AI"
+
 [vars]
 CONFIG_URL = "https://minyan.cascadeshul.org/config.json"
 ALLOWED_ORIGIN = "https://minyan.cascadeshul.org"
