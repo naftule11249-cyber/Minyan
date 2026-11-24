@@ -3360,6 +3360,25 @@
         teBox.appendChild(el('div', { class: 'hint', id: 'te-last' }, [!lt ? 'No text has reached the text service yet. If you text the shul\'s number, get an answer, and this still says so after "Check again", the number is sending its texts somewhere else. In Twilio: Phone Numbers → the number → Messaging → "A message comes in" must be Webhook, HTTP POST, ' + notifyBase() + ' .'
           : 'Last text to reach the text service: ' + ltWhen + '. ' + (lt.signed ? 'It was accepted as coming from Twilio.' : 'It was not accepted as coming from Twilio.'),
           ' ', el('button', { type: 'button', class: 'btn small', id: 'te-refresh', text: 'Check again', onclick: teLoad })]));
+        /* "Try a text": what the service would make of a text and answer, without changing anything or sending anything */
+        var tryIn = el('input', { type: 'text', id: 'te-try', dir: 'auto', value: te.tryText || '', placeholder: 'מאך די מנחה פון 2 אין לב אהרן', 'aria-label': 'A text to try', autocomplete: 'off' });
+        tryIn.addEventListener('input', function () { te.tryText = tryIn.value; });
+        function teTry() {
+          if (!tryIn.value.trim()) { te.tried = { note: 'Write a text to try first.' }; tePaint(); return; }
+          te.tried = { note: 'Reading it…' }; tePaint();
+          teCall({ tryText: tryIn.value.trim() }).then(function (j) { var keep = te.tryText; teTake(j); te.tryText = keep; te.tried = j.tried || { note: 'The text service gave no answer for it.' }; tePaint(); },
+            function (e) { te.tried = { note: 'Could not try it: ' + (e && e.message === 'Failed to fetch' ? 'the text service did not answer.' : (e && e.message || e)) }; tePaint(); });
+        }
+        tryIn.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); teTry(); } });
+        var tr = te.tried, tryBox = el('div', { class: 'te-try', id: 'te-trybox' }, [el('b', { text: 'Try a text' }),
+          el('div', { class: 'hint', text: 'Write what a gabbai might text, in any words, in Yiddish, Hebrew or English. This shows what the service would do and answer. Nothing is changed and nothing is sent.' }),
+          el('div', { class: 'te-key' }, [tryIn, el('button', { type: 'button', class: 'btn', id: 'te-trybtn', text: 'Try it', onclick: teTry })])]);
+        if (tr) tryBox.appendChild(tr.note ? el('div', { class: 'hint', id: 'te-tried', role: 'status', text: tr.note }) : el('div', { class: 'te-tried ' + (tr.change ? 'yes' : 'no'), id: 'te-tried', role: 'status' }, [
+          el('b', { text: tr.change ? 'It would change the schedule.' : tr.ordinary ? 'Not a change: it would get the ordinary answer.' : 'It would change nothing.' }),
+          tr.read ? el('div', { class: 'hint', dir: 'auto', text: 'Understood as: ' + tr.read }) : null,
+          el('pre', { class: 'shere-preview', dir: 'auto', text: tr.reply || '' }),
+          tr.aiError ? el('div', { class: 'hint', text: 'The AI that reads free wording did not answer just now (' + tr.aiError + '), so only the plain wording was tried.' }) : null]));
+        teBox.appendChild(tryBox);
         var list = el('div', { class: 'col te-list' });
         te.editors.forEach(function (e, i) {
           var nm = el('input', { type: 'text', dir: 'auto', value: e.name, placeholder: 'Name', 'aria-label': 'Name', autocomplete: 'off' }), ph = el('input', { type: 'tel', dir: 'ltr', value: e.number, placeholder: '718-555-0101', 'aria-label': 'Phone number', autocomplete: 'off', inputmode: 'tel' });
@@ -3374,7 +3393,7 @@
         teBox.appendChild(el('div', { class: 'hint', text: 'The numbers, and the changes they text in, are kept by the text service only. They are not in the settings the website publishes, and Save at the top of this page does not touch them.' }));
         teBox.appendChild(el('details', { class: 'te-more' }, [el('summary', { text: 'What to text' }), el('div', { class: 'te-ex' }, [['What it does', 'In Yiddish', 'In English'], ['Add a minyan', 'לייג צו מנחה 2:15 ברך משה', 'add mincha 2:15 ברך משה'], ['Cancel one', 'בטל מנחה 2:00', 'cancel mincha 2:00'], ['Move to another time', 'טויש מנחה 2:00 אויף 2:15', 'move mincha 2:00 to 2:15'], ['Move to another room', 'טויש מנחה 2:00 לב אהרן', 'move mincha 2:00 לב אהרן'], ['Take the last change back', 'צוריק', 'undo'], ['Get these examples by text', 'גבאי', 'gabbai']]
             .map(function (r, k) { return el('div', { class: 'te-exr' + (k ? '' : ' h') }, [el('span', { text: r[0] }), el('span', { dir: 'rtl', lang: 'yi', text: r[1] }), el('span', { dir: 'ltr', text: r[2] })]); })),
-          el('div', { class: 'hint', text: 'It is for today unless the text says מארגן / tomorrow or a day (דינסטאג / tuesday), up to six days ahead. Write the time with a colon (2:15). A room can be its name, the start of its name, or its number from the list below. "undo" takes back the sender\'s own last change, for 24 hours. Nothing is changed or answered on Shabbos and Yom Tov.' })]));
+          el('div', { class: 'hint', text: 'These are the plain ways to write it; a gabbai can also say it in his own words, and the service works out what he means and answers with exactly what it did. It is for today unless the text says מארגן / tomorrow or a day (דינסטאג / tuesday), up to six days ahead. Write the time with a colon (2:15). A room can be its name, the start of its name, or its number from the list below. "undo" takes back the sender\'s own last change, for 24 hours. Nothing is changed or answered on Shabbos and Yom Tov.' })]));
         function teGive(body, doing, done) {
           te.msg = doing; tePaint();
           teCall(body).then(function (j) { teTake(j); te.msg = j.keyError ? 'Not done: ' + j.keyError : done; tePaint(); if (!j.keyError) toast(done); },

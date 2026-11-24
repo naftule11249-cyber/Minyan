@@ -1195,7 +1195,7 @@ var MinyanEdit = (function () {
     move: ['move', 'change', 'edit', 'טויש', 'טוישן', 'רוק', 'ענדער', 'שנה', 'לשנות']
   };
   var UNDO = ['undo', 'צוריק', 'צוריקציען', 'בטל שינוי', 'ציי צוריק'], HELP = ['gabbai', 'גבאי', 'gabai'];
-  var FILLER = ['to', 'at', 'on', 'for', 'in', 'the', 'minyan', 'צו', 'אויף', 'פאר', 'אום', 'ביי', 'אין', 'אינעם', 'יום', 'מנין', 'דעם', 'ל', 'ב', '->', '→', '>', '-'];
+  var FILLER = ['to', 'at', 'on', 'for', 'in', 'the', 'a', 'an', 'please', 'pls', 'minyan', 'די', 'דער', 'דאס', 'א', 'אן', 'ביטע', 'בבקשה', 'צו', 'אויף', 'פאר', 'אום', 'ביי', 'אין', 'אינעם', 'יום', 'מנין', 'דעם', 'ל', 'ב', '->', '→', '>', '-'];
   var TODAY = ['today', 'היינט', 'היום'], TOMORROW = ['tomorrow', 'מארגן', 'מחר'];
   var DOWS = [['sunday', 'זונטאג', 'ראשון'], ['monday', 'מאנטאג', 'שני'], ['tuesday', 'דינסטאג', 'שלישי'], ['wednesday', 'מיטוואך', 'רביעי'], ['thursday', 'דאנערשטאג', 'חמישי'], ['friday', 'פרייטאג', 'שישי', 'ערש״ק'], ['shabbos', 'shabbat', 'saturday', 'שבת', 'שב״ק']];
   var ROOMWORD = ['room', 'חדר', 'שטוב', 'בחדר'];
@@ -1210,7 +1210,7 @@ var MinyanEdit = (function () {
     yi: {
       added: 'צוגעלייגט', cancelled: 'אראפגענומען', moved: 'געטוישט', undone: 'צוריקגעצויגן', today: 'היינט', tomorrow: 'מארגן',
       soon: 'עס וועט זיין אויפן סקרין אין א מינוט. נאר פאר דעם טאג.', undoHint: 'צוריקצוציען שיקט: צוריק',
-      help: 'טוישן א מנין דורך טעקסט (נאר פאר איין טאג):\nלייג צו מנחה 2:15 ברך משה\nבטל מנחה 2:00\nטויש מנחה 2:00 אויף 2:15\nמען קען צושרייבן מארגן אדער א טאג (דינסטאג), און א חדר.\nצוריק = ציט צוריק די לעצטע ענדערונג.',
+      help: 'טוישן א מנין דורך טעקסט (נאר פאר איין טאג):\nלייג צו מנחה 2:15 ברך משה\nבטל מנחה 2:00\nטויש מנחה 2:00 אויף 2:15\nמען קען צושרייבן מארגן אדער א טאג (דינסטאג), און א חדר.\nצוריק = ציט צוריק די לעצטע ענדערונג.\nמען קען עס אויך שרייבן מיט אייגענע ווערטער.',
       needTefilla: 'וועלכע תפילה? שרייבט שחרית, מנחה אדער מעריב. צום ביישפיל: ',
       needTime: 'וועלכע צייט? צום ביישפיל: ', needNew: 'אויף וואס טוישן? שרייבט א נייע צייט אדער א חדר. צום ביישפיל: ',
       what: function (x) { return 'נישט פארשטאנען „' + x + '". שיקט גבאי פאר ביישפילן.'; },
@@ -1226,7 +1226,7 @@ var MinyanEdit = (function () {
     en: {
       added: 'Added', cancelled: 'Cancelled', moved: 'Moved', undone: 'Undone', today: 'today', tomorrow: 'tomorrow',
       soon: 'It will be on the screen within a minute. For that day only.', undoHint: 'To take it back, text: undo',
-      help: 'Change a minyan by text (for one day only):\nadd mincha 2:15 ברך משה\ncancel mincha 2:00\nmove mincha 2:00 to 2:15\nYou can add tomorrow or a day (tuesday), and a room.\nundo = takes back your last change.',
+      help: 'Change a minyan by text (for one day only):\nadd mincha 2:15 ברך משה\ncancel mincha 2:00\nmove mincha 2:00 to 2:15\nYou can add tomorrow or a day (tuesday), and a room.\nundo = takes back your last change.\nYou can also say it in your own words.',
       needTefilla: 'Which tefilla? Write shacharis, mincha or maariv. For example: ',
       needTime: 'Which time? For example: ', needNew: 'Move it to what? Write a new time or a room. For example: ',
       what: function (x) { return 'I did not understand "' + x + '". Text gabbai for examples.'; },
@@ -1279,8 +1279,8 @@ var MinyanEdit = (function () {
     return t.ap === 'a' ? [base] : t.ap === 'p' ? [base + 720] : [base, base + 720];
   }
 
-  function run(cfg, text, nowMs) {
-    var lang = hasHebrew(words(text)[0]) ? 'yi' : 'en', L = T[lang], a = actionOf(text); /* by the command's own word: an English text may still name a room in Hebrew letters */
+  function run(cfg, text, nowMs, replyLang) { /* replyLang: when the command was worked out from a text in the sender's own words, the language that text was in */
+    var lang = replyLang === 'yi' || replyLang === 'en' ? replyLang : hasHebrew(words(text)[0]) ? 'yi' : 'en', L = T[lang], a = actionOf(text); /* by the command's own word: an English text may still name a room in Hebrew letters */
     function say(reply) { return { reply: reply, lang: lang }; }
     var nums = Object.keys(cfg.roomNumbers || {}).sort(function (p, q) { return p - q; }).map(function (k) { return k + ' ' + cfg.roomNumbers[k]; }).join(', ');
     var help = L.help + (nums ? '\n' + L.rooms + ': ' + nums : '');
@@ -1416,7 +1416,7 @@ var MinyanEdit = (function () {
     return { reply: L.undone + ': ' + rec.summary + '.\n' + L.soon.split('.')[0] + '.', cfg: writeDay(cfg, rd, todayRd, tf, list, now) };
   }
 
-  return { parse: parse, run: run, undo: undo, T: T };
+  return { parse: parse, run: run, undo: undo, T: T, hasHebrew: hasHebrew };
 })();
 
 
@@ -1568,14 +1568,103 @@ async function keepDay(env, siteCfg, days, changed, iso, tef) {
   await env.SUBS.put('textdays', JSON.stringify(days));
 }
 async function editLog(env, entry) { var log = (await env.SUBS.get('editlog', 'json')) || []; log.unshift(entry); await env.SUBS.put('editlog', JSON.stringify(log.slice(0, 30))); }
+/* ---- a text in the gabbai's own words: "מאך די מנחה פון 2 אין לב אהרן היינט", "pls cancel the late maariv tmrw" ----
+   Workers AI (the AI binding in wrangler.toml; nothing to set up) reads the text and fills in a small form: what to do, to which
+   tefilla, at what time, which room, which day. That form becomes one of the plain commands src/edit.js already knows, and
+   everything after it is the same as for a text written the plain way: found or not found, done, said back in words, undo.
+   So the AI never changes anything by itself and cannot invent a room or a tefilla; the worst it can do is pick the wrong minyan,
+   and the answer says exactly what was changed. */
+var AI_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+var AI_DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+function aiPrompt(cfg, nowMs) {
+  var engine = MinyanEngine(cfg), now = Cal.nowInTz(nowMs, engine.loc().tz), sched = engine.scheduleFor(now.rd), tefs = engine.tefillos().filter(function (t) { return t.kind !== 'event'; });
+  function t24(m) { m = Math.round(m) % 1440; return ('0' + Math.floor(m / 60)).slice(-2) + ':' + ('0' + (m % 60)).slice(-2); }
+  var rooms = {}, nums = cfg.roomNumbers || {};
+  String(cfg.rooms || '').split(',').forEach(function (r) { if (r.trim()) rooms[r.trim()] = 1; });
+  tefs.forEach(function (t) { (sched.byTefilla[t.id] || []).forEach(function (e) { if (e.room) rooms[e.room] = 1; }); });
+  var roomLines = Object.keys(rooms).map(function (r) { var n = Object.keys(nums).filter(function (k) { return nums[k] === r; })[0]; return '- ' + r + (n ? ' (room number ' + n + ')' : ''); }).join('\n');
+  var lists = tefs.map(function (t) { return t.id + ' (' + t.name + '): ' + ((sched.byTefilla[t.id] || []).map(function (e) { return t24(e.start) + (e.room ? ' ' + e.room : ''); }).join(', ') || 'none'); }).join('\n');
+  return 'You read text messages that a gabbai sends to change his shul\'s minyan schedule for ONE day, and fill in a form. The texts are in Yiddish, Hebrew or English, often mixed, short, with typos, or in Latin letters (e.g. "shachris", "mincha", "maariv", "morgen").\n\n' +
+    'Now: ' + AI_DAYS[sched.info.dow] + ', ' + t24(now.min) + ' (24-hour clock).\n\n' +
+    'Tefillos (use the id): ' + tefs.map(function (t) { return t.id + ' = ' + t.name; }).join(', ') + '.\n\n' +
+    'Rooms (copy the name exactly as written here; a number alone can be a room number):\n' + roomLines + '\n\n' +
+    'Today\'s minyanim, 24-hour clock:\n' + lists + '\n\n' +
+    'Fill in:\n' +
+    '- intent: "add" (a new minyan), "cancel" (a minyan is off / not taking place), "move" (an existing minyan gets another time and/or another room), "undo" (take back his last change), "help" (he asks how to do it), "none" (anything else: a question, asking for the times, a greeting, or a request this form cannot hold, like cancelling several minyanim at once).\n' +
+    '- tefilla: the id, or null if he does not say and it cannot be told from the time.\n' +
+    '- time: "HH:MM", 24-hour. For add: the new minyan\'s time. For cancel and move: the time the minyan has NOW. Mincha and maariv are in the afternoon and evening (2:00 is "14:00"; maariv at 12:00 is "00:00"), shacharis in the morning. "the first / last / late mincha" means that one in today\'s list.\n' +
+    '- new_time: for move only, the new time if the time changes; otherwise null.\n' +
+    '- room: for add, its room; for move, the room it moves TO; for cancel, a room only if he names one. Otherwise null.\n' +
+    '- day: "today", "tomorrow", or a weekday name in English, lower case; null means today. היינט = today, מארגן / מחר = tomorrow, זונטאג = sunday, מאנטאג = monday, דינסטאג = tuesday, מיטוואך = wednesday, דאנערשטאג = thursday, פרייטאג / ערב שבת = friday, שבת = saturday.\n\n' +
+    'Examples:\n' +
+    '"מאך די מנחה פון 2 אין לב אהרן היינט" -> {"intent":"move","tefilla":"mincha","time":"14:00","new_time":null,"room":"לב אהרן","day":"today"}\n' +
+    '"עס איז נישטא קיין מעריב 9:30 מארגן" -> {"intent":"cancel","tefilla":"maariv","time":"21:30","new_time":null,"room":null,"day":"tomorrow"}\n' +
+    '"can u add a mincha at 215 in room 4" -> {"intent":"add","tefilla":"mincha","time":"14:15","new_time":null,"room":"<the room numbered 4>","day":null}\n' +
+    '"די 8:00 שחרית וועט זיין 8:10 דינסטאג" -> {"intent":"move","tefilla":"shacharis","time":"08:00","new_time":"08:10","room":null,"day":"tuesday"}\n' +
+    '"טעות, נעם עס צוריק" -> {"intent":"undo","tefilla":null,"time":null,"new_time":null,"room":null,"day":null}\n' +
+    '"ווען איז מנחה?" -> {"intent":"none","tefilla":null,"time":null,"new_time":null,"room":null,"day":null}\n\n' +
+    'Answer with the JSON form only.';
+}
+/* The plain command for a text in the sender's own words, or null (not a change, not understood, or the AI is not there). */
+async function understand(env, cfg, text, nowMs) {
+  if (!env.AI || !String(text || '').trim() || String(text).length > 300) return null;
+  var schema = { type: 'object', properties: { intent: { type: 'string', enum: ['add', 'cancel', 'move', 'undo', 'help', 'none'] }, tefilla: { type: ['string', 'null'] }, time: { type: ['string', 'null'] }, new_time: { type: ['string', 'null'] }, room: { type: ['string', 'null'] }, day: { type: ['string', 'null'] } }, required: ['intent'] };
+  var out = await env.AI.run(AI_MODEL, { messages: [{ role: 'system', content: aiPrompt(cfg, nowMs) }, { role: 'user', content: String(text).trim() }], response_format: { type: 'json_schema', json_schema: schema }, temperature: 0, max_tokens: 200 });
+  var f = out && out.response;
+  if (typeof f === 'string') { var m = /\{[\s\S]*\}/.exec(f); f = m ? JSON.parse(m[0]) : null; }
+  if (!f || typeof f !== 'object') return null;
+  return formToCommand(cfg, f);
+}
+/* the filled-in form as a plain command; anything in it that is not a real tefilla, time, room or day is left out, not trusted */
+function formToCommand(cfg, f) {
+  if (f.intent === 'undo') return 'undo';
+  if (f.intent === 'help') return 'gabbai';
+  if (['add', 'cancel', 'move'].indexOf(f.intent) < 0) return null;
+  var tefs = MinyanEngine(cfg).tefillos().filter(function (t) { return t.kind !== 'event'; }), tf = tefs.filter(function (t) { return t.id === f.tefilla || t.name === f.tefilla; })[0];
+  var T24 = /^([01]?\d|2[0-3]):[0-5]\d$/, parts = [f.intent];
+  if (tf) parts.push(/^(shacharis|mincha|maariv)$/.test(tf.id) ? tf.id : tf.name);
+  if (!T24.test(f.time || '')) return null;
+  parts.push(f.time);
+  if (f.intent === 'move' && T24.test(f.new_time || '') && f.new_time !== f.time) { parts.push('to'); parts.push(f.new_time); }
+  var nums = cfg.roomNumbers || {}, known = {};
+  String(cfg.rooms || '').split(',').forEach(function (r) { if (r.trim()) known[r.trim()] = 1; });
+  Object.keys(nums).forEach(function (k) { known[nums[k]] = 1; });
+  var room = typeof f.room === 'string' ? f.room.trim() : '';
+  if (room && !known[room] && nums[room.replace(/\D/g, '')]) room = nums[room.replace(/\D/g, '')];
+  if (room && known[room]) parts.push(room);
+  var day = String(f.day || '').toLowerCase();
+  if (day === 'tomorrow' || AI_DAYS.indexOf(day) >= 0) parts.push(day === 'saturday' ? 'shabbos' : day);
+  return parts.join(' ');
+}
+/* Is this one of the ordinary texts (מנין, מנחה, today, zmanim, שערן, a reminder command …)? Those are answered as always, with no AI. */
+function ordinaryText(cfg, text) {
+  var t = String(text || '').trim(), n = t.split(/\s+/).length;
+  if (!t) return true;
+  if (MinyanNotify.parseCommand(t, cfg)) return true;
+  if (typeof MinyanShere !== 'undefined' && MinyanShere.reply(cfg, t, Date.now())) return true;
+  return n <= 2 && !/\d/.test(t) && MinyanSms.keyword(t) !== 'next';
+}
+/* What a gabbai's text asks for: { text: the plain command, by: 'rules' | 'ai', lang } or null when it is not a change at all.
+   A text written the plain way never goes to the AI. One in his own words does, and so does a plain one that did not add up. */
+async function readEdit(env, cfg, text, now) {
+  var lang = MinyanEdit.hasHebrew(text) ? 'yi' : 'en', plain = MinyanEdit.parse(text), first = plain ? MinyanEdit.run(cfg, text, now) : null;
+  if (first && (first.cfg || first.wantsUndo || plain.action === 'help')) return { text: text, by: 'rules', lang: first.lang };
+  if (!plain && ordinaryText(cfg, text)) return null;
+  var cmd = null, aiError = '';
+  try { cmd = await understand(env, cfg, text, now); } catch (e) { aiError = String(e && e.message || e).slice(0, 160); }
+  if (cmd) return { text: cmd, by: 'ai', lang: lang, aiError: aiError };
+  return plain ? { text: text, by: 'rules', lang: first.lang, aiError: aiError } : (aiError ? { text: null, by: 'none', lang: lang, aiError: aiError } : null);
+}
+
 /* The reply to a gabbai's change, or null when this text is not one (the sender is not on the list, or it is an ordinary text).
    cfg is the settings with the changes so far already laid over them; siteCfg is the published settings alone. */
 async function textEdit(env, cfg, siteCfg, days, text, from) {
-  if (!MinyanEdit.parse(text)) return null;
   var who = phoneDigits(from), ed = ((await env.SUBS.get('editors', 'json')) || []).filter(function (e) { return e.n === who; })[0];
   if (!ed) return null;
-  var now = Date.now(), res = MinyanEdit.run(cfg, text, now), L = MinyanEdit.T[res.lang], undoKey = 'undo:' + who;
-  function note(ok, reply) { return editLog(env, { at: now, who: ed.name || ('…' + who.slice(-4)), text: String(text).trim().slice(0, 140), ok: ok, reply: String(reply).split('\n')[0].slice(0, 200) }); }
+  var now = Date.now(), read = await readEdit(env, cfg, text, now);
+  if (!read || !read.text) return null; /* not a change: answered like anyone's text */
+  var res = MinyanEdit.run(cfg, read.text, now, read.lang), L = MinyanEdit.T[res.lang], undoKey = 'undo:' + who;
+  function note(ok, reply) { return editLog(env, { at: now, who: ed.name || ('…' + who.slice(-4)), text: String(text).trim().slice(0, 140), ok: ok, reply: String(reply).split('\n')[0].slice(0, 200), read: read.by === 'ai' ? read.text : undefined }); }
   if (MinyanNotify.holyNow(cfg, now)) { await note(false, 'Shabbos / Yom Tov: nothing changed, nothing answered'); return ''; } /* nothing is changed or sent on Shabbos and Yom Tov */
   try {
     if (res.wantsUndo) {
@@ -1586,7 +1675,7 @@ async function textEdit(env, cfg, siteCfg, days, text, from) {
     } else if (res.cfg) {
       await keepDay(env, siteCfg, days, res.cfg, res.undo.iso, res.undo.tefilla);
       await env.SUBS.put(undoKey, JSON.stringify(res.undo), { expirationTtl: 86400 });
-    } else if (MinyanEdit.parse(text).action === 'help') return res.reply; /* the examples: not worth a line in the log */
+    } else if (read.text === 'gabbai' || (MinyanEdit.parse(read.text) || {}).action === 'help') return res.reply; /* the examples: not worth a line in the log */
   } catch (e) { await note(false, 'not saved: ' + (e && e.message || e)); return L.failed; }
   await note(!!res.cfg, res.reply);
   return res.reply;
@@ -1655,12 +1744,20 @@ export default {
         else if (!/^[A-Za-z0-9]{32}$/.test(eb.twilioKey.trim())) keyError = 'That does not look like a Twilio Auth Token: it is 32 letters and digits.';
         else await env.SUBS.put('twkey', eb.twilioKey.trim());
       }
+      /* "Try a text": what the service would make of a text and answer, without changing anything */
+      var tried;
+      if (typeof eb.tryText === 'string' && eb.tryText.trim()) {
+        var tSite = await loadSiteConfig(env), tCfg = MinyanEngine.withDayLines(tSite, await textDays(env, tSite)), tNow = Date.now(), tRead = await readEdit(env, tCfg, eb.tryText, tNow);
+        if (!tRead || !tRead.text) tried = { change: false, by: tRead ? tRead.by : 'none', aiError: tRead && tRead.aiError || undefined, reply: MinyanSms.buildReply(tCfg, eb.tryText, tNow).text, ordinary: true };
+        else { var tRes = MinyanEdit.run(tCfg, tRead.text, tNow, tRead.lang); tried = { change: !!tRes.cfg, by: tRead.by, read: tRead.by === 'ai' ? tRead.text : undefined, aiError: tRead.aiError || undefined, reply: tRes.wantsUndo ? '(takes back the sender\'s last change)' : tRes.reply }; }
+        tried.ai = !!env.AI;
+      }
       if (typeof eb.clearDay === 'string') { var td = (await env.SUBS.get('textdays', 'json')) || {}; delete td[eb.clearDay]; await env.SUBS.put('textdays', JSON.stringify(td)); } /* a day's texted changes taken back from the admin page */
       if (eb.forgetAccount) await env.SUBS.delete('twsid'); /* start over: the next text from Twilio says which account is the shul's */
       var kvTw = !!(await env.SUBS.get('twkey')), sid = await env.SUBS.get('twsid');
       return json(env, { editors: ((await env.SUBS.get('editors', 'json')) || []).map(function (e) { return { number: '+' + e.n, name: e.name }; }),
         log: (await env.SUBS.get('editlog', 'json')) || [], keyError: keyError || undefined,
-        lastText: (await env.SUBS.get('lasttext', 'json')) || undefined, days: await textDays(env),
+        lastText: (await env.SUBS.get('lasttext', 'json')) || undefined, days: await textDays(env), tried: tried, ai: !!env.AI,
         /* how the service knows a text is really from Twilio: 'signature' (the Auth Token checks every text), 'account' (texts must
            come from the Twilio account the first text came from), or '' (no text has come yet) */
         ready: { trust: env.TWILIO_AUTH_TOKEN || kvTw ? 'signature' : sid ? 'account' : '', twilioFrom: env.TWILIO_AUTH_TOKEN ? 'secret' : kvTw ? 'device' : '' } });
@@ -1680,13 +1777,16 @@ export default {
            keeps out someone who merely knows this address and a gabbai's number; the Auth Token is the stronger lock. */
       var hadSig = !!request.headers.get('X-Twilio-Signature'), twk = env.TWILIO_AUTH_TOKEN || (await env.SUBS.get('twkey'));
       if (twk) { signed = await twilioSignatureOk(request, params, twk); if (!signed && env.TWILIO_AUTH_TOKEN) return new Response('forbidden', { status: 403 }); }
-      else if (hadSig && /^AC[0-9a-fA-F]{32}$/.test(params.AccountSid || '')) {
+      else if (/^AC[0-9a-fA-F]{32}$/.test(params.AccountSid || '')) { /* with or without the signature header: some setups pass Twilio's text on through a function of their own, which drops it */
         var pinned = await env.SUBS.get('twsid');
         if (!pinned) { pinned = params.AccountSid; await env.SUBS.put('twsid', pinned); }
         signed = pinned === params.AccountSid;
       }
       /* when the last text arrived and whether it was believed: the admin page shows it, to tell "texts do not reach this service" from the rest */
-      await env.SUBS.put('lasttext', JSON.stringify({ at: Date.now(), signed: signed, hadSignature: hadSig }));
+      /* also the shape of it, never its contents: which fields and which headers came. That tells a text passed on by something
+         else (no signature, perhaps no account ID) from one straight from Twilio. */
+      var hdrs = []; request.headers.forEach(function (v, k) { if (/^(x-|user-agent$|content-type$|i-twilio)/i.test(k) && !/^x-(real-ip|forwarded-for)$/i.test(k)) hdrs.push(/^(user-agent|content-type)$/i.test(k) ? k + ': ' + String(v).slice(0, 60) : k); });
+      await env.SUBS.put('lasttext', JSON.stringify({ at: Date.now(), signed: signed, hadSignature: hadSig, hasAccount: /^AC[0-9a-fA-F]{32}$/.test(params.AccountSid || ''), fields: Object.keys(params).sort().slice(0, 40), headers: hdrs.sort().slice(0, 30), path: path || '/' }));
     } else { text = url.searchParams.get('q') || url.searchParams.get('Body') || ''; from = url.searchParams.get('from') || ''; }
     var reply;
     try {

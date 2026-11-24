@@ -1292,3 +1292,7 @@ html.lobby .shabbos-z li { padding: .45em 0; }
 .te-key { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
 @media (max-width: 560px) { .te-key { grid-template-columns: minmax(0, 1fr); } }
 .te-day { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-top: 1px solid var(--a-line); }
+.te-try { border: 1px solid var(--a-line); border-radius: 14px; padding: 12px 14px; display: grid; gap: 8px; background: var(--a-field); }
+.te-tried { border-radius: 12px; padding: 10px 12px; display: grid; gap: 6px; }
+.te-tried.yes { background: #e7f4ea; } .te-tried.no { background: #f1efe8; }
+.te-tried pre { margin: 0; white-space: pre-wrap; background: #fff; border-radius: 8px; padding: 8px 10px; font: inherit; }

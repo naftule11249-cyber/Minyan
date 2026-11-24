@@ -20,8 +20,9 @@ const { chromium } = require('playwright');
       if (typeof body.twilioKey === 'string') { svc.tw.push(body.twilioKey); svc.ready = body.twilioKey ? { trust: 'signature', twilioFrom: 'device' } : { trust: 'account', twilioFrom: '' }; }
       if (body.forgetAccount) svc.ready = { trust: '', twilioFrom: '' };
       if (typeof body.clearDay === 'string') delete svc.days[body.clearDay];
+      let tried; if (typeof body.tryText === 'string') tried = /מנחה פון 2/.test(body.tryText) ? { change: true, by: 'ai', read: 'move mincha 14:00 לב אהרן', reply: 'געטוישט: מנחה 2:00 ברך משה → 2:00 לב אהרן, היינט (זונטאג).\nעס וועט זיין אויפן סקרין אין א מינוט.', ai: true } : { change: false, by: 'none', ordinary: true, reply: 'מנין הבא: מנחה 2:00', ai: true };
       if (Array.isArray(body.editors)) svc.editors = body.editors.map(e => ({ number: '+1' + e.number.replace(/\D/g, '').slice(-10), name: e.name }));
-      route.fulfill({ status: 200, headers: CORS, body: JSON.stringify({ editors: svc.editors, log: svc.log, ready: svc.ready, lastText: svc.lastText, days: svc.days }) });
+      route.fulfill({ status: 200, headers: CORS, body: JSON.stringify({ editors: svc.editors, log: svc.log, ready: svc.ready, lastText: svc.lastText, days: svc.days, tried }) });
     });
     const page = await ctx.newPage(); page.on('pageerror', e => errors.push(e.message));
     page.on('console', x => { if (x.type() === 'error' && !/ERR_TUNNEL|ERR_NAME_NOT_RESOLVED|ERR_INTERNET|ERR_CONNECTION|ERR_FAILED|Failed to load resource/.test(x.text())) errors.push(x.text()); });
@@ -62,6 +63,13 @@ const { chromium } = require('playwright');
   ok('an empty token box is not sent', [await page.locator('#te-msg').textContent(), svc.tw.length], ['Paste the Auth Token first.', 0]);
   await page.locator('#te-lock summary').click(); await page.fill('#te-twkey', '0123456789abcdef0123456789abcdef'); await page.click('#te-givetw'); await page.waitForFunction(() => /has the Twilio token/.test(document.querySelector('#te-msg').textContent));
   ok('the token given: it is not on the page, and it can be taken back', [svc.tw, /0123456789abcdef/.test(await page.locator('#te-box').innerHTML()), await page.locator('#te-forgettw').count(), await page.locator('#te-twkey').count(), await page.locator('.abar .status.dirty').count()], [['0123456789abcdef0123456789abcdef'], false, 1, 0, 0]);
+  /* try a text */
+  await page.click('#te-trybtn');
+  ok('nothing to try: says so', await page.locator('#te-tried').textContent(), 'Write a text to try first.');
+  await page.fill('#te-try', 'מאך די מנחה פון 2 אין לב אהרן'); await page.press('#te-try', 'Enter'); await page.waitForSelector('#te-tried.yes');
+  ok('a text in his own words: would change, how it was read, and the answer; the box keeps the text; not an unsaved change', [/^It would change the schedule\./.test(await page.locator('#te-tried').textContent()), /Understood as: move mincha 14:00 לב אהרן/.test(await page.locator('#te-tried').textContent()), /געטוישט: מנחה 2:00/.test(await page.locator('#te-tried pre').textContent()), await page.locator('#te-try').inputValue(), await page.locator('.abar .status.dirty').count()], [true, true, true, 'מאך די מנחה פון 2 אין לב אהרן', 0]);
+  await page.fill('#te-try', 'ווען איז מנחה'); await page.click('#te-trybtn'); await page.waitForSelector('#te-tried.no');
+  ok('an ordinary text: the ordinary answer', /^Not a change: it would get the ordinary answer\./.test(await page.locator('#te-tried').textContent()), true);
   /* room numbers belong to the settings */
   ok('room numbers as the settings have them', await page.locator('#te-rooms .te-room').evaluateAll(els => els.map(e => e.querySelector('input').value + ' ' + e.textContent.trim())), ['2 ברך משה', '1 דברי יואל', '4 לב אהרן', '3 שלמה יודא', '5 היכל אדל', ' היכל ביהמ״ד', '6 היכל חנה']);
   await page.locator('#te-rooms input[aria-label="Number for היכל ביהמ״ד"]').fill('7');

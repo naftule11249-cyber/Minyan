@@ -1195,7 +1195,7 @@ var MinyanEdit = (function () {
     move: ['move', 'change', 'edit', 'טויש', 'טוישן', 'רוק', 'ענדער', 'שנה', 'לשנות']
   };
   var UNDO = ['undo', 'צוריק', 'צוריקציען', 'בטל שינוי', 'ציי צוריק'], HELP = ['gabbai', 'גבאי', 'gabai'];
-  var FILLER = ['to', 'at', 'on', 'for', 'in', 'the', 'minyan', 'צו', 'אויף', 'פאר', 'אום', 'ביי', 'אין', 'אינעם', 'יום', 'מנין', 'דעם', 'ל', 'ב', '->', '→', '>', '-'];
+  var FILLER = ['to', 'at', 'on', 'for', 'in', 'the', 'a', 'an', 'please', 'pls', 'minyan', 'די', 'דער', 'דאס', 'א', 'אן', 'ביטע', 'בבקשה', 'צו', 'אויף', 'פאר', 'אום', 'ביי', 'אין', 'אינעם', 'יום', 'מנין', 'דעם', 'ל', 'ב', '->', '→', '>', '-'];
   var TODAY = ['today', 'היינט', 'היום'], TOMORROW = ['tomorrow', 'מארגן', 'מחר'];
   var DOWS = [['sunday', 'זונטאג', 'ראשון'], ['monday', 'מאנטאג', 'שני'], ['tuesday', 'דינסטאג', 'שלישי'], ['wednesday', 'מיטוואך', 'רביעי'], ['thursday', 'דאנערשטאג', 'חמישי'], ['friday', 'פרייטאג', 'שישי', 'ערש״ק'], ['shabbos', 'shabbat', 'saturday', 'שבת', 'שב״ק']];
   var ROOMWORD = ['room', 'חדר', 'שטוב', 'בחדר'];
@@ -1210,7 +1210,7 @@ var MinyanEdit = (function () {
     yi: {
       added: 'צוגעלייגט', cancelled: 'אראפגענומען', moved: 'געטוישט', undone: 'צוריקגעצויגן', today: 'היינט', tomorrow: 'מארגן',
       soon: 'עס וועט זיין אויפן סקרין אין א מינוט. נאר פאר דעם טאג.', undoHint: 'צוריקצוציען שיקט: צוריק',
-      help: 'טוישן א מנין דורך טעקסט (נאר פאר איין טאג):\nלייג צו מנחה 2:15 ברך משה\nבטל מנחה 2:00\nטויש מנחה 2:00 אויף 2:15\nמען קען צושרייבן מארגן אדער א טאג (דינסטאג), און א חדר.\nצוריק = ציט צוריק די לעצטע ענדערונג.',
+      help: 'טוישן א מנין דורך טעקסט (נאר פאר איין טאג):\nלייג צו מנחה 2:15 ברך משה\nבטל מנחה 2:00\nטויש מנחה 2:00 אויף 2:15\nמען קען צושרייבן מארגן אדער א טאג (דינסטאג), און א חדר.\nצוריק = ציט צוריק די לעצטע ענדערונג.\nמען קען עס אויך שרייבן מיט אייגענע ווערטער.',
       needTefilla: 'וועלכע תפילה? שרייבט שחרית, מנחה אדער מעריב. צום ביישפיל: ',
       needTime: 'וועלכע צייט? צום ביישפיל: ', needNew: 'אויף וואס טוישן? שרייבט א נייע צייט אדער א חדר. צום ביישפיל: ',
       what: function (x) { return 'נישט פארשטאנען „' + x + '". שיקט גבאי פאר ביישפילן.'; },
@@ -1226,7 +1226,7 @@ var MinyanEdit = (function () {
     en: {
       added: 'Added', cancelled: 'Cancelled', moved: 'Moved', undone: 'Undone', today: 'today', tomorrow: 'tomorrow',
       soon: 'It will be on the screen within a minute. For that day only.', undoHint: 'To take it back, text: undo',
-      help: 'Change a minyan by text (for one day only):\nadd mincha 2:15 ברך משה\ncancel mincha 2:00\nmove mincha 2:00 to 2:15\nYou can add tomorrow or a day (tuesday), and a room.\nundo = takes back your last change.',
+      help: 'Change a minyan by text (for one day only):\nadd mincha 2:15 ברך משה\ncancel mincha 2:00\nmove mincha 2:00 to 2:15\nYou can add tomorrow or a day (tuesday), and a room.\nundo = takes back your last change.\nYou can also say it in your own words.',
       needTefilla: 'Which tefilla? Write shacharis, mincha or maariv. For example: ',
       needTime: 'Which time? For example: ', needNew: 'Move it to what? Write a new time or a room. For example: ',
       what: function (x) { return 'I did not understand "' + x + '". Text gabbai for examples.'; },
@@ -1279,8 +1279,8 @@ var MinyanEdit = (function () {
     return t.ap === 'a' ? [base] : t.ap === 'p' ? [base + 720] : [base, base + 720];
   }
 
-  function run(cfg, text, nowMs) {
-    var lang = hasHebrew(words(text)[0]) ? 'yi' : 'en', L = T[lang], a = actionOf(text); /* by the command's own word: an English text may still name a room in Hebrew letters */
+  function run(cfg, text, nowMs, replyLang) { /* replyLang: when the command was worked out from a text in the sender's own words, the language that text was in */
+    var lang = replyLang === 'yi' || replyLang === 'en' ? replyLang : hasHebrew(words(text)[0]) ? 'yi' : 'en', L = T[lang], a = actionOf(text); /* by the command's own word: an English text may still name a room in Hebrew letters */
     function say(reply) { return { reply: reply, lang: lang }; }
     var nums = Object.keys(cfg.roomNumbers || {}).sort(function (p, q) { return p - q; }).map(function (k) { return k + ' ' + cfg.roomNumbers[k]; }).join(', ');
     var help = L.help + (nums ? '\n' + L.rooms + ': ' + nums : '');
@@ -1416,7 +1416,7 @@ var MinyanEdit = (function () {
     return { reply: L.undone + ': ' + rec.summary + '.\n' + L.soon.split('.')[0] + '.', cfg: writeDay(cfg, rd, todayRd, tf, list, now) };
   }
 
-  return { parse: parse, run: run, undo: undo, T: T };
+  return { parse: parse, run: run, undo: undo, T: T, hasHebrew: hasHebrew };
 })();
 
 
