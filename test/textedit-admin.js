@@ -17,7 +17,7 @@ const { chromium } = require('playwright');
       const body = JSON.parse(route.request().postData() || '{}'); svc.calls.push(body);
       if (svc.down) return route.abort();
       if (body.pin !== PIN) return route.fulfill({ status: 403, headers: CORS, body: JSON.stringify({ error: 'wrong PIN' }) });
-      if (typeof body.twilioKey === 'string') { svc.tw.push(body.twilioKey); svc.ready = body.twilioKey ? { trust: 'signature', twilioFrom: 'device' } : { trust: 'account', twilioFrom: '' }; }
+      if (typeof body.twilioKey === 'string') { svc.tw.push(body.twilioKey + '|' + (body.twilioSid || '')); svc.ready = body.twilioKey ? { trust: 'signature', twilioFrom: 'device', twilioAccount: !!body.twilioSid } : { trust: 'account', twilioFrom: '', twilioAccount: false }; }
       if (body.forgetAccount) svc.ready = { trust: '', twilioFrom: '' };
       if (typeof body.clearDay === 'string') delete svc.days[body.clearDay];
       let tried; if (typeof body.tryText === 'string') tried = /מנחה פון 2/.test(body.tryText) ? { change: true, by: 'ai', read: 'move mincha 14:00 לב אהרן', reply: 'געטוישט: מנחה 2:00 ברך משה → 2:00 לב אהרן, היינט (זונטאג).\nעס וועט זיין אויפן סקרין אין א מינוט.', ai: true } : { change: false, by: 'none', ordinary: true, reply: 'מנין הבא: מנחה 2:00', ai: true };
@@ -34,7 +34,7 @@ const { chromium } = require('playwright');
   let { ctx, page } = await open(1280);
   await page.waitForSelector('#te-status');
   ok('the numbers come by themselves, with the PIN typed at the door', [svc.calls.length, svc.calls[0].pin === PIN, await page.locator('.te-row').count(), await page.locator('.te-row input[type=tel]').first().inputValue()], [1, true, 1, '(718) 555-0101']);
-  ok('before the first text: nothing to set up, only a text to send; no key or token is asked for', [await page.locator('#te-status').getAttribute('class'), /^One text to go\. Nothing to set up\./.test(await page.locator('#te-status').textContent()), /^No text has reached the text service yet/.test(await page.locator('#te-last').textContent()), /GitHub|GITHUB/.test(await page.locator('#te-box').textContent()), await page.locator('#te-lock[open]').count()], ['te-status warn', true, true, false, 0]);
+  ok('before signing in: one step, no GitHub anywhere', [await page.locator('#te-status').getAttribute('class'), /^One step to go\./.test(await page.locator('#te-status').textContent()), /^No text has reached the text service yet/.test(await page.locator('#te-last').textContent()), /GitHub|GITHUB/.test(await page.locator('#te-box').textContent())], ['te-status warn', true, true, false]);
   ok('the page does not count these as unsaved changes', await page.locator('.abar .status.dirty').count(), 0);
   await page.click('#te-add'); await page.locator('.te-row').nth(1).locator('input[type=text]').fill('משה אליעזר'); await page.locator('.te-row').nth(1).locator('input[type=tel]').fill('718 555');
   await page.click('#te-save');
@@ -44,7 +44,7 @@ const { chromium } = require('playwright');
   await page.locator('.te-row').first().locator('button').click(); await page.click('#te-save'); await page.waitForFunction(() => /1 number can/.test(document.querySelector('#te-msg').textContent));
   ok('removed and saved', svc.editors.map(e => e.name), ['משה אליעזר']);
   /* the first text arrives: ready */
-  svc.ready = { trust: 'account', twilioFrom: '' }; svc.lastText = { at: Date.UTC(2026, 10, 22, 16, 9), signed: true, hadSignature: true };
+  svc.ready = { trust: 'signature', twilioFrom: 'device', twilioAccount: true }; svc.lastText = { at: Date.UTC(2026, 10, 22, 16, 9), signed: true, hadSignature: true };
   svc.days = { '2026-11-24': { mincha: { line: '14:15 לב אהרן', base: null, at: 1 } } };
   await page.click('#te-refresh'); await page.waitForSelector('#te-status.ok');
   ok('after the first text: Ready, with when it came', [/^Ready\. A text from one of these numbers changes the schedule/.test(await page.locator('#te-status').textContent()), /Last text to reach the text service: 11\/22, 11:09 AM\. It was accepted/.test(await page.locator('#te-last').textContent())], [true, true]);
@@ -55,21 +55,13 @@ const { chromium } = require('playwright');
   await page.locator('details.te-more', { hasText: 'Last changes' }).locator('summary').click();
   ok('the last changes by text: who, what, and what was answered', [await page.locator('.te-log').count(), await page.locator('.te-log.no').count(), /גבאי א.*cancel mincha 2:00.*✓ Cancelled/.test((await page.locator('.te-log').first().textContent()))], [2, 1, true]);
   /* a text from somewhere else */
-  svc.lastText = { at: Date.UTC(2026, 10, 22, 16, 30), signed: false, hadSignature: true }; await page.click('#te-refresh'); await page.waitForSelector('#te-status.warn');
-  ok('a text through another Twilio account: said so, with a way to start over', [/^Check this\. The last text came through a different Twilio account/.test(await page.locator('#te-status').textContent()), await page.locator('#te-forgetacct').count()], [true, 1]);
-  /* the optional stronger lock */
-  svc.lastText = { at: Date.UTC(2026, 10, 22, 16, 40), signed: true, hadSignature: true }; await page.click('#te-refresh'); await page.waitForSelector('#te-status.ok');
-  await page.locator('#te-lock summary').click(); await page.click('#te-givetw');
-  ok('an empty token box is not sent', [await page.locator('#te-msg').textContent(), svc.tw.length], ['Paste the Auth Token first.', 0]);
-  await page.locator('#te-lock summary').click(); await page.fill('#te-twkey', '0123456789abcdef0123456789abcdef'); await page.click('#te-givetw'); await page.waitForFunction(() => /has the Twilio token/.test(document.querySelector('#te-msg').textContent));
-  ok('the token given: it is not on the page, and it can be taken back', [svc.tw, /0123456789abcdef/.test(await page.locator('#te-box').innerHTML()), await page.locator('#te-forgettw').count(), await page.locator('#te-twkey').count(), await page.locator('.abar .status.dirty').count()], [['0123456789abcdef0123456789abcdef'], false, 1, 0, 0]);
-  /* try a text */
-  await page.click('#te-trybtn');
-  ok('nothing to try: says so', await page.locator('#te-tried').textContent(), 'Write a text to try first.');
-  await page.fill('#te-try', 'מאך די מנחה פון 2 אין לב אהרן'); await page.press('#te-try', 'Enter'); await page.waitForSelector('#te-tried.yes');
-  ok('a text in his own words: would change, how it was read, and the answer; the box keeps the text; not an unsaved change', [/^It would change the schedule\./.test(await page.locator('#te-tried').textContent()), /Understood as: move mincha 14:00 לב אהרן/.test(await page.locator('#te-tried').textContent()), /געטוישט: מנחה 2:00/.test(await page.locator('#te-tried pre').textContent()), await page.locator('#te-try').inputValue(), await page.locator('.abar .status.dirty').count()], [true, true, true, 'מאך די מנחה פון 2 אין לב אהרן', 0]);
-  await page.fill('#te-try', 'ווען איז מנחה'); await page.click('#te-trybtn'); await page.waitForSelector('#te-tried.no');
-  ok('an ordinary text: the ordinary answer', /^Not a change: it would get the ordinary answer\./.test(await page.locator('#te-tried').textContent()), true);
+  /* signing in to Twilio */
+  svc.ready = { trust: '', twilioFrom: '', twilioAccount: false }; await page.click('#te-refresh'); await page.waitForSelector('#te-givetw');
+  ok('not signed in: one step, the sign-in boxes', [/^One step to go\. One step: sign in to Twilio/.test(await page.locator('#te-status').textContent()), await page.locator('#te-twsid').count(), await page.locator('#te-twkey').count()], [true, 1, 1]);
+  await page.fill('#te-twsid', 'AC0123'); await page.click('#te-givetw');
+  ok('both boxes are needed', [await page.locator('#te-msg').textContent(), svc.tw.length], ['Paste both the Account SID and the Auth Token.', 0]);
+  await page.fill('#te-twsid', ' AC' + 'b'.repeat(32) + ' '); await page.fill('#te-twkey', 'c'.repeat(32)); await page.click('#te-givetw'); await page.waitForFunction(() => /Signed in to Twilio/.test(document.querySelector('#te-msg').textContent));
+  ok('signed in: sent tidied, Ready, the values are not on the page, sign out is there', [svc.tw, /^Ready\./.test(await page.locator('#te-status').textContent()), /cccccccc|bbbbbbbb/.test(await page.locator('#te-box').innerHTML()), await page.locator('#te-forgettw').count(), await page.locator('.abar .status.dirty').count()], [['c'.repeat(32) + '|AC' + 'b'.repeat(32)], true, false, 1, 0]);
   /* room numbers belong to the settings */
   ok('room numbers as the settings have them', await page.locator('#te-rooms .te-room').evaluateAll(els => els.map(e => e.querySelector('input').value + ' ' + e.textContent.trim())), ['2 ברך משה', '1 דברי יואל', '4 לב אהרן', '3 שלמה יודא', '5 היכל אדל', ' היכל ביהמ״ד', '6 היכל חנה']);
   await page.locator('#te-rooms input[aria-label="Number for היכל ביהמ״ד"]').fill('7');
@@ -92,7 +84,7 @@ const { chromium } = require('playwright');
   ok('taken back: the regular list again', (await mincha()).length > 4, true);
   await ctx.close();
   /* a phone: nothing wider than the screen */
-  svc.ready = { trust: '', twilioFrom: '' }; ({ ctx, page } = await open(390)); await page.waitForSelector('#te-status');
+  svc.ready = { trust: '', twilioFrom: '', twilioAccount: false }; ({ ctx, page } = await open(390)); await page.waitForSelector('#te-status');
   ok('phone: the card fits', await page.evaluate(() => { const b = document.querySelector('#te-box'); return [b.scrollWidth <= b.clientWidth + 1, Array.from(document.querySelectorAll('#te-box button')).filter(x => x.offsetParent).every(x => x.getBoundingClientRect().height >= 36)]; }), [true, true]);
   await ctx.close(); await browser.close();
   console.log(errors.length ? 'ERRORS:\n' + errors.join('\n') : 'no console errors');

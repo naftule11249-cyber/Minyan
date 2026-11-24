@@ -3350,10 +3350,10 @@
           teBox.appendChild(el('div', { class: 'bar actions' }, [el('button', { type: 'button', class: 'btn primary', id: 'te-load', text: 'Show the numbers', onclick: teLoad }), msg]));
           return;
         }
-        var ready = te.ready || {}, isReady = !!ready.trust, lt = te.lastText, ltWhen = lt ? new Date(lt.at).toLocaleString([], { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+        var ready = te.ready || {}, isReady = ready.trust === 'signature' && ready.twilioAccount || ready.trust === 'account', lt = te.lastText, ltWhen = lt ? new Date(lt.at).toLocaleString([], { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
         var wrongAccount = ready.trust === 'account' && lt && !lt.signed && lt.hadSignature, badToken = ready.trust === 'signature' && lt && !lt.signed;
-        teBox.appendChild(el('div', { class: 'te-status ' + (isReady && !wrongAccount && !badToken ? 'ok' : 'warn'), id: 'te-status' }, [el('b', { text: !isReady ? 'One text to go. ' : wrongAccount || badToken ? 'Check this. ' : 'Ready. ' }),
-          !isReady ? 'Nothing to set up. The first text that reaches the text service through Twilio shows it which Twilio account is the shul\'s; from then on a text from one of these numbers changes the schedule. Text anything to the shul\'s number (גבאי, for the examples), then press "Check again".'
+        teBox.appendChild(el('div', { class: 'te-status ' + (isReady && !wrongAccount && !badToken ? 'ok' : 'warn'), id: 'te-status' }, [el('b', { text: !isReady ? 'One step to go. ' : wrongAccount || badToken ? 'Check this. ' : 'Ready. ' }),
+          !isReady ? 'One step: sign in to Twilio below, with the Account SID and Auth Token from the Twilio home page. Then a text from one of these numbers changes the schedule.'
             : badToken ? 'The last text did not match the Twilio token that was pasted here, so it could not change anything. Take the token back below and paste the Auth Token again.'
             : wrongAccount ? 'The last text came through a different Twilio account than the first one did, so it could not change anything. If the shul\'s number moved to another Twilio account, press "Start over" below.'
             : 'A text from one of these numbers changes the schedule; it is on the screen within a minute.']));
@@ -3411,27 +3411,28 @@
             } })]));
         });
         teBox.appendChild(dayBox);
-        /* optional: the Twilio Auth Token makes every text be checked by its signature */
-        var lock = el('details', { class: 'te-more', id: 'te-lock' }, [el('summary', { text: 'A stronger lock (optional)' })]);
-        if (ready.trust !== 'signature') {
-          var twIn = el('input', { type: 'password', id: 'te-twkey', autocomplete: 'off', placeholder: 'paste the Auth Token here', 'aria-label': 'Twilio Auth Token', dir: 'ltr' });
-          lock.appendChild(el('div', { class: 'hint', text: 'As it is, the text service believes a text when it comes through the shul\'s own Twilio account. That keeps out someone who only knows a gabbai\'s number. With the account\'s Auth Token every text is checked by Twilio\'s signature, which cannot be copied. On console.twilio.com the first page shows "Account Info": next to Auth Token press Show, copy it and paste it here.' }));
-          lock.appendChild(el('div', { class: 'te-key' }, [twIn, el('button', { type: 'button', class: 'btn', id: 'te-givetw', text: 'Give it to the text service', onclick: function () {
-            if (!twIn.value.trim()) { te.msg = 'Paste the Auth Token first.'; tePaint(); return; }
-            teGive({ twilioKey: twIn.value.trim() }, 'Saving…', 'The text service has the Twilio token.');
+        /* Twilio sign-in: the Account SID and Auth Token, so the service can ask Twilio whether a text really came in. Needed for the
+           shul's number, whose texts come through the Beis Horaah hotline's function and carry no signature of their own. */
+        var signedIn = ready.trust === 'signature' && ready.twilioAccount;
+        var lock = el('div', { class: 'te-setup', id: 'te-lock' }, [el('b', { text: signedIn ? 'Twilio: signed in' : 'Sign in to Twilio' })]);
+        if (!signedIn) {
+          var sidIn = el('input', { type: 'text', id: 'te-twsid', autocomplete: 'off', spellcheck: 'false', placeholder: 'AC…', 'aria-label': 'Twilio Account SID', dir: 'ltr' });
+          var twIn = el('input', { type: 'password', id: 'te-twkey', autocomplete: 'off', placeholder: 'Auth Token', 'aria-label': 'Twilio Auth Token', dir: 'ltr' });
+          lock.appendChild(el('div', { text: 'So the text service can check with Twilio that a gabbai\'s text really came from his phone. Open console.twilio.com: the first page shows "Account SID" and "Auth Token". Click the copy icon next to each and paste them here.' }));
+          lock.appendChild(el('div', { class: 'fields' }, [field('Account SID', sidIn), field('Auth Token', twIn)]));
+          lock.appendChild(el('div', { class: 'bar actions' }, [el('button', { type: 'button', class: 'btn primary', id: 'te-givetw', text: 'Sign in', onclick: function () {
+            var sv = sidIn.value.replace(/\s+/g, ''), tv = twIn.value.replace(/\s+/g, '');
+            if (!sv || !tv) { te.msg = 'Paste both the Account SID and the Auth Token.'; tePaint(); return; }
+            teGive({ twilioSid: sv, twilioKey: tv }, 'Checking with Twilio…', 'Signed in to Twilio. Gabbai texts can change the schedule now.');
           } })]));
-          lock.appendChild(el('div', { class: 'hint', text: 'It goes straight to your text service, which keeps it privately and never shows it again. Do not put it in an email or a chat.' }));
-        } else lock.appendChild(el('div', { class: 'hint', text: 'Every text is checked by Twilio\'s signature.' + (ready.twilioFrom === 'device' ? '' : ' The token is set in the service itself.') }));
-        var lockBar = el('div', { class: 'bar actions' });
-        if (ready.twilioFrom === 'device') lockBar.appendChild(el('button', { type: 'button', class: 'btn small', id: 'te-forgettw', text: 'Take the Twilio token back', onclick: function () {
-          if (!confirm('Take the Twilio token back from the text service?')) return;
-          teGive({ twilioKey: '' }, 'Taking it back…', 'The text service no longer has the Twilio token.');
-        } }));
-        if (ready.trust === 'account') lockBar.appendChild(el('button', { type: 'button', class: 'btn small', id: 'te-forgetacct', text: 'Start over', title: 'Forget which Twilio account is the shul\'s; the next text says so again', onclick: function () {
-          if (!confirm('Forget which Twilio account is the shul\'s? The next text that arrives through Twilio sets it again.')) return;
-          teGive({ forgetAccount: true }, 'Starting over…', 'Done. The next text through Twilio sets the account again.');
-        } }));
-        if (lockBar.children.length) lock.appendChild(lockBar);
+          lock.appendChild(el('div', { class: 'hint', text: 'They go straight to your text service, which keeps them privately and never shows them again. Do not put them in an email or a chat.' }));
+        } else {
+          lock.appendChild(el('div', { class: 'hint', text: 'The text service checks every gabbai text with Twilio.' }));
+          if (ready.twilioFrom === 'device') lock.appendChild(el('div', { class: 'bar actions' }, [el('button', { type: 'button', class: 'btn small', id: 'te-forgettw', text: 'Sign out of Twilio', onclick: function () {
+            if (!confirm('Sign the text service out of Twilio? Gabbai texts stop changing the schedule until it is signed in again.')) return;
+            teGive({ twilioKey: '', twilioSid: '' }, 'Signing out…', 'Signed out of Twilio.');
+          } })]));
+        }
         teBox.appendChild(lock);
         var logBox = el('details', { class: 'te-more' }, [el('summary', { text: 'Last changes sent by text' + (te.log.length ? ' (' + te.log.length + ')' : '') })]);
         if (!te.log.length) logBox.appendChild(el('div', { class: 'hint', text: 'None yet.' }));

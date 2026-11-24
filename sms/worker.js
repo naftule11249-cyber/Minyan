@@ -61,6 +61,23 @@ async function allSubscriptions(env) {
   } while (cursor);
   return out;
 }
+/* Does Twilio itself have this message, as a text that came in from that sender to that number with these words? Used for texts the
+   shul's relay passes on without Twilio's signature. A message ID is believed once only. */
+async function twilioHasMessage(env, token, params) {
+  var sid = (await env.SUBS.get('twacct')) || env.TWILIO_ACCOUNT_SID;
+  if (!/^AC[0-9a-fA-F]{32}$/.test(sid || '')) return false;
+  var seenKey = 'msg:' + params.MessageSid;
+  if (await env.SUBS.get(seenKey)) return false;
+  try {
+    var r = await fetch('https://api.twilio.com/2010-04-01/Accounts/' + sid + '/Messages/' + params.MessageSid + '.json', { headers: { Authorization: 'Basic ' + btoa(sid + ':' + token) } });
+    if (!r.ok) return false;
+    var m = await r.json();
+    var same = String(m.direction || '') === 'inbound' && phoneDigits(m.from) === phoneDigits(params.From) && phoneDigits(m.to) === phoneDigits(params.To) && String(m.body || '').trim() === String(params.Body || '').trim();
+    if (same) await env.SUBS.put(seenKey, '1', { expirationTtl: 7 * 86400 });
+    return same;
+  } catch (e) { return false; }
+}
+
 /* The admin PIN (the site's config carries its hash) or the BROADCAST_KEY secret; ten wrong tries lock that address out for an hour.
    Resolves to null when the caller is the gabbai, otherwise to the refusal to send back. */
 async function adminRefusal(request, env, body, cfg) {
@@ -268,8 +285,20 @@ export default {
       }
       var keyError = '';
       /* the Twilio Auth Token, handed over the same way (or '' to forget it): it only proves a text is from Twilio; it is not used to send */
+      /* the Account SID, given together with the token: lets the service ask Twilio about a relayed text */
+      if (typeof eb.twilioSid === 'string') {
+        if (!eb.twilioSid) await env.SUBS.delete('twacct');
+        else if (!/^AC[0-9a-fA-F]{32}$/.test(eb.twilioSid.trim())) keyError = 'That does not look like a Twilio Account SID: it starts with AC and is 34 letters and digits.';
+        else await env.SUBS.put('twacct', eb.twilioSid.trim());
+      }
+      /* both given: try them on Twilio at once, so a typing mistake is said now and not found out on the next text */
+      if (!keyError && typeof eb.twilioKey === 'string' && eb.twilioKey && typeof eb.twilioSid === 'string' && eb.twilioSid) {
+        var probeTw = await fetch('https://api.twilio.com/2010-04-01/Accounts/' + eb.twilioSid.trim() + '.json', { headers: { Authorization: 'Basic ' + btoa(eb.twilioSid.trim() + ':' + eb.twilioKey.trim()) } }).catch(function () { return null; });
+        if (!probeTw) keyError = 'Twilio did not answer. Try again in a minute.';
+        else if (!probeTw.ok) { keyError = 'Twilio does not accept this Account SID and Auth Token together. Copy both again from the Twilio home page.'; await env.SUBS.delete('twacct'); eb.twilioKey = null; }
+      }
       if (typeof eb.twilioKey === 'string') {
-        if (!eb.twilioKey) await env.SUBS.delete('twkey');
+        if (!eb.twilioKey) { await env.SUBS.delete('twkey'); await env.SUBS.delete('twacct'); }
         else if (!/^[A-Za-z0-9]{32}$/.test(eb.twilioKey.trim())) keyError = 'That does not look like a Twilio Auth Token: it is 32 letters and digits.';
         else await env.SUBS.put('twkey', eb.twilioKey.trim());
       }
@@ -289,7 +318,7 @@ export default {
         lastText: (await env.SUBS.get('lasttext', 'json')) || undefined, days: await textDays(env), tried: tried, ai: !!env.AI,
         /* how the service knows a text is really from Twilio: 'signature' (the Auth Token checks every text), 'account' (texts must
            come from the Twilio account the first text came from), or '' (no text has come yet) */
-        ready: { trust: env.TWILIO_AUTH_TOKEN || kvTw ? 'signature' : sid ? 'account' : '', twilioFrom: env.TWILIO_AUTH_TOKEN ? 'secret' : kvTw ? 'device' : '' } });
+        ready: { trust: env.TWILIO_AUTH_TOKEN || kvTw ? 'signature' : sid ? 'account' : '', twilioFrom: env.TWILIO_AUTH_TOKEN ? 'secret' : kvTw ? 'device' : '', twilioAccount: !!(await env.SUBS.get('twacct')) } });
     }
     /* Twilio webhook (SMS or WhatsApp): POST form. GET ?q=text[&from=+1…] answers in plain text for testing. */
     var isPost = request.method === 'POST', text = '', params = {}, from = '', signed = false;
@@ -306,6 +335,10 @@ export default {
            keeps out someone who merely knows this address and a gabbai's number; the Auth Token is the stronger lock. */
       var hadSig = !!request.headers.get('X-Twilio-Signature'), twk = env.TWILIO_AUTH_TOKEN || (await env.SUBS.get('twkey'));
       if (twk) { signed = await twilioSignatureOk(request, params, twk); if (!signed && env.TWILIO_AUTH_TOKEN) return new Response('forbidden', { status: 403 }); }
+      /* A text passed on by the shul's own relay (a Twilio Function that keeps only Body, From, To and MessageSid) has no signature to
+         check. With the account's SID and Auth Token (given on the admin page) the service asks Twilio itself about that message ID:
+         it is believed only if Twilio has it as a text that came in to the shul's number from that sender with those words. */
+      if (twk) { if (!signed && !hadSig && /^(SM|MM)[0-9a-fA-F]{32}$/.test(params.MessageSid || '')) signed = await twilioHasMessage(env, twk, params); }
       else if (/^AC[0-9a-fA-F]{32}$/.test(params.AccountSid || '')) { /* with or without the signature header: some setups pass Twilio's text on through a function of their own, which drops it */
         var pinned = await env.SUBS.get('twsid');
         if (!pinned) { pinned = params.AccountSid; await env.SUBS.put('twsid', pinned); }

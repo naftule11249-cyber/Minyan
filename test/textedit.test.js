@@ -34,7 +34,7 @@ const PIN = process.env.MINYAN_PIN || '1234';
   ok('the list cannot be read or changed with a wrong PIN', [r.status, store.has('editors')], [403, false]);
   r = await editors({ pin: PIN, editors: [{ number: '(718) 555-0101', name: 'גבאי א' }, { number: '+1 718 555 0102', name: 'גבאי ב' }, { number: '718-555-0101', name: 'twice' }, { number: '12', name: 'not a number' }] });
   let j = await r.json();
-  ok('saved with the PIN: numbers tidied, a repeat and a non-number left out; no text has come yet', [r.status, j.editors, j.ready], [200, [{ number: '+17185550101', name: 'גבאי א' }, { number: '+17185550102', name: 'גבאי ב' }], { trust: '', twilioFrom: '' }]);
+  ok('saved with the PIN: numbers tidied, a repeat and a non-number left out; no text has come yet', [r.status, j.editors, j.ready], [200, [{ number: '+17185550101', name: 'גבאי א' }, { number: '+17185550102', name: 'גבאי ב' }], { trust: '', twilioFrom: '', twilioAccount: false }]);
 
   /* who is believed */
   const viaGet = await (await worker.fetch(new Request(HOOK + '?q=' + encodeURIComponent('cancel mincha 2:00') + '&from=' + encodeURIComponent(GABBAI)), env)).text();
@@ -88,7 +88,7 @@ const PIN = process.env.MINYAN_PIN || '1234';
   j = await (await editors({ pin: PIN, twilioKey: 'short' })).json();
   ok('something that is not a Twilio token is not kept', [/32 letters and digits/.test(j.keyError), j.ready.trust], [true, 'account']);
   j = await (await editors({ pin: PIN, twilioKey: ' ' + TOKEN + ' ' })).json();
-  ok('the token is kept and never sent back; every text is now checked by its signature', [j.ready, /0123456789abcdef/.test(JSON.stringify(j))], [{ trust: 'signature', twilioFrom: 'device' }, false]);
+  ok('the token is kept and never sent back; every text is now checked by its signature', [j.ready, /0123456789abcdef/.test(JSON.stringify(j))], [{ trust: 'signature', twilioFrom: 'device', twilioAccount: false }, false]);
   r = await sms(GABBAI, 'add mincha 2:15', { token: 'f'.repeat(32) });
   ok('a text signed with something else is still answered, but cannot change anything', [r.status, /^Added/.test(r.text), await changes()], [200, false, {}]);
   r = await sms(GABBAI, 'add mincha 2:15');
@@ -100,7 +100,7 @@ const PIN = process.env.MINYAN_PIN || '1234';
   r = await sms(GABBAI, 'מנחה', { env: withSecret, token: 'f'.repeat(32) });
   ok('with the token as the service\'s own secret an unsigned text is refused outright, as before', r.status, 403);
   j = await (await editors({ pin: PIN, twilioKey: '' })).json();
-  ok('token taken back: the account lock is still there', j.ready, { trust: 'account', twilioFrom: '' });
+  ok('token taken back: the account lock is still there', j.ready, { trust: 'account', twilioFrom: '', twilioAccount: false });
   j = await (await editors({ pin: PIN, forgetAccount: true })).json();
   ok('and that can be started over too', [j.ready.trust, store.has('twsid')], ['', false]);
   await sms(OTHER, 'מנחה');
@@ -147,6 +147,43 @@ const PIN = process.env.MINYAN_PIN || '1234';
   j = await (await editors({ pin: PIN, tryText: 'מנחה' }, withAi)).json();
   ok('an ordinary text tried: the ordinary answer', [j.tried.change, j.tried.ordinary, /מנחה/.test(j.tried.reply)], [false, true, true]);
   store.delete('textdays'); store.delete('undo:17185550101');
+
+  /* the shul's relay (the hotline's Twilio Function) passes texts on without a signature: checked with Twilio by the message ID */
+  store.delete('twsid'); store.delete('twkey'); store.delete('twacct'); store.delete('textdays');
+  const ACCT = 'AC' + 'b'.repeat(32), TOK = 'c'.repeat(32), twMsgs = {}; let twAsked = 0;
+  const realFetch = global.fetch;
+  global.fetch = async (url, init) => { url = String(url);
+    if (url === 'https://api.twilio.com/2010-04-01/Accounts/' + ACCT + '.json') return new Response('{}', { status: (init.headers.Authorization === 'Basic ' + Buffer.from(ACCT + ':' + TOK).toString('base64')) ? 200 : 401 });
+    const m = /Accounts\/(AC\w+)\/Messages\/(\w+)\.json$/.exec(url);
+    if (m) { twAsked++; if (init.headers.Authorization !== 'Basic ' + Buffer.from(ACCT + ':' + TOK).toString('base64')) return new Response('{}', { status: 401 }); return twMsgs[m[2]] ? new Response(JSON.stringify(twMsgs[m[2]])) : new Response('{}', { status: 404 }); }
+    return realFetch(url, init); };
+  const relay = async (from, text, o) => { o = o || {}; const msid = o.msid || ('SM' + crypto.randomBytes(16).toString('hex'));
+    if (!o.fake) twMsgs[msid] = { direction: 'inbound', from: from.replace('whatsapp:', ''), to: '+19298287677', body: o.realBody || text };
+    const params = { Body: text, From: from, To: '+19298287677', MessageSid: msid };
+    const res = await worker.fetch(new Request(HOOK, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', 'user-agent': 'node' }, body: new URLSearchParams(params) }), env); const x = await res.text(); return { status: res.status, text: (/<Message>([\s\S]*)<\/Message>/.exec(x) || [, ''])[1], msid }; };
+  r = await relay(GABBAI, 'cancel mincha 2:00');
+  ok('before signing in, a relayed text changes nothing and Twilio is not asked', [/^Cancelled/.test(r.text), await changes(), twAsked], [false, {}, 0]);
+  j = await (await editors({ pin: PIN, twilioSid: ACCT, twilioKey: 'd'.repeat(32) })).json();
+  ok('a wrong Auth Token is caught at once and nothing is kept', [/does not accept/.test(j.keyError), store.has('twkey'), store.has('twacct')], [true, false, false]);
+  j = await (await editors({ pin: PIN, twilioSid: 'AC123', twilioKey: TOK })).json();
+  ok('nor an SID that is not one', [/Account SID/.test(j.keyError), store.has('twacct')], [true, false]);
+  j = await (await editors({ pin: PIN, twilioSid: ACCT, twilioKey: TOK })).json();
+  ok('signed in: both kept, never sent back', [j.keyError, j.ready.trust, j.ready.twilioAccount, new RegExp(TOK).test(JSON.stringify(j))], [undefined, 'signature', true, false]);
+  r = await relay(GABBAI, 'cancel mincha 2:00');
+  ok('a gabbai text through the relay, which Twilio confirms, changes the day', [r.text.split('\n')[0], (await day('mincha')).includes('2:00 ברך משה')], ['Cancelled: Mincha 2:00 ברך משה, today (Sunday).', false]);
+  r = await relay(GABBAI, 'undo');
+  ok('and undo', [/^Undone/.test(r.text), await changes()], [true, {}]);
+  const again = r.msid; r = await relay(GABBAI, 'undo', { msid: again });
+  ok('the same message ID again (a copied request) is not believed twice', /^Undone|^Nothing to undo/.test(r.text) && !/^Undone/.test(r.text) || !/^Undone/.test(r.text), true);
+  r = await relay(GABBAI, 'cancel mincha 2:00', { fake: true });
+  ok('a made-up message ID Twilio does not have changes nothing', [/^Cancelled/.test(r.text), await changes()], [false, {}]);
+  r = await relay(GABBAI, 'cancel mincha 2:00', { realBody: 'hello' });
+  ok('a real message ID with other words than it had changes nothing', [/^Cancelled/.test(r.text), await changes()], [false, {}]);
+  r = await relay(OTHER, 'cancel mincha 2:00');
+  ok('someone not on the list changes nothing', [/^Cancelled/.test(r.text), await changes()], [false, {}]);
+  j = await (await editors({ pin: PIN, twilioKey: '', twilioSid: '' })).json();
+  ok('signed out: both gone', [store.has('twkey'), store.has('twacct'), j.ready.twilioAccount], [false, false, false]);
+  global.fetch = realFetch;
 
   /* odds and ends */
   r = await sms(GABBAI, 'גבאי');
