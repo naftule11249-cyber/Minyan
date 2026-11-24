@@ -22,12 +22,12 @@ const { chromium } = require('playwright');
     const btn = how === 'own' ? page.locator('#page-today .actions button.primary') : page.locator('.abar button.primary', { hasText: /^Save$/ });
     btn.click({ timeout: 10000 }).catch(() => {});
     await page.waitForTimeout(2500);
-    const saved = await within(page.evaluate(() => (JSON.parse(localStorage.getItem('minyan-config') || '{}').overrides || []).map(o => [o.date, (o.lines.mincha || '').split('\n')[0]])), 5000);
+    const saved = await within(page.evaluate(() => (JSON.parse(localStorage.getItem('minyan-config') || '{}').overrides || []).filter(o => o.date === new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date())).map(o => [o.date, (o.lines.mincha || '').split('\n')[0]])), 5000); /* today's; the shul's settings may hold other days' changes */
     ok(how + ': saved for today, and the page is still alive', saved, [[iso, time + ' ' + to]]);
     if (saved !== 'FROZEN') {
       ok(how + ': the tab shows the day as changed, with the new room', [await within(sel().inputValue(), 4000), await within(page.locator('#page-today .today-head .status.dirty').count(), 4000)], [to, 1]);
       await within(page.click('#tab-settings').then(() => page.locator('.subtabs button', { hasText: 'Special dates' }).click()), 6000);
-      ok(how + ': Special dates opens with that day in it', await within(page.locator('.ovr').count(), 4000), 1);
+      ok(how + ': Special dates opens with that day in it', await within(page.locator('.ovr').count(), 4000) >= 1, true);
       await within(page.click('#tab-schedule'), 4000);
       ok(how + ': and the Schedule page still lays a minyan out on one line', await within(page.evaluate(() => { const r = Array.from(document.querySelectorAll('#dtp-weekday .mrow.flat')).find(x => x.offsetParent); return r ? Math.round(r.getBoundingClientRect().height) < 90 : null; }), 4000), true);
     }
