@@ -180,7 +180,7 @@
  ],
  "smsNumber": "+1 929 828 7677",
  "remoteConfigUrl": "",
- "savedAt": 1795540176735,
+ "savedAt": 1795734047791,
  "siteUrl": "https://minyan.cascadeshul.org/",
  "logo": "",
  "wallLogo": "logo-name.png",
@@ -298,7 +298,9 @@
    "time": "אחר התפילה",
    "detail": "ע״י הרה״ג שמואל דוד סאקס שליט״א, דומ״ץ • בעזרת נשים",
    "week": "every",
-   "skip": {}
+   "skip": {
+    "2026-11-28": "cancel"
+   }
   },
   {
    "when": "morning",
@@ -314,7 +316,9 @@
    "time": "8:45",
    "detail": "ע״י הרה״ג שמואל דוד סאקס שליט״א, דומ״ץ • בהיכל ביהמ״ד",
    "week": "every",
-   "skip": {}
+   "skip": {
+    "2026-11-28": "cancel"
+   }
   },
   {
    "when": "motzash",
