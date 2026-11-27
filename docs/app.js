@@ -299,13 +299,15 @@
       else if (items.length) colR.appendChild(wallCard(items[0].title, items[0].nodes)); /* the first tefilla of the day keeps a frame to itself */
       /* Shabbos and Yom Tov have no מנין הבא panel: from candle lighting until nightfall at the end, the minyanim have the whole column */
       var dI = Cal.dayInfo(n.rd, !!cfg.israel), zN = zmanimFor(n.rd), holyNow = ((dI.shabbos || dI.yomtov) && !(dI.motzaei && n.min >= zN.tzeis)) || (dI.candles === 'day' && n.min >= zN.candles);
-      if (cfg.nextPanel !== false && !holyNow) colR.appendChild(next); else ui.countdown = null; /* Hallway screen → "The next-minyan panel" can take it off; the minyanim then have the whole column */
+      var candlesPanel = next.classList.contains('candles'); /* Friday afternoon: it goes under the Shabbos zmanim instead (below) */
+      if (cfg.nextPanel !== false && !holyNow && !candlesPanel) colR.appendChild(next); else if (!candlesPanel) ui.countdown = null; /* Hallway screen → "The next-minyan panel" can take it off; the minyanim then have the whole column */
       if (items.length > 1) { /* the rest of the day shares one frame, each tefilla named above its own tiles */
         var rest = items.slice(1), blocks = [];
         rest.forEach(function (it) { blocks.push(el('div', { class: 'sub', text: it.sub })); blocks = blocks.concat(it.nodes); });
         colL.appendChild(wallCard(S().minyanim(rest.map(function (it) { return it.t.name; }).join(' ')), blocks));
       }
       if (ui.shabbosWin) colL.appendChild(wallCard(shabbosTitle(ui.shabbosWin), [shabbosList(ui.shabbosWin)]));
+      if (candlesPanel) colL.appendChild(next); /* the candle-lighting countdown under the Shabbos zmanim */
       if (!(ui.shabbosWin && now >= ui.shabbosWin.chatzosMs && now < ui.shabbosWin.outMs)) colL.appendChild(wallZmanim(info, z, rd, now)); else ui.zcount = null; /* from חצות on Friday the Shabbos box has the column (its סוף זמן ק״ש stands in it); until then people still look for Friday's חצות */
       colM.appendChild(analogClock(now, false)); /* the time with seconds is in the top bar */
       if (strip) colM.appendChild(strip);
