@@ -2184,7 +2184,7 @@
     function homeMin() { var m = /^(\d{2}):(\d{2})/.exec(fHTime.value || ''); return m ? +m[1] * 60 + +m[2] : null; }
     function homeUrl() { return 'index.html?view=display&full=1' + (H.mode === 'at' && homeRd() != null && homeMin() != null ? '&at=' + fHDate.value + 'T' + fHTime.value.slice(0, 5) : ''); }
     function nextDay(test) { for (var i = 1; i <= 60; i++) if (test(Cal.dayInfo(todayRd + i, !!d.israel))) return todayRd + i; return todayRd + 1; }
-    var HOME_DAYS = [['Tomorrow', todayRd + 1], ['Friday', nextDay(function (x) { return x.dow === 5; })], ['Shabbos', nextDay(function (x) { return x.dow === 6; })], ['Rosh Chodesh', nextDay(function (x) { return x.roshChodesh; })], ['Yom Tov', nextDayOfType('yomtov')]];
+    var HOME_DAYS = [['Today', todayRd], ['Tomorrow', todayRd + 1], ['Friday', nextDay(function (x) { return x.dow === 5; })], ['Shabbos', nextDay(function (x) { return x.dow === 6; })], ['Rosh Chodesh', nextDay(function (x) { return x.roshChodesh; })], ['Yom Tov', nextDayOfType('yomtov')]];
     function seeDayOnScreen(rd, time) { /* from the Schedule page: Home, on that day */
       var iso = MinyanEngine.isoDate(rd);
       H.mode = 'at'; H.date = iso; fHDate.value = iso; hHDate.sync();
