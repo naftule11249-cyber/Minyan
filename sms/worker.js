@@ -227,6 +227,31 @@ async function textEdit(env, cfg, siteCfg, days, text, from) {
   return res.reply;
 }
 
+/* "Quick change" in the back end: what the gabbai wants, in his own words, done at once the way a gabbai's text is done. The
+   admin PIN was checked by the caller. One day only, kept with the texted changes, and "undo" takes the last one back. */
+async function adminEdit(env, text) {
+  var siteCfg = await loadSiteConfig(env), days = await textDays(env, siteCfg), cfg = MinyanEngine.withDayLines(siteCfg, days), now = Date.now(), undoKey = 'undo:admin';
+  var read = await readEdit(env, cfg, text, now), out = { ok: false, ai: !!env.AI, by: read ? read.by : 'none', aiError: read && read.aiError || undefined, reply: '' };
+  if (!read || !read.text) return out; /* not a change it can make */
+  var res = MinyanEdit.run(cfg, read.text, now, read.lang), L = MinyanEdit.T[res.lang];
+  if (read.by === 'ai') out.read = read.text;
+  try {
+    if (res.wantsUndo) {
+      var rec = await env.SUBS.get(undoKey, 'json');
+      if (!rec) { out.reply = L.noUndo; return out; }
+      res = MinyanEdit.undo(cfg, rec, res.lang, now);
+      if (res.cfg) { await keepDay(env, siteCfg, days, res.cfg, rec.iso, rec.tefilla); await env.SUBS.delete(undoKey); }
+    } else if (res.cfg) {
+      await keepDay(env, siteCfg, days, res.cfg, res.undo.iso, res.undo.tefilla);
+      await env.SUBS.put(undoKey, JSON.stringify(res.undo), { expirationTtl: 86400 });
+      out.canUndo = true;
+    }
+  } catch (e) { out.reply = L.failed; return out; }
+  out.ok = !!res.cfg; out.reply = String(res.reply || '').replace('\n' + L.undoHint, '');
+  if (res.cfg) await editLog(env, { at: now, who: 'Back end', text: String(text).trim().slice(0, 140), ok: true, reply: String(res.reply).split('\n')[0].slice(0, 200), read: out.read });
+  return out;
+}
+
 export default {
   async fetch(request, env) {
     var url = new URL(request.url), path = url.pathname.replace(/\/+$/, '');
@@ -310,12 +335,14 @@ export default {
         else { var tRes = MinyanEdit.run(tCfg, tRead.text, tNow, tRead.lang); tried = { change: !!tRes.cfg, by: tRead.by, read: tRead.by === 'ai' ? tRead.text : undefined, aiError: tRead.aiError || undefined, reply: tRes.wantsUndo ? '(takes back the sender\'s last change)' : tRes.reply }; }
         tried.ai = !!env.AI;
       }
+      var done;
+      if (typeof eb.doText === 'string' && eb.doText.trim() && eb.doText.length <= 300) done = await adminEdit(env, eb.doText.trim());
       if (typeof eb.clearDay === 'string') { var td = (await env.SUBS.get('textdays', 'json')) || {}; delete td[eb.clearDay]; await env.SUBS.put('textdays', JSON.stringify(td)); } /* a day's texted changes taken back from the admin page */
       if (eb.forgetAccount) await env.SUBS.delete('twsid'); /* start over: the next text from Twilio says which account is the shul's */
       var kvTw = !!(await env.SUBS.get('twkey')), sid = await env.SUBS.get('twsid');
       return json(env, { editors: ((await env.SUBS.get('editors', 'json')) || []).map(function (e) { return { number: '+' + e.n, name: e.name }; }),
         log: (await env.SUBS.get('editlog', 'json')) || [], keyError: keyError || undefined,
-        lastText: (await env.SUBS.get('lasttext', 'json')) || undefined, days: await textDays(env), tried: tried, ai: !!env.AI,
+        lastText: (await env.SUBS.get('lasttext', 'json')) || undefined, days: await textDays(env), tried: tried, done: done, ai: !!env.AI,
         /* how the service knows a text is really from Twilio: 'signature' (the Auth Token checks every text), 'account' (texts must
            come from the Twilio account the first text came from), or '' (no text has come yet) */
         ready: { trust: env.TWILIO_AUTH_TOKEN || kvTw ? 'signature' : sid ? 'account' : '', twilioFrom: env.TWILIO_AUTH_TOKEN ? 'secret' : kvTw ? 'device' : '', twilioAccount: !!(await env.SUBS.get('twacct')) } });

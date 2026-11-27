@@ -294,14 +294,16 @@
       if (!items.length && up) items = wallSections(up.sched, now, up, true); /* nothing left today: tomorrow's lists */
       /* a poster (cfg.posters: { src, from, until } in the shul's time, "YYYY-MM-DDTHH:MM") takes the first tefilla's place for its hours,
          filling the column as a framed picture; the next-minyan panel, when there is one, stays under it */
-      var poster = activePoster(now);
-      if (poster) { var pimg = el('img', { src: poster.src, alt: poster.title || '', decoding: 'async' }); pimg.addEventListener('load', function () { fitPoster(pimg); }); colR.appendChild(el('section', { class: 'wposter' }, [el('img', { class: 'wposter-bg', src: poster.src, alt: '', 'aria-hidden': 'true' }), pimg])); }
+      var poster = activePoster(now), posterRest = !!(poster && poster.place === 'rest' && !ui.shabbosWin); /* place 'rest': in the other column, where the rest of the day's minyanim stand. While the Shabbos zmanim are up that column is theirs, and the poster keeps to the first one, where it stays large */
+      var posterBox = function () { var pimg = el('img', { src: poster.src, alt: poster.title || '', decoding: 'async' }); pimg.addEventListener('load', function () { fitPoster(pimg); }); return el('section', { class: 'wposter' + (posterRest ? ' at-rest' : '') }, [el('img', { class: 'wposter-bg', src: poster.src, alt: '', 'aria-hidden': 'true' }), pimg]); };
+      if (poster && !posterRest) colR.appendChild(posterBox());
       else if (items.length) colR.appendChild(wallCard(items[0].title, items[0].nodes)); /* the first tefilla of the day keeps a frame to itself */
       /* Shabbos and Yom Tov have no מנין הבא panel: from candle lighting until nightfall at the end, the minyanim have the whole column */
       var dI = Cal.dayInfo(n.rd, !!cfg.israel), zN = zmanimFor(n.rd), holyNow = ((dI.shabbos || dI.yomtov) && !(dI.motzaei && n.min >= zN.tzeis)) || (dI.candles === 'day' && n.min >= zN.candles);
       var candlesPanel = next.classList.contains('candles'); /* Friday afternoon: it goes under the Shabbos zmanim instead (below) */
       if (cfg.nextPanel !== false && !holyNow && !candlesPanel) colR.appendChild(next); else if (!candlesPanel) ui.countdown = null; /* Hallway screen → "The next-minyan panel" can take it off; the minyanim then have the whole column */
-      if (items.length > 1) { /* the rest of the day shares one frame, each tefilla named above its own tiles */
+      if (posterRest) colL.appendChild(posterBox());
+      else if (items.length > 1) { /* the rest of the day shares one frame, each tefilla named above its own tiles */
         var rest = items.slice(1), blocks = [];
         rest.forEach(function (it) { blocks.push(el('div', { class: 'sub', text: it.sub })); blocks = blocks.concat(it.nodes); });
         colL.appendChild(wallCard(S().minyanim(rest.map(function (it) { return it.t.name; }).join(' ')), blocks));
@@ -1429,6 +1431,7 @@
     return el('label', { for: id }, [c, ' ' + label]);
   }
   var ICONS = {
+    spark: '<path d="M11 3l1.9 5.1L18 10l-5.1 1.9L11 17l-1.9-5.1L4 10l5.1-1.9z"/><path d="M18.5 15l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/>',
     rolls: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v16"/>',
     screen: '<rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/>',
     tv: '<rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/>',
@@ -1648,7 +1651,7 @@
           var span = p.spec.every * Math.max(0, (p.spec.count || 1) - 1);
           en = st.kind === 'fixed' ? { kind: 'fixed', time: hhmm(p.spec.start.min + span), off: 0, round: false } : { kind: st.kind, time: '', off: st.off + span, round: false };
         }
-        return { series: true, every: p.spec.every, start: st, endMode: 'to', end: en, rooms: p.rooms.join(', '), note: p.note, cond: condOf(p), disabled: off };
+        return { series: true, every: p.spec.every, start: st, endMode: 'to', end: en, rooms: p.rooms.join(', '), byClock: !!p.byClock, note: p.note, cond: condOf(p), disabled: off };
       }
       var r = specToRow(p.spec); r.room = p.room; r.note = p.note; r.cond = condOf(p); r.disabled = off;
       return r;
@@ -1661,7 +1664,7 @@
     function rowToLine(r, clean) {
       var pre = r.disabled && !clean ? '#off ' : '';
       if (r.raw != null) return r.comment ? r.raw : pre + r.raw;
-      if (r.series) return pre + 'every ' + (r.every || 10) + ' from ' + tokOf(r.start) + ' to ' + tokOf(r.end) + (r.rooms ? ' rooms ' + r.rooms : '') + condTok(r) + (r.note ? ' // ' + r.note : '');
+      if (r.series) return pre + 'every ' + (r.every || 10) + ' from ' + tokOf(r.start) + ' to ' + tokOf(r.end) + (r.rooms ? ' rooms ' + r.rooms + (r.byClock ? ' @clock' : '') : '') + condTok(r) + (r.note ? ' // ' + r.note : '');
       return pre + tokOf(r) + (r.room ? ' ' + r.room : '') + condTok(r) + (r.note ? ' // ' + r.note : '');
     }
     var roomsList = el('datalist', { id: 'rooms-list' }), knownRooms = [];
@@ -1819,10 +1822,17 @@
           function commitRooms() { r.rooms = seq.join(', '); paint(); changed(); }
           var picker = roomPicker('', function (v) { if (v) { seq.push(v); commitRooms(); } }, 'Add a room');
           paint();
-          row.appendChild(el('div', { class: 'mrow-l' }, [el('span', { class: 'tag', text: 'Repeating' }), el('span', { class: 'k', text: 'every' }), stepper(every, 5), el('span', { class: 'k', text: 'min, from' })].concat(timeWidget(r.start, changed, 'From', 'round every minyan to 5'))));
+          row.appendChild(el('div', { class: 'mrow-l' }, [el('span', { class: 'tag', text: 'Repeating' }), el('span', { class: 'k', text: 'every' }), stepper(every, 5), el('span', { class: 'k', text: 'min, from' })].concat(timeWidget(r.start, function () { clockSync(); changed(); }, 'From', 'round every minyan to 5'))));
           row.appendChild(el('div', { class: 'mrow-l' }, [el('span', { class: 'k', text: 'to' })].concat(endW)));
           row.appendChild(el('div', { class: 'mrow-l' }, [el('span', { class: 'k', text: 'rooms, in this order (1st minyan, 2nd, …, then again from 1):' }), chips]));
           row.appendChild(el('div', { class: 'mrow-l' }, picker));
+          /* a run that starts by a zman starts at another minute every day, so the rooms move with it; "by the clock" ties each time to its room */
+          var clockIn = el('input', { type: 'checkbox', 'aria-label': 'The same room at the same time every day' }); clockIn.checked = !!r.byClock;
+          clockIn.addEventListener('change', function () { r.byClock = clockIn.checked; changed(); });
+          var clockRow = el('div', { class: 'mrow-l mrow-clock' }, [el('label', { class: 'switch', title: 'The rooms go by the clock and not by the count: whenever the run starts, a given time is in the same room' }, [clockIn, el('span', { class: 'swl', text: 'The same room at the same time every day' })]),
+            el('span', { class: 'k', text: 'This run starts by a zman, so without this the rooms shift as the zman moves.' })]);
+          function clockSync() { clockRow.hidden = !(r.byClock || (r.start && r.start.kind !== 'fixed')); }
+          clockSync(); row.appendChild(clockRow);
           row.appendChild(el('div', { class: 'mrow-l' }, [note]));
           row.appendChild(condWidget(r, changed));
         } else {
@@ -1885,7 +1895,7 @@
     sp.appendChild(roomsList);
     sp.appendChild(el('details', { class: 'help' }, [el('summary', { text: 'How this works' }), el('div', { class: 'hint' }, [
       el('p', { text: 'Pick a day type, then add one row per minyan: a fixed time, or a zman (sunset, chatzos, candle lighting…) with minutes before or after. Type the room name; names you already used are suggested. The small label on each row shows what it gives on the coming day of that kind: "today", or a date such as "Sat Nov 14" on the Shabbos page.' }),
-      el('p', { text: '"+ Add repeating" makes one row that stands for a whole run: every N minutes, from a time or a zman, until a time or zman, in the rooms you pick, taken in turn in the order shown. It is recalculated every day, so a run that starts at sunrise moves with sunrise. Mix repeating rows and single rows freely; the board shows them all sorted by time.' }),
+      el('p', { text: '"+ Add repeating" makes one row that stands for a whole run: every N minutes, from a time or a zman, until a time or zman, in the rooms you pick, taken in turn in the order shown. It is recalculated every day, so a run that starts at sunrise moves with sunrise. On such a run, "The same room at the same time every day" gives the rooms out by the clock, so the 6:20 is in the same room whatever minute the run began. Mix repeating rows and single rows freely; the board shows them all sorted by time.' }),
       el('p', { text: '"Copy from…" starts a day type from another one. A day type with no rows uses the more general one (Rosh Chodesh empty → Weekdays; Yom Tov empty → Shabbos).' }),
       el('p', { text: 'Shabbos and Yom Tov: Friday\'s Mincha is usually set from candle lighting, and Shabbos\'s Mincha and Maariv from sunset, so they move through the year by themselves. Yom Tov uses the Shabbos lists unless you give it its own; for one particular Yom Tov, use Special dates and choose "A calendar day, every year". On these pages every tefilla has a small box, "On Shabbos: …", for another name or another second time on that kind of day. "See the screen on …" shows the screen as it will be on that day.' }),
       el('p', null, ['"Edit as text" shows the same rows as lines like ', el('code', { text: '6:20 ברך משה' }), ', ', el('code', { text: 'sunset-15 דברי יואל // note' }), ' or ', el('code', { text: 'every 10 from sunrise-30 to chatzos-30 rooms ברך משה, דברי יואל' }), ', handy for pasting a whole list.'])])]));
@@ -2173,7 +2183,7 @@
        The screen itself, in a frame the size of the TV scaled to fit the page. "Now" is live; "Another day" opens the same screen with
        its clock set to that day and time, so the schedule, the zmanim and the donations shown are that day's. It shows what is saved
        on this device, published or not. */
-    var hp = el('div', { class: 'col', id: 'page-home', 'data-nodirty': '1' });
+    var hp = el('div', { class: 'col', id: 'page-home', 'data-nodirty': '1' }), qcPanelEl = null, qcFabEl = null;
     ui.home = ui.home || { mode: 'now', date: MinyanEngine.isoDate(todayRd + 1), time: '08:00' };
     var H = ui.home, homeFrame = el('iframe', { id: 'home-tv', title: 'The hallway screen', scrolling: 'no', tabindex: '-1' }),
       homeZoom = el('a', { class: 'home-zoom', id: 'home-zoom', target: '_blank', rel: 'noopener', 'aria-label': 'Open the screen large', title: 'Open the screen large' }), /* a frame swallows a tap: this lies over it and opens the large view */
@@ -2252,6 +2262,59 @@
     homeWhen.appendChild(el('div', { class: 'fields home-pick' }, [
       el('div', { class: 'field' }, [el('label', { for: fHDate.id, text: 'Day' }), el('div', { class: 'hebrow' }, [hHDate.wrap]), el('div', { class: 'dn-civilrow' }, [fHDate, homeCivil]), homeDays]),
       el('div', { class: 'field' }, [el('label', { for: fHTime.id, text: 'Time of day' }), fHTime, homeTimes])]));
+    /* Quick change: what he wants in his own words, done at once the way a gabbai's text is done (the text service reads it, with its
+       AI for words it does not know). One day only; the regular schedule stays as it is; Undo takes the last one back. */
+    if (mode !== 'artifact' && (d.notifyUrl || '').trim()) {
+      var qc = ui.qc = ui.qc || { text: '', res: null, busy: false };
+      var qcIn = el('input', { type: 'text', id: 'qc-text', dir: 'auto', value: qc.text, placeholder: 'מאך די מנחה פון 2 אין לב אהרן היינט', 'aria-label': 'What to change', autocomplete: 'off', 'data-nodirty': '1' });
+      var qcPin = inp('qc-pin', ui.pinValue || '', { type: 'password', autocomplete: 'new-password', placeholder: 'the admin PIN', 'aria-label': 'The admin PIN', 'data-nodirty': '1' });
+      var qcBtn = el('button', { type: 'button', class: 'btn primary', id: 'qc-do', 'data-nodirty': '1', text: 'Do it' }), qcOut = el('div', { id: 'qc-out', role: 'status' });
+      var qcPinRow = el('div', { class: 'te-key' }, [qcPin]); qcPinRow.hidden = !!ui.pinValue;
+      var qcPaint = function () {
+        qcOut.textContent = ''; qcBtn.disabled = !!qc.busy;
+        var r = qc.res; if (!r) return;
+        if (r.note) { qcOut.appendChild(el('div', { class: 'hint', text: r.note })); return; }
+        var box = el('div', { class: 'te-tried ' + (r.ok ? 'yes' : 'no') }, [el('b', { text: r.ok ? 'Done. It is on the screen within a minute.' : 'Nothing was changed.' }),
+          r.read ? el('div', { class: 'hint', dir: 'auto', text: 'Understood as: ' + r.read }) : null,
+          el('pre', { dir: 'auto', text: r.reply })]);
+        if (r.canUndo) box.appendChild(el('div', null, [el('button', { type: 'button', class: 'btn small', id: 'qc-undo', 'data-nodirty': '1', text: 'Undo', onclick: function () { qcSend('undo'); } })]));
+        qcOut.appendChild(box);
+      };
+      var qcSend = function (text) {
+        text = String(text || '').trim();
+        if (qc.busy) return;
+        if (!text) { qc.res = { note: 'Write what you want changed first.' }; qcPaint(); qcIn.focus(); return; }
+        if (!qcPin.value) { qcPinRow.hidden = false; qc.res = { note: 'Enter the admin PIN first.' }; qcPaint(); qcPin.focus(); return; }
+        qc.busy = true; qc.res = { note: 'Working on it…' }; qcPaint();
+        fetch(notifyBase() + '/editors', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ pin: qcPin.value, doText: text }) })
+          .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || ('service ' + r.status)); return j; }, function () { throw new Error('service ' + r.status); }); })
+          .then(function (j) {
+            qc.busy = false; ui.pinValue = ui.pinValue || qcPin.value; qcPinRow.hidden = true;
+            var dn = j.done;
+            if (!dn) qc.res = { note: 'The text service has not been updated for this yet. Try again in a few minutes.' };
+            else {
+              if (!dn.ok && !dn.reply) dn.reply = 'This box can add, cancel or move one minyan, for today or one of the next six days. For example: add mincha 2:15 ברך משה tomorrow. For anything else, use the tabs.' + (dn.ai ? '' : ' (The AI that reads free wording is not switched on, so write it the plain way.)');
+              qc.res = dn;
+              if (dn.ok) { qc.text = ''; qcIn.value = ''; setTimeout(function () { paintHome(true); }, 600); }
+            }
+            qcPaint();
+          }, function (e) { qc.busy = false; qc.res = { note: 'Could not do it: ' + (e && e.message === 'Failed to fetch' ? 'the text service did not answer. Check the connection and try again.' : (e && e.message || e)) }; qcPaint(); });
+      };
+      qcIn.addEventListener('input', function () { qc.text = qcIn.value; });
+      qcIn.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); qcSend(qcIn.value); } });
+      qcBtn.addEventListener('click', function () { qcSend(qcIn.value); });
+      var qcOpen = function (on) {
+        qc.open = !!on; qcPanelEl.hidden = !qc.open; qcFabEl.setAttribute('aria-expanded', String(qc.open)); qcFabEl.classList.toggle('on', qc.open);
+        if (qc.open) setTimeout(function () { try { (qcPin.value || qcPinRow.hidden ? qcIn : qcPin).focus(); } catch (e) {} }, 30);
+      };
+      qcPanelEl = el('div', { class: 'te-try qc-panel', id: 'qc-box', role: 'dialog', 'aria-label': 'Quick change', 'data-nodirty': '1' }, [
+        el('div', { class: 'qc-head' }, [el('b', { text: 'Quick change' }), el('button', { type: 'button', class: 'qc-x', id: 'qc-close', 'data-nodirty': '1', text: '✕', 'aria-label': 'Close', onclick: function () { qcOpen(false); qcFabEl.focus(); } })]),
+        el('div', { class: 'hint', text: 'Write what you want in your own words, in Yiddish, Hebrew or English: add, cancel or move a minyan, for today or one of the next six days. It is done at once, for that day only.' }),
+        el('div', { class: 'te-key' }, [qcIn, qcBtn]), qcPinRow, qcOut]);
+      qcFabEl = el('button', { type: 'button', class: 'qc-fab', id: 'qc-fab', 'data-nodirty': '1', title: 'Quick change: ask for what you want', 'aria-label': 'Quick change: ask for what you want', 'aria-haspopup': 'dialog', onclick: function () { qcOpen(!qc.open); } }, [svgIcon('spark')]);
+      qcPanelEl.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') { ev.stopPropagation(); qcOpen(false); qcFabEl.focus(); } });
+      qcOpen(!!qc.open); qcPaint();
+    }
     hp.appendChild(el('div', { class: 'home-bar' }, [homeModes, el('span', { class: 'sp' }), el('button', { type: 'button', class: 'btn', id: 'home-refresh', 'data-nodirty': '1', text: 'Refresh', title: 'Load the screen again', onclick: function () { paintHome(true); } }), homeOpen]));
     hp.appendChild(homeWhen); hp.appendChild(homeUnsaved);
     hp.appendChild(el('div', { class: 'home-tv' }, [homeStage, el('div', { class: 'home-stand' })]));
@@ -2304,7 +2367,7 @@
     function effSize(x) { var v = x.sizeOwn || kindSize(x.kind); return v === 'normal' ? '' : v; }
     var dons = (d.notices || []).filter(function (n) { return ((n.name || '') + (n.body || '') + (n.lead || '')).trim(); }).map(function (n) {
       var kd = guessKind(n);
-      return { id: n.id || '', no: +n.no || 0, kind: kd, lead: n.lead || '', name: n.name || '', body: n.body || '', logo: n.logo || '', from: n.from || '', to: n.to || '', fromTime: n.fromTime || '', toTime: n.toTime || '', off: !!n.off,
+      return { id: n.id || '', no: +n.no || 0, kind: kd, lead: n.lead || '', name: n.name || '', body: n.body || '', logo: n.logo || '', from: n.from || '', to: n.to || '', fromTime: n.fromTime || '', toTime: n.toTime || '', off: !!n.off, yearly: !!n.yearly,
         titleOwn: n.titleOwn != null ? n.titleOwn : ((n.title || '') === titleFor(kd, n.from, n.to) ? '' : (n.title || '')),
         sizeOwn: n.sizeOwn != null ? n.sizeOwn : ((n.size || 'normal') === kindSize(kd) ? '' : (n.size || 'normal')) };
     });
@@ -2317,6 +2380,7 @@
         var n = { id: x.id, no: x.no, kind: x.kind, title: effTitle(x), titleOwn: (x.titleOwn || '').trim(), lead: (x.lead || '').trim(), name: (x.name || '').trim(), body: (x.body || '').trim(),
           size: effSize(x), sizeOwn: x.sizeOwn || '', logo: (x.logo || '').trim(), from: x.from || '', to: x.to || '' };
         if (x.off) n.off = true; /* switched off: kept in the list, not shown on the board */
+        if (x.yearly && x.from && x.to) n.yearly = true; /* comes back every year on the same Hebrew dates */
         if (x.from && x.fromTime) n.fromTime = x.fromTime; /* a donation for part of a day: from a time on its first day … */
         if (x.to && x.toTime) n.toTime = x.toTime; /* … until a time on its last */
         return n;
@@ -2324,7 +2388,9 @@
     }
     /* where a donation stands today; a switched-off one is off whatever its dates say */
     function minuteNow() { return Cal.nowInTz(Date.now(), loc().tz).min; }
+    function eff(x) { if (!x.yearly) return x; var s = MinyanEngine.noticeSpan(x, todayRd); return { from: s.from, to: s.to, fromTime: x.fromTime, toTime: x.toTime }; }
     function dateState(x) {
+      x = eff(x);
       var a = parseHHMM(x.fromTime), b = parseHHMM(x.toTime), m = minuteNow();
       if (x.from && (todayIso < x.from || (todayIso === x.from && a != null && m < a))) return 'soon';
       if (x.to && (todayIso > x.to || (todayIso === x.to && b != null && m >= b))) return 'done';
@@ -2335,6 +2401,7 @@
     var STATE_TEXT = { on: 'On the board', soon: 'Coming up', done: 'Finished', off: 'Switched off' };
     function dayWord(n) { return n === 1 ? '1 day' : n + ' days'; }
     function whenText(x, side) {
+      x = eff(x);
       var r = rdOf(side === 'from' ? x.from : x.to), n;
       if (r == null) return side === 'from' ? 'no start date' : 'no end date';
       var at = parseHHMM(side === 'from' ? x.fromTime : x.toTime), hour = at == null ? '' : ' at ' + clock12(at), late = at != null && minuteNow() >= at;
@@ -2432,6 +2499,8 @@
       var hasHours = !!(src && orig && (orig.fromTime || orig.toTime));
       var fAllDay = el('input', { type: 'checkbox', role: 'switch', id: 'dn-allday-' + fid }); fAllDay.checked = !hasHours;
       var fFromT = inp('dn-fromt-' + fid, orig && orig.fromTime ? orig.fromTime : '00:00', { type: 'time' }), fToT = inp('dn-tot-' + fid, orig && orig.toTime ? orig.toTime : '23:59', { type: 'time' });
+      var fYearly = el('input', { type: 'checkbox', role: 'switch', id: 'dn-yearly-' + fid }); fYearly.checked = !!(src && orig && orig.yearly);
+      fYearly.addEventListener('change', function () { errDates.textContent = ''; refresh(); changed(); });
       var allDayNote = el('span', { class: 'dn-hint' }), hoursRow = el('div', { class: 'fields dn-hours' }, [field('From, on the first day', fFromT), field('Until, on the last day', fToT)]);
       function hours() { /* what is kept: nothing for a whole day, or for an end left at the day's own edge */
         var a = fAllDay.checked || !fFrom.value ? '' : fFromT.value, b = fAllDay.checked || !fTo.value ? '' : fToT.value;
@@ -2459,7 +2528,7 @@
       function refresh() {
         var c = current(), empty = !(c.name + c.body).trim();
         stage.textContent = ''; stage.appendChild(sponsorPanel(c));
-        var hr = hours(), ds = dateState({ from: fFrom.value, to: fTo.value, fromTime: hr.from, toTime: hr.to });
+        var hr = hours(), ds = dateState({ from: fFrom.value, to: fTo.value, fromTime: hr.from, toTime: hr.to, yearly: fYearly.checked && !!fFrom.value && !!fTo.value });
         hoursSync();
         stageNote.textContent = empty ? 'The name and the lines appear here as you type.' : orig && orig.off ? 'This donation is switched off, so it is not on the board. Switch it on in the list to show it.' : ds === 'on' ? 'This is on the board from the moment you publish' + (hr.to ? ', until ' + hourText(hr.to) + ' on its last day.' : '.') : ds === 'soon' ? 'It goes on the board by itself on its first day' + (hr.from ? ' at ' + hourText(hr.from) + '.' : '.') : 'These dates have passed, so it will not be on the board.';
         fTitle.placeholder = titleFor(w.kind, fFrom.value, fTo.value) || 'The words at the top of the panel';
@@ -2504,10 +2573,11 @@
         if (!nameV && !bodyV) { errName.textContent = 'Enter the name of the donor.'; fName.focus(); return; }
         if (fFrom.value && fTo.value && fTo.value < fFrom.value) { errDates.textContent = 'The last day is before the first day. Pick a later last day.'; setPicking('to'); return; }
         var hrs = hours();
+        if (fYearly.checked && (!fFrom.value || !fTo.value)) { errDates.textContent = 'A donation that comes back every year needs a first day and a last day.'; setPicking(fFrom.value ? 'to' : 'from'); return; }
         if (!fAllDay.checked && (!fFromT.value || !fToT.value)) { errDates.textContent = 'Enter both times, or switch "All day" back on.'; (fFromT.value ? fToT : fFromT).focus(); return; }
         if (hrs.from && hrs.to && fFrom.value === fTo.value && parseHHMM(hrs.to) <= parseHHMM(hrs.from)) { errDates.textContent = 'The end time is not after the start time. Pick a later end time.'; fToT.focus(); return; }
         var rec = orig || { id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), no: ++donSeq };
-        rec.kind = w.kind; rec.lead = fLead.value.trim(); rec.name = nameV; rec.body = bodyV; rec.logo = fLogo.value.trim(); rec.from = fFrom.value; rec.to = fTo.value; rec.fromTime = hrs.from; rec.toTime = hrs.to; rec.sizeOwn = fSize.value;
+        rec.kind = w.kind; rec.lead = fLead.value.trim(); rec.name = nameV; rec.body = bodyV; rec.logo = fLogo.value.trim(); rec.from = fFrom.value; rec.to = fTo.value; rec.fromTime = hrs.from; rec.toTime = hrs.to; rec.yearly = fYearly.checked; rec.sizeOwn = fSize.value;
         rec.titleOwn = fTitle.value.trim() === titleFor(w.kind, fFrom.value, fTo.value) ? '' : fTitle.value.trim();
         if (isNew) dons.push(rec);
         ui.dn.flash = rec.id; clearTimeout(ui.dn.flashT); ui.dn.flashT = setTimeout(function () { ui.dn.flash = ''; }, 3000); /* the list shows where it landed, through the rebuild that follows a save */
@@ -2533,6 +2603,7 @@
         el('div', { class: 'dn-datepair' }, [bFrom, bTo, fFrom, fTo]),
         calBox,
         el('div', { class: 'dn-allday' }, [el('label', { class: 'switch', for: fAllDay.id }, [fAllDay, el('span', { class: 'swl', text: 'All day' })]), allDayNote]),
+        el('div', { class: 'dn-allday dn-yearly' }, [el('label', { class: 'switch', for: fYearly.id }, [fYearly, el('span', { class: 'swl', text: 'Every year' })]), el('span', { class: 'dn-hint', text: 'Comes back by itself every year on the same Hebrew dates, like a yahrzeit.' })]),
         hoursRow, errDates, moreBox]);
       var body = el('div', { class: 'dn-body' }, [form, el('aside', { class: 'dn-preview' }, [el('div', { class: 'dn-label', text: 'How it looks on the board' }), stage, stageNote])]);
       var saveMain = el('button', { type: 'button', class: 'btn primary', id: 'dn-save', text: isConnected() ? 'Save and publish' : 'Save donation', onclick: function () { save(isConnected()); } });
@@ -2667,11 +2738,11 @@
         el('div', { class: 'dn-top' }, [
           el('span', { class: 'dn-av k' + (kindIndex(x.kind) % 5), 'aria-hidden': 'true', text: initials(x) }),
           el('div', { class: 'dn-who' }, [el('div', { class: 'dn-name', dir: 'auto', title: donName(x), text: donName(x) }), sub ? el('div', { class: 'dn-sub', dir: 'auto', text: sub }) : null]),
-          el('div', { class: 'dn-meta' }, [el('span', { class: 'dn-no num', text: numText(x.no) }), el('span', { class: 'dn-st ' + st, text: STATE_TEXT[st] })])]),
+          el('div', { class: 'dn-meta' }, [el('span', { class: 'dn-no num', text: numText(x.no) }), x.yearly ? el('span', { class: 'dn-st yearly', text: 'Every year' }) : null, el('span', { class: 'dn-st ' + st, text: STATE_TEXT[st] })])]),
         el('div', { class: 'dn-chips' }, [el('span', { class: 'dn-kind', dir: 'auto', text: k ? k.name : (effTitle(x) || 'Other') })]),
         el('div', { class: 'dn-dates' }, [
-          el('div', null, [el('span', { class: 'dn-lbl', text: 'Start' }), el('span', { class: 'dn-heb', dir: 'rtl', title: civilDate(x.from), text: hebDate(x.from) }), x.from && x.fromTime ? el('span', { class: 'dn-hour num', text: 'from ' + hourText(x.fromTime) }) : null, el('span', { class: 'dn-rel', text: whenText(x, 'from') })]),
-          el('div', null, [el('span', { class: 'dn-lbl', text: 'End' }), el('span', { class: 'dn-heb', dir: 'rtl', title: civilDate(x.to), text: hebDate(x.to) }), x.to && x.toTime ? el('span', { class: 'dn-hour num', text: 'until ' + hourText(x.toTime) }) : null, el('span', { class: 'dn-rel', text: whenText(x, 'to') })])]),
+          el('div', null, [el('span', { class: 'dn-lbl', text: 'Start' }), el('span', { class: 'dn-heb', dir: 'rtl', title: civilDate(eff(x).from), text: hebDate(eff(x).from) }), x.from && x.fromTime ? el('span', { class: 'dn-hour num', text: 'from ' + hourText(x.fromTime) }) : null, el('span', { class: 'dn-rel', text: whenText(x, 'from') })]),
+          el('div', null, [el('span', { class: 'dn-lbl', text: 'End' }), el('span', { class: 'dn-heb', dir: 'rtl', title: civilDate(eff(x).to), text: hebDate(eff(x).to) }), x.to && x.toTime ? el('span', { class: 'dn-hour num', text: 'until ' + hourText(x.toTime) }) : null, el('span', { class: 'dn-rel', text: whenText(x, 'to') })])]),
         acts]);
     }
     function paintList() {
@@ -2792,7 +2863,7 @@
         pList.appendChild(el('article', { class: 'pcard ' + st }, [
           el('div', { class: 'pthumb' }, [p.src ? el('img', { src: p.src, alt: '', loading: 'lazy' }) : null]),
           el('div', { class: 'pinfo' }, [el('div', { class: 'phead' }, [el('b', { dir: 'auto', text: p.name || p.title || 'Poster' }), el('span', { class: 'dn-st ' + st, text: lbl })]),
-            el('div', { class: 'pwhen' }, [el('span', { class: 'k', text: 'From ' }), whenText(p.from)]), el('div', { class: 'pwhen' }, [el('span', { class: 'k', text: 'Until ' }), whenText(p.until)]),
+            el('div', { class: 'pwhen' }, [el('span', { class: 'k', text: 'From ' }), whenText(p.from)]), el('div', { class: 'pwhen' }, [el('span', { class: 'k', text: 'Until ' }), whenText(p.until)]), el('div', { class: 'pwhen' }, [el('span', { class: 'k', text: 'Where ' }), p.place === 'rest' ? 'in place of Mincha and Maariv' : 'in place of Shacharis']),
             el('div', { class: 'bar actions' }, [
               el('button', { type: 'button', class: 'btn small', text: 'Edit', onclick: function () { openPosterEdit(p); } }),
               el('button', { type: 'button', class: 'btn small', text: p.on === false ? 'Switch on' : 'Switch off', onclick: function () { p.on = p.on === false ? true : false; setDirty(true); paintPosters(); } }),
@@ -2830,6 +2901,7 @@
       var fName2 = inp('pe-name', w.name, { dir: 'auto', placeholder: 'שיעורי תורה לחנוכה' });
       var fFd = inp('pe-from-d', (w.from || '').slice(0, 10), { type: 'date' }), fFt = inp('pe-from-t', (w.from || '').slice(11, 16), { type: 'time' });
       var fUd = inp('pe-until-d', (w.until || '').slice(0, 10), { type: 'date' }), fUt = inp('pe-until-t', (w.until || '').slice(11, 16), { type: 'time' });
+      var fPlace = el('select', { id: 'pe-place' }, [el('option', { value: '', text: 'In place of the Shacharis minyanim' }), el('option', { value: 'rest', text: 'In place of the Mincha and Maariv minyanim' })]); fPlace.value = w.place === 'rest' ? 'rest' : '';
       var pv = el('div', { class: 'pthumb big' }, [w.src ? el('img', { src: w.src, alt: '' }) : el('span', { class: 'hint', text: 'No picture yet' })]), msg = el('div', { class: 'hint', id: 'pe-msg', role: 'status' });
       var file = el('input', { type: 'file', id: 'pe-file', accept: 'image/jpeg,image/png,application/pdf,.pdf' }), pending = null;
       file.addEventListener('change', function () {
@@ -2840,6 +2912,7 @@
           function (e) { msg.textContent = 'Could not read it: ' + (e && e.message || e); });
       });
       var save = el('button', { type: 'button', class: 'btn primary', id: 'pe-save', text: 'Save the poster', onclick: function () {
+        if (fPlace.value) w.place = fPlace.value; else delete w.place;
         w.name = fName2.value.trim(); w.from = fFd.value && fFt.value ? fFd.value + 'T' + fFt.value.slice(0, 5) : ''; w.until = fUd.value && fUt.value ? fUd.value + 'T' + fUt.value.slice(0, 5) : '';
         if (!w.from || !w.until) { msg.textContent = 'Fill in both the start and the end, date and time.'; return; }
         if (posterAt(w.until) <= posterAt(w.from)) { msg.textContent = 'The end must be after the start.'; return; }
@@ -2854,18 +2927,19 @@
         }, function (e) { save.disabled = false; msg.textContent = 'Not saved: ' + (e && e.message || e); });
       } });
       var quick = el('button', { type: 'button', class: 'btn small', text: 'Friday 12:00 until Motzaei Shabbos', onclick: function () { var sp = shabbosSpan(); fFd.value = sp.from.slice(0, 10); fFt.value = sp.from.slice(11); fUd.value = sp.until.slice(0, 10); fUt.value = sp.until.slice(11); } });
-      var c = card(isNew ? 'Add a poster' : 'Edit the poster', 'It takes the place of the Shacharis minyanim on the hallway screen, from the start until the end. A picture taller than the space is trimmed a little at its sides; one wider is shown whole.');
+      var c = card(isNew ? 'Add a poster' : 'Edit the poster', 'It takes the place of the minyanim you choose on the hallway screen, from the start until the end. A picture taller than the space is trimmed a little at its sides; one wider is shown whole.');
       c.body.appendChild(el('div', { class: 'pedit' }, [pv, el('div', { class: 'col' }, [
         field('Name (for you)', fName2),
         el('div', { class: 'field' }, [el('label', { for: 'pe-file', text: 'Picture or PDF' }), file, el('div', { class: 'hint', text: 'A JPEG, PNG or PDF (its first page).' })]),
         el('div', { class: 'fields' }, [field('Starts on', fFd), field('at', fFt)]),
         el('div', { class: 'fields' }, [field('Ends on', fUd), field('at', fUt)]),
         el('div', null, [quick]),
+        field('Where on the screen', fPlace, el('div', { class: 'hint', text: 'The poster takes that box for its hours; the minyanim in it are not shown meanwhile. The next-minyan panel, the clock and the other boxes stay. While the Shabbos zmanim are on the screen (Thursday night until Motzaei Shabbos) a poster always stands in place of Shacharis, so that it stays large.' })),
         el('div', { class: 'bar actions' }, [save, el('button', { type: 'button', class: 'btn', text: 'Cancel', onclick: function () { pEdit.textContent = ''; } }), msg])])]));
       pEdit.appendChild(c);
       try { pEdit.scrollIntoView({ block: 'start', behavior: 'smooth' }); } catch (e) {}
     }
-    var cPost = card('Posters', 'Each poster shows on the hallway screen in place of the Shacharis minyanim, between its start and its end.', { extra: el('button', { type: 'button', class: 'btn primary', id: 'poster-add', text: '+ Add a poster', onclick: function () { openPosterEdit(null); } }) });
+    var cPost = card('Posters', 'Each poster shows on the hallway screen in place of the Shacharis minyanim, or of the Mincha and Maariv minyanim, between its start and its end.', { extra: el('button', { type: 'button', class: 'btn primary', id: 'poster-add', text: '+ Add a poster', onclick: function () { openPosterEdit(null); } }) });
     cPost.body.appendChild(pList);
     pp2.appendChild(pEdit); pp2.appendChild(cPost);
     paintPosters();
@@ -3762,6 +3836,7 @@
         el('div', { class: 'bar' }, [mode !== 'artifact' ? el('a', { class: 'btn toboard', href: 'index.html', target: '_blank', rel: 'noopener', 'aria-label': 'Open the board' }, [el('span', { text: 'Board' }), svgIcon('open')]) : null,
           mode !== 'artifact' ? el('a', { class: 'btn toboard', href: 'tv.html', target: '_blank', rel: 'noopener', 'aria-label': 'See the hallway screen as the TV shows it', title: 'The hallway screen as the TV shows it' }, [el('span', { text: 'TV' }), svgIcon('tv')]) : null, status, saveBtn, closeBtn])]),
       el('div', { class: 'abody' }, [el('nav', { class: 'anav' }, [tabBar, navFoot]), main]), pubBar]);
+    if (qcFabEl) { panel.appendChild(qcPanelEl); panel.appendChild(qcFabEl); }
     overlay(panel);
     refreshPubBar();
     selectTab(draft && ui.adminTab && pages[ui.adminTab] ? ui.adminTab : 'home'); showType('weekday'); markTabs();

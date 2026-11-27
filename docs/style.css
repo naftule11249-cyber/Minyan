@@ -596,6 +596,7 @@ footer { max-width: 1120px; margin: 0 auto; padding-block: 0 30px; padding-left:
 .dn-st.on { background: #e4f3e8; color: #1d6f37; }
 .dn-st.on::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: currentColor; margin-right: 6px; vertical-align: 1px; }
 .dn-st.soon { background: #fdf2dc; color: #8a6414; }
+.dn-st.yearly { background: #e6ecf7; color: #2b4a80; }
 .dn-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .dn-kind { font-size: .88rem; font-weight: 600; padding: 4px 12px; border-radius: 999px; background: var(--a-soft); color: var(--a-navy); border: 1px solid #d9e2f1; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dn-dates { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-top: 12px; border-top: 1px solid var(--a-line); }
@@ -1294,6 +1295,19 @@ html.lobby .shabbos-z li { padding: .45em 0; }
 .te-day { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-top: 1px solid var(--a-line); }
 .te-try { border: 1px solid var(--a-line); border-radius: 14px; padding: 12px 14px; display: grid; gap: 8px; background: var(--a-field); }
 .te-tried { border-radius: 12px; padding: 10px 12px; display: grid; gap: 6px; }
+/* Quick change: a small round button in the corner of the back end, and the ask box it opens */
+.qc-fab { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: 84px; z-index: 7; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--a-line); background: #fff; color: var(--a-navy); display: grid; place-items: center; padding: 0; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.14); transition: background-color .16s ease, color .16s ease; }
+.qc-fab:hover, .qc-fab.on { background: var(--a-navy); color: #fff; border-color: var(--a-navy); }
+.qc-fab:focus-visible { outline: 3px solid var(--a-gold); outline-offset: 2px; }
+.qc-fab .ico svg { width: 20px; height: 20px; }
+.qc-panel { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: 134px; z-index: 7; width: min(420px, calc(100vw - 32px)); max-height: calc(100vh - 220px); overflow: auto; background: #fff; box-shadow: 0 12px 34px rgba(0,0,0,.22); }
+.qc-panel[hidden] { display: none; }
+.qc-head { display: flex; justify-content: space-between; align-items: center; }
+.qc-x { border: 0; background: transparent; font: inherit; color: var(--a-muted); cursor: pointer; padding: 4px 8px; border-radius: 8px; }
+.qc-x:hover { background: var(--a-field); }
+.qc-panel .te-key { grid-template-columns: minmax(0, 1fr) auto; }
+@media (max-width: 900px) { .qc-fab { bottom: 150px; } .qc-panel { bottom: 200px; } }
+@media (prefers-reduced-motion: reduce) { .qc-fab { transition: none; } }
 .te-tried.yes { background: #e7f4ea; } .te-tried.no { background: #f1efe8; }
 .te-tried pre { margin: 0; white-space: pre-wrap; background: #fff; border-radius: 8px; padding: 8px 10px; font: inherit; }
 
@@ -1301,6 +1315,7 @@ html.lobby .shabbos-z li { padding: .45em 0; }
    in the frame the tiles' cards have */
 #app.display .wall .wposter { flex: 1 1 0; min-height: 0; justify-content: center; border-radius: 14px; overflow: hidden; border: 3px double var(--gold); box-shadow: 0 6px 24px rgba(40, 30, 10, .18); background: #efe6d6; display: flex; }
 #app.display .wall .wposter { position: relative; }
+#app.display .wall .wposter.at-rest { min-height: 20rem; } /* beside the Shabbos box and the zmanim it keeps a height worth reading */
 #app.display .wall .wposter img { position: relative; display: block; width: 100%; height: 100%; object-fit: cover; object-position: center top; }
 #app.display .wall .wposter img.wposter-bg { position: absolute; inset: -30px; width: calc(100% + 60px); height: calc(100% + 60px); object-fit: cover; filter: blur(22px) brightness(.92); } /* the poster's own colours, softly, behind it where it does not reach */
 

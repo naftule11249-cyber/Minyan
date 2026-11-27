@@ -418,12 +418,15 @@ var MinyanEngine = (function () {
     if (i >= 0) { note = s.slice(i + 2).trim(); s = s.slice(0, i).trim(); }
     var cond = null, cm = /^(.*?)\s+(until|after|עד|אחרי)\s+(\S+)$/i.exec(s);
     if (cm) { var cs = parseSpec(cm[3], tefilla); if (cs && cs.kind === 'zman') { cond = { op: /^(until|עד)$/i.test(cm[2]) ? 'until' : 'after', spec: cs }; s = cm[1].trim(); } }
+    /* "… rooms A, B @clock": the rooms go by the clock, not by the count, so a time has the same room every day though the run starts by a zman */
+    var byClock = false, bm = /^(every\s.*\srooms\s.*?)\s+@clock$/i.exec(s);
+    if (bm) { byClock = true; s = bm[1]; }
     var m = /^every\s+(\d+)\s+from\s+(\S+)\s+(?:to\s+(\S+)|count\s+(\d+))(?:\s+rooms\s+(.*))?$/i.exec(s);
     if (m) {
       var start = parseSpec(m[2], tefilla), end = m[3] ? parseSpec(m[3], tefilla) : null;
       var rooms = (m[5] || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean);
       var ok = !!start && +m[1] > 0 && (m[3] ? !!end : +m[4] > 0);
-      return { raw: line, tok: s, series: true, spec: ok ? { kind: 'series', every: +m[1], start: start, end: end, count: m[4] ? +m[4] : 0 } : null, room: '', rooms: rooms, note: note, cond: cond };
+      return { raw: line, tok: s, series: true, spec: ok ? { kind: 'series', every: +m[1], start: start, end: end, count: m[4] ? +m[4] : 0 } : null, room: '', rooms: rooms, byClock: byClock, note: note, cond: cond };
     }
     var parts = s.split(/\s*\|\s*|\s+/), tok = parts.shift();
     return { raw: line, tok: tok, spec: parseSpec(tok, tefilla), room: parts.join(' '), note: note, cond: cond };
@@ -475,7 +478,7 @@ var MinyanEngine = (function () {
       var n = 0, m = start, limit = p.spec.count || 500, rnd = p.spec.start.round || 0, rUp = !!p.spec.start.roundUp, t;
       while (n < limit && n < 500 && (!p.spec.end || m <= end)) {
         t = rnd ? (rUp ? Math.ceil(m / rnd) : Math.floor(m / rnd)) * rnd : m;
-        if (!out.length || out[out.length - 1].start !== t) out.push({ start: t, room: p.rooms.length ? p.rooms[out.length % p.rooms.length] : '', note: p.note });
+        if (!out.length || out[out.length - 1].start !== t) out.push({ start: t, room: p.rooms.length ? p.rooms[(p.byClock ? Math.floor(t / p.spec.every) : out.length) % p.rooms.length] : '', note: p.note });
         m += p.spec.every; n++;
       }
       return out;
@@ -490,12 +493,13 @@ var MinyanEngine = (function () {
       return (cfg.notices || []).filter(function (n) {
         if (n.off) return false; /* switched off in the back end: kept, not shown */
         if (!((n.body || '') + (n.name || '') + (n.lead || '')).trim()) return false; /* a name on its own is a sponsor too */
-        if (n.from && iso < n.from) return false;
-        if (n.to && iso > n.to) return false;
+        var sp = noticeSpan(n, rd); /* a donation that comes back every year: this year's days for its Hebrew dates */
+        if (sp.from && iso < sp.from) return false;
+        if (sp.to && iso > sp.to) return false;
         if (min != null) {
           var a = clockMin(n.fromTime), b = clockMin(n.toTime);
-          if (a != null && n.from && iso === n.from && min < a) return false;
-          if (b != null && n.to && iso === n.to && min >= b) return false;
+          if (a != null && sp.from && iso === sp.from && min < a) return false;
+          if (b != null && sp.to && iso === sp.to && min >= b) return false;
         }
         return true;
       });
@@ -659,6 +663,32 @@ var MinyanEngine = (function () {
      special date writes it (null: no list of its own), and base is the line the settings themselves had for it when the text came.
      A change holds only while the settings still have that same line: once the back end has given the day another list for that
      tefilla, the back end's stands. The settings object itself is never altered. */
+  /* The days a donation is on, as { from, to } civil dates. One marked `yearly` (with a first and a last day) comes back every year
+     on the same Hebrew dates: this gives the round that holds day rd, else the next one to come, else the last one gone by. A day
+     that a year does not have (30 Kislev) becomes that month's last day; Adar of a plain year is Adar II of a leap year. */
+  function noticeSpan(n, rd) {
+    var plain = { from: n.from || '', to: n.to || '' };
+    if (!n.yearly || !n.from || !n.to) return plain;
+    function rdOfIso(v) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v); return m ? Cal.rdFromGreg(+m[1], +m[2], +m[3]) : null; }
+    var a = rdOfIso(n.from), b = rdOfIso(n.to);
+    if (a == null || b == null || b < a) return plain;
+    var hf = Cal.hebFromRD(a), ht = Cal.hebFromRD(b);
+    function inYear(h, y) { /* cal.js counts the year from Tishrei: month 7 opens year y, month 6 closes it */
+      var m = h.m;
+      if (m === 12 || m === 13) m = Cal.hebLeap(y) ? (h.m === 12 && Cal.hebLeap(h.y) ? 12 : 13) : 12;
+      return Cal.rdFromHeb(y, m, Math.min(h.d, Cal.hebMonthLength(y, m)));
+    }
+    var dy = ht.y - hf.y, now = Cal.hebFromRD(rd).y, best = null, last = null, y, f, t;
+    for (y =Math.max(hf.y, now - 1 - dy); y <= now + 1; y++) {
+      f = inYear(hf, y); t = inYear(ht, y + dy);
+      if (t < f) continue;
+      if (rd >= f && rd <= t) { best = [f, t]; break; }
+      if (f > rd && !best) best = [f, t];
+      if (t < rd) last = [f, t];
+    }
+    best = best || last;
+    return best ? { from: isoDate(best[0]), to: isoDate(best[1]) } : plain;
+  }
   function withDayLines(cfg, days) {
     var isos = Object.keys(days || {}), touched = false;
     if (!isos.length) return cfg;
@@ -679,7 +709,7 @@ var MinyanEngine = (function () {
     return out;
   }
   create.withDayLines = withDayLines;
-  create.parseLine = parseLine; create.parseSpec = parseSpec; create.sameEntry = sameEntry; create.gregStr = gregStr; create.isoDate = isoDate;
+  create.parseLine = parseLine; create.parseSpec = parseSpec; create.sameEntry = sameEntry; create.gregStr = gregStr; create.isoDate = isoDate; create.noticeSpan = noticeSpan;
   create.TEFILLA_DEFAULTS = TEFILLA_DEFAULTS; create.FALLBACK = FALLBACK; create.TYPE_NAME = TYPE_NAME; create.TYPE_NAME_EN = TYPE_NAME_EN;
   return create;
 })();

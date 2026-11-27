@@ -45,6 +45,7 @@ Zman words: `שקיעה` `נץ` `הדלקה` `צאת` `פלג` `חצות` `על�
 candles, tzeis, plag, chatzos, alos, shema). The last weekday Shacharis is written `חצות-30 ברך משה`,
 so it moves with chatzos every day (change `-30` if your board uses a different gap).
 A repeating run: `every 10 from sunrise-30~5 to chatzos-30 rooms ברך משה, דברי יואל` (every 10 minutes, rooms in turn; `~5` rounds every minyan to 5 minutes). The admin page builds these rows for you.
+A run that starts by a zman starts at another minute every day, so its rooms shift with it. `@clock` after the rooms (`… rooms ברך משה, דברי יואל @clock`; in the editor, "The same room at the same time every day", shown on runs that start by a zman) gives the rooms out by the clock instead of by the count: a given time is in the same room whatever minute the run began.
 
 A rule at the end of a line, `until <zman>` or `after <zman>` (עד / אחרי work too, with an offset like `tefilla-10`), keeps the minyan only while it starts before (or from) that zman on that day: `10:45 ברך משה until tefilla` is listed in winter and drops away by itself in summer, and a repeating run with `… rooms A, B until tefilla-5` shortens by itself. In the editor every row has "Show: only while it starts before…", and its preview says "not today" when the rule hides it. Every row also has an On/Off switch: Off keeps the row, with its times and rooms, but takes the minyan off the board, the texts and the Today tab (in the text form the line gets `#off` in front); the Publish list reports it as "switched off".
 A zman-based time starts from the zman as the zmanim list shows it (to the minute), so with chatzos at 12:40 `חצות-30` is 12:10.
@@ -91,6 +92,12 @@ The admin page's **Shere** tab sets the barber's hours and prices, and anyone wh
 - From chatzos on Thursday night until Motzei Shabbos, a **זמני שבת קודש** box takes the place of Mincha and Maariv (board, phones, hallway screen): candle lighting, Friday's Mincha, Shabbos's minyanim and Motzei Shabbos (72 minutes, rounded up). On Friday after chatzos the next-minyan box counts down to candle lighting.
 - The Friday and Shabbos schedule follows the weekly sheet: Mincha erev Shabbos `candles+45^5`, Shabbos Mincha `fricandles+35^5` (`fricandles` is this week's Friday candle lighting; `^5` rounds up to 5, `~5` down).
 - `node tools/shabbos-week.js [--date YYYY-MM-DD] [--config URL] > week.json` prints the coming Shabbos's times from the board for the weekly sheet: parsha, hadlakah, szks (מג״א), motzash, minchaErev, shacharis/hodu, minchaShabbos, and every Friday and Shabbos minyan.
+
+## Donations every year, posters, and Quick change
+
+- **Every year** (Donations → a donation's form): the donation comes back by itself every year on the same Hebrew dates, like a yahrzeit (`yearly: true` on the notice; `MinyanEngine.noticeSpan` gives this year's days). A day a year does not have (30 Kislev) becomes that month's last day; Adar of a plain year is Adar II of a leap year. The list marks it "Every year" and shows this year's dates.
+- **Where on the screen** (Posters → a poster's form): in place of the Shacharis minyanim (as always) or in place of the Mincha and Maariv minyanim (`place: 'rest'`). While the Shabbos zmanim are on the screen (Thursday night until Motzaei Shabbos) a poster always stands in place of Shacharis, where it stays large.
+- **Quick change**: the small round button in the corner of every back-end page opens a box to write what is wanted in one's own words (add, cancel or move a minyan, today or one of the next six days). It is done at once by the text service, exactly as a gabbai's text is (`doText` on `/editors`, with the admin PIN; kept with the texted changes, logged as "Back end", with Undo). It needs the text service's address (General → Website and services).
 
 ## Quick changes for today
 
