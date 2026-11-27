@@ -2276,7 +2276,8 @@
         if (r.note) { qcOut.appendChild(el('div', { class: 'hint', text: r.note })); return; }
         var box = el('div', { class: 'te-tried ' + (r.ok ? 'yes' : 'no') }, [el('b', { text: r.ok ? 'Done. It is on the screen within a minute.' : 'Nothing was changed.' }),
           r.read ? el('div', { class: 'hint', dir: 'auto', text: 'Understood as: ' + r.read }) : null,
-          el('pre', { dir: 'auto', text: r.reply })]);
+          el('pre', { dir: 'auto', text: r.reply }),
+          !r.ok && r.aiError ? el('div', { class: 'hint', text: 'The AI that reads free wording did not answer just now, so only the plain way of writing works at the moment.' }) : null]);
         if (r.canUndo) box.appendChild(el('div', null, [el('button', { type: 'button', class: 'btn small', id: 'qc-undo', 'data-nodirty': '1', text: 'Undo', onclick: function () { qcSend('undo'); } })]));
         qcOut.appendChild(box);
       };

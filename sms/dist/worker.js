@@ -1623,7 +1623,7 @@ async function editLog(env, entry) { var log = (await env.SUBS.get('editlog', 'j
    and the answer says exactly what was changed. */
 var AI_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 var AI_DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-function aiPrompt(cfg, nowMs) {
+function aiPrompt(cfg, nowMs, admin) {
   var engine = MinyanEngine(cfg), now = Cal.nowInTz(nowMs, engine.loc().tz), sched = engine.scheduleFor(now.rd), tefs = engine.tefillos().filter(function (t) { return t.kind !== 'event'; });
   function t24(m) { m = Math.round(m) % 1440; return ('0' + Math.floor(m / 60)).slice(-2) + ':' + ('0' + (m % 60)).slice(-2); }
   var rooms = {}, nums = cfg.roomNumbers || {};
@@ -1650,13 +1650,15 @@ function aiPrompt(cfg, nowMs) {
     '"די 8:00 שחרית וועט זיין 8:10 דינסטאג" -> {"intent":"move","tefilla":"shacharis","time":"08:00","new_time":"08:10","room":null,"day":"tuesday"}\n' +
     '"טעות, נעם עס צוריק" -> {"intent":"undo","tefilla":null,"time":null,"new_time":null,"room":null,"day":null}\n' +
     '"ווען איז מנחה?" -> {"intent":"none","tefilla":null,"time":null,"new_time":null,"room":null,"day":null}\n\n' +
+    (admin ? 'This text was typed by the gabbai on the shul\'s own settings page: it is ALWAYS a request to change the schedule, never a question, so answer "none" only when it names no time at all. When it has no word for add, cancel or move: if the list above has that tefilla at that time, it is "move" (to the room he names); if it has not, it is "add".\n' +
+      '"שחרית פון היינט 6:30 אין דברי יואל" (the list has no shacharis at 06:30) -> {"intent":"add","tefilla":"shacharis","time":"06:30","new_time":null,"room":"דברי יואל","day":"today"}\n\n' : '') +
     'Answer with the JSON form only.';
 }
 /* The plain command for a text in the sender's own words, or null (not a change, not understood, or the AI is not there). */
-async function understand(env, cfg, text, nowMs) {
+async function understand(env, cfg, text, nowMs, admin) {
   if (!env.AI || !String(text || '').trim() || String(text).length > 300) return null;
   var schema = { type: 'object', properties: { intent: { type: 'string', enum: ['add', 'cancel', 'move', 'undo', 'help', 'none'] }, tefilla: { type: ['string', 'null'] }, time: { type: ['string', 'null'] }, new_time: { type: ['string', 'null'] }, room: { type: ['string', 'null'] }, day: { type: ['string', 'null'] } }, required: ['intent'] };
-  var out = await env.AI.run(AI_MODEL, { messages: [{ role: 'system', content: aiPrompt(cfg, nowMs) }, { role: 'user', content: String(text).trim() }], response_format: { type: 'json_schema', json_schema: schema }, temperature: 0, max_tokens: 200 });
+  var out = await env.AI.run(AI_MODEL, { messages: [{ role: 'system', content: aiPrompt(cfg, nowMs, admin) }, { role: 'user', content: String(text).trim() }], response_format: { type: 'json_schema', json_schema: schema }, temperature: 0, max_tokens: 200 });
   var f = out && out.response;
   if (typeof f === 'string') { var m = /\{[\s\S]*\}/.exec(f); f = m ? JSON.parse(m[0]) : null; }
   if (!f || typeof f !== 'object') return null;
@@ -1693,12 +1695,12 @@ function ordinaryText(cfg, text) {
 }
 /* What a gabbai's text asks for: { text: the plain command, by: 'rules' | 'ai', lang } or null when it is not a change at all.
    A text written the plain way never goes to the AI. One in his own words does, and so does a plain one that did not add up. */
-async function readEdit(env, cfg, text, now) {
+async function readEdit(env, cfg, text, now, admin) { /* admin: typed in the back end's Quick change, where every text is meant as a change */
   var lang = MinyanEdit.hasHebrew(text) ? 'yi' : 'en', plain = MinyanEdit.parse(text), first = plain ? MinyanEdit.run(cfg, text, now) : null;
   if (first && (first.cfg || first.wantsUndo || plain.action === 'help')) return { text: text, by: 'rules', lang: first.lang };
-  if (!plain && ordinaryText(cfg, text)) return null;
+  if (!plain && !admin && ordinaryText(cfg, text)) return null;
   var cmd = null, aiError = '';
-  try { cmd = await understand(env, cfg, text, now); } catch (e) { aiError = String(e && e.message || e).slice(0, 160); }
+  try { cmd = await understand(env, cfg, text, now, admin); } catch (e) { aiError = String(e && e.message || e).slice(0, 160); }
   if (cmd) return { text: cmd, by: 'ai', lang: lang, aiError: aiError };
   return plain ? { text: text, by: 'rules', lang: first.lang, aiError: aiError } : (aiError ? { text: null, by: 'none', lang: lang, aiError: aiError } : null);
 }
@@ -1730,12 +1732,27 @@ async function textEdit(env, cfg, siteCfg, days, text, from) {
 
 /* "Quick change" in the back end: what the gabbai wants, in his own words, done at once the way a gabbai's text is done. The
    admin PIN was checked by the caller. One day only, kept with the texted changes, and "undo" takes the last one back. */
+/* "שחרית פון היינט 6:30 אין דברי יואל": a tefilla, a time and a room with no word for what to do. If there is such a minyan at that
+   time it is moved to that room; if there is none it is added. Only a reading that really changes the day is taken; anything else
+   goes on to the AI. */
+var LITTLE_WORDS = ['פון', 'fun', 'of', 'איז', 'is', 'וועט', 'זיין', 'זאל', 'will', 'be', 'should', 'היינטיגע', 'היינטיגער', 'מארגנדיגע', 'מארגנדיגער'];
+function verbless(cfg, text, now, lang) {
+  if (MinyanEdit.parse(text) || !/\d/.test(text)) return null;
+  var w = String(text).replace(/[,;!?]/g, ' ').replace(/\.(\s|$)/g, ' ').split(/\s+/).filter(function (x) { return x && LITTLE_WORDS.indexOf(x.toLowerCase()) < 0; }).join(' '), tries = ['move ' + w, 'add ' + w], i, r;
+  for (i = 0; i < tries.length; i++) { r = MinyanEdit.run(cfg, tries[i], now, lang); if (r && r.cfg) return tries[i]; }
+  return null;
+}
 async function adminEdit(env, text) {
   var siteCfg = await loadSiteConfig(env), days = await textDays(env, siteCfg), cfg = MinyanEngine.withDayLines(siteCfg, days), now = Date.now(), undoKey = 'undo:admin';
-  var read = await readEdit(env, cfg, text, now), out = { ok: false, ai: !!env.AI, by: read ? read.by : 'none', aiError: read && read.aiError || undefined, reply: '' };
-  if (!read || !read.text) return out; /* not a change it can make */
+  var lang0 = MinyanEdit.hasHebrew(text) ? 'yi' : 'en', guess = verbless(cfg, text, now, lang0);
+  var read = guess ? { text: guess, by: 'rules', lang: lang0 } : await readEdit(env, cfg, text, now, true), out = { ok: false, ai: !!env.AI, by: read ? read.by : 'none', aiError: read && read.aiError || undefined, reply: '' };
+  if (!read || !read.text) { /* not a change it can make: say how to write one, in the language he wrote in */
+    out.reply = lang0 === 'yi' ? 'נישט פארשטאנען וואס צו טוישן. גארנישט געטוישט. שרייבט צום ביישפיל:\nלייג צו שחרית 6:30 דברי יואל\nבטל מנחה 2:00\nטויש מנחה 2:00 אויף 2:15\nמען קען צושרייבן מארגן אדער א טאג (דינסטאג).'
+      : 'I could not tell what to change. Nothing changed. Write it like:\nadd shacharis 6:30 דברי יואל\ncancel mincha 2:00\nmove mincha 2:00 to 2:15\nYou can add tomorrow or a day (tuesday).';
+    return out;
+  }
   var res = MinyanEdit.run(cfg, read.text, now, read.lang), L = MinyanEdit.T[res.lang];
-  if (read.by === 'ai') out.read = read.text;
+  if (read.by === 'ai' || guess) out.read = read.text;
   try {
     if (res.wantsUndo) {
       var rec = await env.SUBS.get(undoKey, 'json');
