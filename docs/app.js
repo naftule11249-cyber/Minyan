@@ -1436,6 +1436,7 @@
     general: '<path d="M4 6h8M18 6h2M4 12h2M12 12h8M4 18h10M20 18h0"/><circle cx="14" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/>',
     schedule: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     notices: '<path d="M3 10v4a1 1 0 0 0 1 1h3l6 4V5L7 9H4a1 1 0 0 0-1 1z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/>',
+    posters: '<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="9.5" cy="8.5" r="1.5"/><path d="M20 15l-5-5-9 9"/>',
     donations: '<path d="M12 20.5s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.9c0 5.4-7.5 10-7.5 10z"/>',
     search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/>',
     edit: '<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/>',
@@ -1487,7 +1488,7 @@
     d.location = d.location || {}; d.schedules = d.schedules || {}; d.overrides = d.overrides || []; d.notices = d.notices || [];
     d.tefillos = (d.tefillos && d.tefillos.length) ? d.tefillos : clone(TEFILLA_DEFAULTS);
     var todayRd = Cal.nowInTz(Date.now(), loc().tz).rd, todayInfo = Cal.dayInfo(todayRd, !!cfg.israel);
-    var tabs = [['home', 'Home', 'The hallway screen as it is now, and as it will be on any day you choose.'], ['today', 'This week', 'Move, cancel or add a minyan for today or for one of the next days; that day only.', 'Week'], ['general', 'General', 'Name, rooms, location, looks and the tefillos.'], ['schedule', 'Schedule', 'The regular minyanim for each kind of day.'], ['donations', 'Donations', 'Who sponsors what on the board, and from when to when.', 'Donors'], ['notices', 'Banner', 'One line across the top of the board, for as long as you say.'], ['shere', 'Shere', 'The barber\'s hours: what people get when they text שערן.'], ['rolls', 'Extra schedules', 'A named list that takes over for the days it covers: a season, a week, or one kind of day.', 'Extra'], ['screen', 'Hallway screen', 'The TV in the hallway: its colours, and which minyanim it shows.', 'Screen'], ['overrides', 'Special dates', 'A different schedule for one date or for a day every year.', 'Special']];
+    var tabs = [['home', 'Home', 'The hallway screen as it is now, and as it will be on any day you choose.'], ['today', 'This week', 'Move, cancel or add a minyan for today or for one of the next days; that day only.', 'Week'], ['general', 'General', 'Name, rooms, location, looks and the tefillos.'], ['schedule', 'Schedule', 'The regular minyanim for each kind of day.'], ['donations', 'Donations', 'Who sponsors what on the board, and from when to when.', 'Donors'], ['notices', 'Banner', 'One line across the top of the board, for as long as you say.'], ['posters', 'Posters', 'A picture on the hallway screen, in place of the Shacharis minyanim, from when to when you say.'], ['shere', 'Shere', 'The barber\'s hours: what people get when they text שערן.'], ['rolls', 'Extra schedules', 'A named list that takes over for the days it covers: a season, a week, or one kind of day.', 'Extra'], ['screen', 'Hallway screen', 'The TV in the hallway: its colours, and which minyanim it shows.', 'Screen'], ['overrides', 'Special dates', 'A different schedule for one date or for a day every year.', 'Special']];
     if (mode !== 'artifact') tabs.push(['publish', 'Publish', 'What is waiting to go out, and the connection to the website.']);
     if (mode !== 'artifact') tabs.push(['send', 'Send', 'A notification, right now, to everyone who turned reminders on.']);
     tabs.push(['data', 'Backup', 'Previous versions and the settings as text.']);
@@ -2772,6 +2773,104 @@
 
     pages.notices = np;
 
+    /* posters: a picture that takes the Shacharis column of the hallway screen for the hours set (cfg.posters, shown by activePoster).
+       The picture goes to the website at once, as its own file (docs/posters/<id>.jpg), with this device's Publish connection; the
+       poster's times are settings like any other, saved with Save and published with Publish. */
+    d.posters = d.posters || [];
+    var pp2 = el('div', { class: 'col', id: 'page-posters' }), pList = el('div', { class: 'col' }), pEdit = el('div', { id: 'poster-edit' });
+    function posterAt(v) { var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(v || ''); return m ? Cal.epochFromWall(Cal.rdFromGreg(+m[1], +m[2], +m[3]), +m[4] * 60 + +m[5], loc().tz) : null; }
+    function posterState(p) { var a = posterAt(p.from), b = posterAt(p.until), n = Date.now(); if (p.on === false) return 'off'; if (a == null || b == null) return 'bad'; return n < a ? 'soon' : n < b ? 'on' : 'done'; }
+    function whenText(v) { var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(v || ''); if (!m) return '—'; var rd = Cal.rdFromGreg(+m[1], +m[2], +m[3]); return DAYS_EN_LONG[Cal.dayInfo(rd, !!d.israel).dow] + ' ' + (+m[2]) + '/' + (+m[3]) + ', ' + clockText(+m[4] * 60 + +m[5]) + ' · ' + Cal.formatHeb(Cal.hebFromRD(rd)); }
+    var DAYS_EN_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Shabbos'];
+    function clockText(min) { var h = Math.floor(min / 60), mm = min % 60; return ((h + 11) % 12 + 1) + ':' + pad2(mm) + (h < 12 ? ' AM' : ' PM'); }
+    function paintPosters() {
+      pList.textContent = '';
+      var order = { on: 0, soon: 1, off: 2, bad: 3, done: 4 }, list = d.posters.slice().sort(function (a, b) { return (order[posterState(a)] - order[posterState(b)]) || ((a.from || '') < (b.from || '') ? -1 : 1); });
+      if (!list.length) pList.appendChild(el('div', { class: 'hint lead', text: 'No posters yet. Press "+ Add a poster" to put one up.' }));
+      list.forEach(function (p) {
+        var st = posterState(p), lbl = { on: 'On the screen now', soon: 'Coming up', done: 'Finished', off: 'Switched off', bad: 'Check the times' }[st];
+        pList.appendChild(el('article', { class: 'pcard ' + st }, [
+          el('div', { class: 'pthumb' }, [p.src ? el('img', { src: p.src, alt: '', loading: 'lazy' }) : null]),
+          el('div', { class: 'pinfo' }, [el('div', { class: 'phead' }, [el('b', { dir: 'auto', text: p.name || p.title || 'Poster' }), el('span', { class: 'dn-st ' + st, text: lbl })]),
+            el('div', { class: 'pwhen' }, [el('span', { class: 'k', text: 'From ' }), whenText(p.from)]), el('div', { class: 'pwhen' }, [el('span', { class: 'k', text: 'Until ' }), whenText(p.until)]),
+            el('div', { class: 'bar actions' }, [
+              el('button', { type: 'button', class: 'btn small', text: 'Edit', onclick: function () { openPosterEdit(p); } }),
+              el('button', { type: 'button', class: 'btn small', text: p.on === false ? 'Switch on' : 'Switch off', onclick: function () { p.on = p.on === false ? true : false; setDirty(true); paintPosters(); } }),
+              el('button', { type: 'button', class: 'btn small danger', text: 'Remove', onclick: function () { if (!confirm('Remove the poster "' + (p.name || 'Poster') + '"?')) return; d.posters.splice(d.posters.indexOf(p), 1); setDirty(true); paintPosters(); } })])])]));
+      });
+    }
+    /* the coming Friday 12:00 until מוצאי שבת: what a poster for Shabbos usually wants */
+    function shabbosSpan() {
+      var fri = todayRd + Cal.mod(5 - Cal.mod(todayRd + 0, 7) + 7, 7) - (Cal.mod(todayRd, 7) === 6 ? 7 : 0), zs = zmanimFor(fri + 1);
+      if (Cal.dayInfo(fri, !!d.israel).dow !== 5) { for (var k = 0; k < 7; k++) if (Cal.dayInfo(todayRd + k, !!d.israel).dow === 5) { fri = todayRd + k; zs = zmanimFor(fri + 1); break; } }
+      var out = Math.ceil(zs.tzeis72);
+      return { from: MinyanEngine.isoDate(fri) + 'T12:00', until: MinyanEngine.isoDate(fri + 1) + 'T' + pad2(Math.floor(out / 60)) + ':' + pad2(out % 60) };
+    }
+    /* a picture or a PDF's first page, as a JPEG 1100 wide: sharp on the screen and small enough to load at once */
+    function loadPdfJs() {
+      if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+      return new Promise(function (ok, no) { var sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'; sc.onload = function () { window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; ok(window.pdfjsLib); }; sc.onerror = function () { no(new Error('the PDF reader could not be loaded; check the connection, or use a JPEG or PNG')); }; document.head.appendChild(sc); });
+    }
+    function toJpeg(src, w, h) { var W = 1100, c = document.createElement('canvas'); c.width = W; c.height = Math.round(h * W / w); var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(src, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', 0.84); }
+    function fileToJpeg(file) {
+      if (/pdf$/i.test(file.type) || /\.pdf$/i.test(file.name)) return file.arrayBuffer().then(function (buf) { return loadPdfJs().then(function (lib) { return lib.getDocument({ data: buf }).promise; }); }).then(function (pdf) { return pdf.getPage(1); }).then(function (page) {
+        var v0 = page.getViewport({ scale: 1 }), v = page.getViewport({ scale: 1500 / v0.width }), c = document.createElement('canvas'); c.width = v.width; c.height = v.height;
+        return page.render({ canvasContext: c.getContext('2d'), viewport: v }).promise.then(function () { return toJpeg(c, c.width, c.height); });
+      });
+      return new Promise(function (ok, no) { var url = URL.createObjectURL(file), im = new Image(); im.onload = function () { URL.revokeObjectURL(url); ok(toJpeg(im, im.naturalWidth, im.naturalHeight)); }; im.onerror = function () { no(new Error('this file could not be read as a picture')); }; im.src = url; });
+    }
+    function uploadPoster(path, dataUrl) {
+      var s = ghSettings(); if (!ghConfigured(s)) return Promise.reject(new Error('this device is not connected to the website yet. Connect it once on Settings → Publish, then add the poster again.'));
+      var dir = (s.path || 'docs/config.json').replace(/[^\/]*$/, ''), api = 'https://api.github.com/repos/' + s.repo.replace(/^\/+|\/+$/g, '') + '/contents/' + dir + path, h = ghHeaders(s); h['Content-Type'] = 'application/json';
+      return fetch(api, { method: 'PUT', headers: h, body: JSON.stringify({ message: 'Poster: ' + path, content: dataUrl.split(',')[1], branch: s.branch || 'main' }) }).then(function (r) { if (!r.ok) return r.json().then(function (j) { throw new Error('GitHub ' + r.status + (j && j.message ? ': ' + j.message : '')); }, function () { throw new Error('GitHub ' + r.status); }); return path; });
+    }
+    function openPosterEdit(p) {
+      var isNew = !p, span = shabbosSpan(), w = p ? Object.assign(clone(p), { name: p.name || p.title || '' }) : { id: 'p' + Date.now().toString(36), name: '', src: '', from: span.from, until: span.until, on: true };
+      pEdit.textContent = '';
+      var fName2 = inp('pe-name', w.name, { dir: 'auto', placeholder: 'שיעורי תורה לחנוכה' });
+      var fFd = inp('pe-from-d', (w.from || '').slice(0, 10), { type: 'date' }), fFt = inp('pe-from-t', (w.from || '').slice(11, 16), { type: 'time' });
+      var fUd = inp('pe-until-d', (w.until || '').slice(0, 10), { type: 'date' }), fUt = inp('pe-until-t', (w.until || '').slice(11, 16), { type: 'time' });
+      var pv = el('div', { class: 'pthumb big' }, [w.src ? el('img', { src: w.src, alt: '' }) : el('span', { class: 'hint', text: 'No picture yet' })]), msg = el('div', { class: 'hint', id: 'pe-msg', role: 'status' });
+      var file = el('input', { type: 'file', id: 'pe-file', accept: 'image/jpeg,image/png,application/pdf,.pdf' }), pending = null;
+      file.addEventListener('change', function () {
+        var f = file.files && file.files[0]; if (!f) return;
+        if (f.size > 50 * 1024 * 1024) { msg.textContent = 'That file is over 50 MB.'; return; }
+        msg.textContent = 'Reading the file…';
+        fileToJpeg(f).then(function (jpg) { pending = jpg; pv.textContent = ''; pv.appendChild(el('img', { src: jpg, alt: '' })); msg.textContent = 'Ready. Press "Save the poster".'; if (!fName2.value.trim()) fName2.value = f.name.replace(/\.[^.]+$/, ''); },
+          function (e) { msg.textContent = 'Could not read it: ' + (e && e.message || e); });
+      });
+      var save = el('button', { type: 'button', class: 'btn primary', id: 'pe-save', text: 'Save the poster', onclick: function () {
+        w.name = fName2.value.trim(); w.from = fFd.value && fFt.value ? fFd.value + 'T' + fFt.value.slice(0, 5) : ''; w.until = fUd.value && fUt.value ? fUd.value + 'T' + fUt.value.slice(0, 5) : '';
+        if (!w.from || !w.until) { msg.textContent = 'Fill in both the start and the end, date and time.'; return; }
+        if (posterAt(w.until) <= posterAt(w.from)) { msg.textContent = 'The end must be after the start.'; return; }
+        if (!pending && !w.src) { msg.textContent = 'Choose the picture or PDF first.'; return; }
+        save.disabled = true; msg.textContent = pending ? 'Sending the picture to the website…' : 'Saving…';
+        var path = 'posters/' + w.id + '-' + Date.now().toString(36) + '.jpg';
+        (pending ? uploadPoster(path, pending) : Promise.resolve(w.src)).then(function (src) {
+          w.src = src;
+          if (isNew) d.posters.push(w); else d.posters[d.posters.indexOf(p)] = w;
+          pEdit.textContent = ''; setDirty(true); paintPosters();
+          toast('Poster saved here. Press Save, then Publish, to put it on the screen.', 7000);
+        }, function (e) { save.disabled = false; msg.textContent = 'Not saved: ' + (e && e.message || e); });
+      } });
+      var quick = el('button', { type: 'button', class: 'btn small', text: 'Friday 12:00 until Motzaei Shabbos', onclick: function () { var sp = shabbosSpan(); fFd.value = sp.from.slice(0, 10); fFt.value = sp.from.slice(11); fUd.value = sp.until.slice(0, 10); fUt.value = sp.until.slice(11); } });
+      var c = card(isNew ? 'Add a poster' : 'Edit the poster', 'It takes the place of the Shacharis minyanim on the hallway screen, from the start until the end. A picture taller than the space is trimmed a little at its sides; one wider is shown whole.');
+      c.body.appendChild(el('div', { class: 'pedit' }, [pv, el('div', { class: 'col' }, [
+        field('Name (for you)', fName2),
+        el('div', { class: 'field' }, [el('label', { for: 'pe-file', text: 'Picture or PDF' }), file, el('div', { class: 'hint', text: 'A JPEG, PNG or PDF (its first page).' })]),
+        el('div', { class: 'fields' }, [field('Starts on', fFd), field('at', fFt)]),
+        el('div', { class: 'fields' }, [field('Ends on', fUd), field('at', fUt)]),
+        el('div', null, [quick]),
+        el('div', { class: 'bar actions' }, [save, el('button', { type: 'button', class: 'btn', text: 'Cancel', onclick: function () { pEdit.textContent = ''; } }), msg])])]));
+      pEdit.appendChild(c);
+      try { pEdit.scrollIntoView({ block: 'start', behavior: 'smooth' }); } catch (e) {}
+    }
+    var cPost = card('Posters', 'Each poster shows on the hallway screen in place of the Shacharis minyanim, between its start and its end.', { extra: el('button', { type: 'button', class: 'btn primary', id: 'poster-add', text: '+ Add a poster', onclick: function () { openPosterEdit(null); } }) });
+    cPost.body.appendChild(pList);
+    pp2.appendChild(pEdit); pp2.appendChild(cPost);
+    paintPosters();
+    pages.posters = pp2;
+
     /* shere: the barber's hours, answered in Yiddish to anyone who texts שערן (src/shere.js). Laid out like the This week tab:
        day buttons along the top, one day open at a time, its sets of hours as rows with "+ Add hours" and Remove. */
     var shp = el('div', { class: 'col', id: 'page-shere' }), sh = MinyanShere.settings(d), EN_DOW = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Shabbos'];
@@ -3646,7 +3745,7 @@
       el('button', { type: 'button', class: 'btn ghost', 'data-nodirty': '1', onclick: function () { if (ui.adminDirty && !confirm('Lock without saving? The changes made here will be lost.')) return; pinOk = false; try { sessionStorage.removeItem('minyan-pin'); } catch (e) {} ui.adminDirty = false; closeOverlay(); showPin(); } }, [svgIcon('lock'), el('span', { text: 'Lock' })])]);
     var ghNow = mode === 'artifact' ? null : ghSettings();
     var footHint = mode === 'artifact' ? 'Save publishes a new version of this page for everyone who has the link.' : (ghConfigured(ghNow) ? 'Save keeps the changes on this device. Publish sends them to the website and the app.' : 'Save keeps the settings on this device only. Connect the website on the Publish tab to be able to publish.');
-    var main = el('div', { class: 'amain' }, [subBar, el('div', { class: 'ptitle' }, [pageTitle, pageDesc]), pages.home, pages.today, pages.general, pages.schedule, pages.donations, pages.rolls, pages.notices, pages.shere, pages.screen, pages.overrides, mode !== 'artifact' ? pages.publish : null, mode !== 'artifact' ? pages.send : null, pages.data,
+    var main = el('div', { class: 'amain' }, [subBar, el('div', { class: 'ptitle' }, [pageTitle, pageDesc]), pages.home, pages.today, pages.general, pages.schedule, pages.donations, pages.rolls, pages.notices, pages.shere, pages.screen, pages.posters, pages.overrides, mode !== 'artifact' ? pages.publish : null, mode !== 'artifact' ? pages.send : null, pages.data,
       el('div', { class: 'bar afoot' }, [el('span', { class: 'hint', text: footHint }), saveBtn.cloneNode(true)])]);
     var pubBar = el('div', { class: 'pubbar' }); pubBar.hidden = true;
     function refreshPubBar() {

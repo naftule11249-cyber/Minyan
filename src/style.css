@@ -1303,3 +1303,16 @@ html.lobby .shabbos-z li { padding: .45em 0; }
 #app.display .wall .wposter { position: relative; }
 #app.display .wall .wposter img { position: relative; display: block; width: 100%; height: 100%; object-fit: cover; object-position: center top; }
 #app.display .wall .wposter img.wposter-bg { position: absolute; inset: -30px; width: calc(100% + 60px); height: calc(100% + 60px); object-fit: cover; filter: blur(22px) brightness(.92); } /* the poster's own colours, softly, behind it where it does not reach */
+
+/* Back end → Posters */
+.pcard { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 14px; padding: 12px; border: 1px solid var(--a-line); border-radius: 16px; background: var(--a-card); }
+.pcard.done, .pcard.off { opacity: .7; }
+.pthumb { border-radius: 10px; overflow: hidden; background: #efe9dd; aspect-ratio: 11 / 17; display: flex; align-items: center; justify-content: center; }
+.pthumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pthumb.big { width: 220px; max-width: 40vw; }
+.pinfo { display: grid; gap: 6px; align-content: start; min-width: 0; }
+.phead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; justify-content: space-between; }
+.pwhen { font-size: .92rem; } .pwhen .k { color: var(--a-muted); }
+.dn-st.on { background: #e3f3e7; color: #1d5c2d; } .dn-st.done, .dn-st.off { background: #ece9e2; color: #6f695f; } .dn-st.bad { background: #fde7e7; color: #8a1c1c; }
+.pedit { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 640px) { .pedit { grid-template-columns: minmax(0, 1fr); } .pthumb.big { width: 160px; } .pcard { grid-template-columns: 80px minmax(0, 1fr); } }
