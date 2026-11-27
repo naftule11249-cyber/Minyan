@@ -309,8 +309,9 @@
       if (!(ui.shabbosWin && now >= ui.shabbosWin.chatzosMs && now < ui.shabbosWin.outMs)) colL.appendChild(wallZmanim(info, z, rd, now)); else ui.zcount = null; /* from חצות on Friday the Shabbos box has the column (its סוף זמן ק״ש stands in it); until then people still look for Friday's חצות */
       colM.appendChild(analogClock(now, false)); /* the time with seconds is in the top bar */
       if (strip) colM.appendChild(strip);
-      /* from חצות on Friday until the Shabbos box goes (חצות on Motzaei Shabbos) the Shabbos zmanim stand on the right and שחרית on the left */
-      var shabbosRight = !!(ui.shabbosWin && now >= ui.shabbosWin.chatzosMs);
+      /* from חצות on Friday until Shabbos goes out the Shabbos zmanim stand on the right and שחרית on the left; at מוצאי שבת שחרית is back on the
+         right, and the Shabbos box (there until חצות הלילה) on the left */
+      var shabbosRight = !!(ui.shabbosWin && now >= ui.shabbosWin.chatzosMs && now < Cal.epochFromWall(ui.shabbosWin.sat, ui.shabbosWin.motzash, loc().tz)); /* the מוצאי שבת time the Shabbos box gives */
       if (shabbosRight) { main.classList.add('shabbos-right'); main.appendChild(colL); main.appendChild(colM); main.appendChild(colR); }
       else { main.appendChild(colR); main.appendChild(colM); main.appendChild(colL); }
       root.appendChild(main);
