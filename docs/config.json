@@ -180,7 +180,7 @@
  ],
  "smsNumber": "+1 929 828 7677",
  "remoteConfigUrl": "",
- "savedAt": 1795734047791,
+ "savedAt": 1795760236683,
  "siteUrl": "https://minyan.cascadeshul.org/",
  "logo": "",
  "wallLogo": "logo-name.png",
@@ -1308,5 +1308,13 @@
   "4": "לב אהרן",
   "5": "היכל אדל",
   "6": "היכל חנה"
- }
+ },
+ "posters": [
+  {
+   "src": "posters/chanukah-shiurim-5787.jpg",
+   "title": "שיעורי תורה לכבוד ימי החנוכה",
+   "from": "2026-11-28T11:44",
+   "until": "2026-11-28T23:44"
+  }
+ ]
 }

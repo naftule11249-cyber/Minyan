@@ -1296,3 +1296,10 @@ html.lobby .shabbos-z li { padding: .45em 0; }
 .te-tried { border-radius: 12px; padding: 10px 12px; display: grid; gap: 6px; }
 .te-tried.yes { background: #e7f4ea; } .te-tried.no { background: #f1efe8; }
 .te-tried pre { margin: 0; white-space: pre-wrap; background: #fff; border-radius: 8px; padding: 8px 10px; font: inherit; }
+
+/* a poster in place of a column's minyanim on the hallway screen: the picture fills the column, trimmed at its sides if it must be,
+   in the frame the tiles' cards have */
+#app.display .wall .wposter { flex: 1 1 0; min-height: 0; justify-content: center; border-radius: 14px; overflow: hidden; border: 3px double var(--gold); box-shadow: 0 6px 24px rgba(40, 30, 10, .18); background: #efe6d6; display: flex; }
+#app.display .wall .wposter { position: relative; }
+#app.display .wall .wposter img { position: relative; display: block; width: 100%; height: 100%; object-fit: cover; object-position: center top; }
+#app.display .wall .wposter img.wposter-bg { position: absolute; inset: -30px; width: calc(100% + 60px); height: calc(100% + 60px); object-fit: cover; filter: blur(22px) brightness(.92); } /* the poster's own colours, softly, behind it where it does not reach */

@@ -292,7 +292,11 @@
       var colR = el('div', { class: 'wcol' }), colM = el('div', { class: 'wcol mid' }), colL = el('div', { class: 'wcol' });
       var items = wallSections(sched, now, up);
       if (!items.length && up) items = wallSections(up.sched, now, up, true); /* nothing left today: tomorrow's lists */
-      if (items.length) colR.appendChild(wallCard(items[0].title, items[0].nodes)); /* the first tefilla of the day keeps a frame to itself */
+      /* a poster (cfg.posters: { src, from, until } in the shul's time, "YYYY-MM-DDTHH:MM") takes the first tefilla's place for its hours,
+         filling the column as a framed picture; the next-minyan panel, when there is one, stays under it */
+      var poster = activePoster(now);
+      if (poster) { var pimg = el('img', { src: poster.src, alt: poster.title || '', decoding: 'async' }); pimg.addEventListener('load', function () { fitPoster(pimg); }); colR.appendChild(el('section', { class: 'wposter' }, [el('img', { class: 'wposter-bg', src: poster.src, alt: '', 'aria-hidden': 'true' }), pimg])); }
+      else if (items.length) colR.appendChild(wallCard(items[0].title, items[0].nodes)); /* the first tefilla of the day keeps a frame to itself */
       /* Shabbos and Yom Tov have no מנין הבא panel: from candle lighting until nightfall at the end, the minyanim have the whole column */
       var dI = Cal.dayInfo(n.rd, !!cfg.israel), zN = zmanimFor(n.rd), holyNow = ((dI.shabbos || dI.yomtov) && !(dI.motzaei && n.min >= zN.tzeis)) || (dI.candles === 'day' && n.min >= zN.candles);
       if (cfg.nextPanel !== false && !holyNow) colR.appendChild(next); else ui.countdown = null; /* Hallway screen → "The next-minyan panel" can take it off; the minyanim then have the whole column */
@@ -305,7 +309,10 @@
       if (!(ui.shabbosWin && now >= ui.shabbosWin.chatzosMs && now < ui.shabbosWin.outMs)) colL.appendChild(wallZmanim(info, z, rd, now)); else ui.zcount = null; /* from חצות on Friday the Shabbos box has the column (its סוף זמן ק״ש stands in it); until then people still look for Friday's חצות */
       colM.appendChild(analogClock(now, false)); /* the time with seconds is in the top bar */
       if (strip) colM.appendChild(strip);
-      main.appendChild(colR); main.appendChild(colM); main.appendChild(colL);
+      /* from חצות on Friday until the Shabbos box goes (חצות on Motzaei Shabbos) the Shabbos zmanim stand on the right and שחרית on the left */
+      var shabbosRight = !!(ui.shabbosWin && now >= ui.shabbosWin.chatzosMs);
+      if (shabbosRight) { main.classList.add('shabbos-right'); main.appendChild(colL); main.appendChild(colM); main.appendChild(colR); }
+      else { main.appendChild(colR); main.appendChild(colM); main.appendChild(colL); }
       root.appendChild(main);
       if (keepOv) root.appendChild(keepOv);
       fitLobby();
@@ -416,6 +423,18 @@
     var from = Cal.epochFromWall(fri - 1, Math.round(zt.chatzosNight), tz), until = Cal.epochFromWall(fri + 1, Math.round(zs.chatzosNight), tz), outMs = Cal.epochFromWall(fri + 1, Math.round(zs.tzeis72), tz); /* the Shabbos box stays until חצות on Motzaei Shabbos */
     if (now < from || now >= until) return null;
     return { fri: fri, sat: fri + 1, candlesMin: zf.candles, candlesMs: Cal.epochFromWall(fri, Math.round(zf.candles), tz), chatzosMs: Cal.epochFromWall(fri, Math.round(zf.chatzos), tz), outMs: outMs, motzash: Math.ceil(zs.tzeis72) }; /* Motzei Shabbos rounded up, as on the weekly sheet */
+  }
+  /* a poster may lose a little at its sides (its edges are scenery), never its top or bottom (the text): where the space is taller than
+     the poster it fills it, trimmed at the sides; where it is wider, the whole poster shows */
+  function fitPoster(img) {
+    var box = img && img.parentNode; if (!box || !img.naturalWidth) return;
+    var r = box.getBoundingClientRect(); if (!r.width || !r.height) return;
+    img.style.objectFit = r.width / r.height <= img.naturalWidth / img.naturalHeight ? 'cover' : 'contain';
+  }
+  function activePoster(now) {
+    var tz = loc().tz;
+    function at(v) { var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(v || ''); return m ? Cal.epochFromWall(Cal.rdFromGreg(+m[1], +m[2], +m[3]), +m[4] * 60 + +m[5], tz) : null; }
+    return (cfg.posters || []).filter(function (p) { var a = at(p.from), b = at(p.until); return p && p.src && p.on !== false && a != null && b != null && now >= a && now < b; })[0] || null;
   }
   function isPmMinyan(t) { return t.kind !== 'event' && (t.period === 'pm' || t.id === 'mincha' || t.id === 'maariv'); }
   function shabbosTitle(w) { var p = Cal.parshaOfWeek(w.sat, !!cfg.israel), en = S().today === 'Today'; return (en ? 'Shabbos zmanim' : 'זמני שבת קודש') + (p ? (en ? ' – ' : ' – פרשת ') + p : ''); }
@@ -721,6 +740,7 @@
     var html = document.documentElement, main = $('#app') && $('#app').querySelector('main.wall');
     ui.pages = [];
     if (!main) return;
+    setTimeout(function () { Array.prototype.forEach.call(main.querySelectorAll('.wposter img:not(.wposter-bg)'), fitPoster); }, 0); /* once the columns have their sizes */
     var want = ui.lobbyScale || 1, pass, lo = 0.5, hi = want, best = 0, over;
     function set(v) { html.style.setProperty('--lobby-scale', String(v)); }
     function overflow() {
